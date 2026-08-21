@@ -67,7 +67,7 @@ export function VariantMappingModal({
             <div key={item.id}>
               <p className="text-sm font-medium text-slate-700">
                 {item.product_name} {item.calidad ? `— ${item.calidad}` : ''}{' '}
-                <span className="font-mono text-xs text-slate-400">({item.code})</span>
+                {item.code && <span className="font-mono text-xs text-slate-400">({item.code})</span>}
               </p>
               <select
                 value={mapping[item.id] ?? ''}

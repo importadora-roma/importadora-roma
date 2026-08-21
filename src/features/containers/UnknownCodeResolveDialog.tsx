@@ -36,7 +36,7 @@ export function UnknownCodeResolveDialog({
   onResolve: (action: Action, payload: ResolvePayload) => Promise<{ error: string | null }>
 }) {
   const { t } = useTranslation()
-  const [action, setAction] = useState<Action>('add_to_list')
+  const [action, setAction] = useState<Action>('manual_match')
   const [productName, setProductName] = useState('')
   const [calidad, setCalidad] = useState('')
   const [expectedQty, setExpectedQty] = useState('')
@@ -46,7 +46,7 @@ export function UnknownCodeResolveDialog({
   const [submitting, setSubmitting] = useState(false)
 
   function reset() {
-    setAction('add_to_list')
+    setAction('manual_match')
     setProductName('')
     setCalidad('')
     setExpectedQty('')
@@ -125,7 +125,7 @@ export function UnknownCodeResolveDialog({
             <option value="">{t('unknownDialog.selectPlaceholder')}</option>
             {containerItems.map((item) => (
               <option key={item.id} value={item.id}>
-                {item.product_name} {item.calidad ? `— ${item.calidad}` : ''} ({item.code})
+                {item.product_name} {item.calidad ? `— ${item.calidad}` : ''} {item.code ? `(${item.code})` : ''}
               </option>
             ))}
           </Select>

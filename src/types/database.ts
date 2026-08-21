@@ -587,8 +587,8 @@ export interface Database {
         Row: {
           id: string
           container_id: string
-          code: string
-          code_normalized: string
+          code: string | null
+          code_normalized: string | null
           product_name: string
           calidad: string | null
           expected_qty: number
@@ -608,7 +608,7 @@ export interface Database {
         Insert: {
           id?: string
           container_id: string
-          code: string
+          code?: string | null
           product_name: string
           calidad?: string | null
           expected_qty: number
@@ -869,7 +869,7 @@ export interface Database {
         Args: {
           p_container_id: string
           p_items: {
-            code: string
+            code?: string | null
             product_name: string
             calidad?: string | null
             expected_qty: number
@@ -931,7 +931,7 @@ export interface Database {
           p_matched_item_id?: string | null
           p_notes?: string | null
         }
-        Returns: { unknown_code_id: string; container_item_id: string | null; action: string }
+        Returns: { unknown_code_id: string; container_item_id: string | null; action: string; learned_code: boolean }
       }
       push_container_to_inventory: {
         Args: {

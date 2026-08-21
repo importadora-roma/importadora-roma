@@ -13,7 +13,11 @@ export const fieldTargetI18nKey: Record<ContainerFieldTarget, string> = {
   ignore: 'fieldTarget.ignore',
 }
 
-export const containerRequiredFields: ContainerFieldTarget[] = ['code', 'product_name', 'expected_qty']
+// 'code' is deliberately NOT required — many suppliers' shipping lists
+// have no code column at all; the fardo code only exists on the physical
+// label and gets learned onto the item the first time it's scanned and
+// manually matched during counting (see resolve_unknown_code).
+export const containerRequiredFields: ContainerFieldTarget[] = ['product_name', 'expected_qty']
 
 export function guessContainerField(header: string): ContainerFieldTarget {
   const h = header.toLowerCase().trim()

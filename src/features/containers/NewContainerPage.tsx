@@ -169,7 +169,6 @@ export function NewContainerPage() {
 
     return previewRows.map((row) => {
       const errors: string[] = []
-      if (!row.code.trim()) errors.push(t('rowError.emptyCode'))
       if (!row.product_name.trim()) errors.push(t('rowError.emptyProduct'))
       const qty = Number(row.expected_qty)
       if (row.expected_qty.trim() === '' || Number.isNaN(qty) || qty < 0) errors.push(t('rowError.invalidQty'))
@@ -197,7 +196,7 @@ export function NewContainerPage() {
       .map((row, i) => ({ row, i }))
       .filter(({ i }) => rowErrors[i].length === 0)
       .map(({ row }) => ({
-        code: row.code.trim(),
+        code: row.code.trim() || null,
         product_name: row.product_name.trim(),
         calidad: row.calidad.trim() || null,
         expected_qty: Number(row.expected_qty),
@@ -340,6 +339,7 @@ export function NewContainerPage() {
       {step === 'mapping' && (
         <div className="mt-6 space-y-4">
           <p className="mb-2 text-sm font-medium text-slate-700">{t('newContainer.mapping.instructions', { count: rawRows.length })}</p>
+          <p className="text-xs text-slate-500">{t('newContainer.mapping.codeOptionalHint')}</p>
           <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">

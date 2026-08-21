@@ -30,8 +30,8 @@ export interface Container {
 export interface ContainerItem {
   id: string
   container_id: string
-  code: string
-  code_normalized: string
+  code: string | null
+  code_normalized: string | null
   product_name: string
   calidad: string | null
   expected_qty: number

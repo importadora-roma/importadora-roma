@@ -34,7 +34,7 @@ export function generateContainerPdf(container: Container, itemsWithProgress: It
     body: itemsWithProgress.map((i) => [
       i.product_name,
       i.calidad ?? '—',
-      i.code,
+      i.code ?? '—',
       String(i.expected_qty),
       String(i.scannedQty),
       String(i.remaining),

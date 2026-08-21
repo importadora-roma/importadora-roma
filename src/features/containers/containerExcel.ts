@@ -35,7 +35,7 @@ export function exportContainerExcel(
   const itemRows = itemsWithProgress.map((i) => ({
     Producto: i.product_name,
     Calidad: i.calidad ?? '',
-    Código: i.code,
+    Código: i.code ?? '',
     Esperado: i.expected_qty,
     Escaneado: i.scannedQty,
     Restante: i.remaining,
@@ -65,7 +65,7 @@ export function exportContainerExcel(
     .map((i) => ({
       Producto: i.product_name,
       Calidad: i.calidad ?? '',
-      Código: i.code,
+      Código: i.code ?? '',
       Esperado: i.expected_qty,
       Escaneado: i.scannedQty,
       Diferencia: i.scannedQty - i.expected_qty,

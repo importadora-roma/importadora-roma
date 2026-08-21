@@ -43,7 +43,7 @@ export function ItemComparisonTable({ items }: { items: ItemWithProgress[] }) {
     if (calidadFilter && item.calidad !== calidadFilter) return false
     if (search) {
       const q = search.toLowerCase()
-      if (!item.product_name.toLowerCase().includes(q) && !item.code.toLowerCase().includes(q)) return false
+      if (!item.product_name.toLowerCase().includes(q) && !(item.code ?? '').toLowerCase().includes(q)) return false
     }
     return true
   })
@@ -102,7 +102,7 @@ export function ItemComparisonTable({ items }: { items: ItemWithProgress[] }) {
               <tr key={item.id}>
                 <td className="px-3 py-2 font-medium text-slate-900">{item.product_name}</td>
                 <td className="px-3 py-2 text-slate-600">{item.calidad ?? '—'}</td>
-                <td className="px-3 py-2 font-mono text-xs text-slate-500">{item.code}</td>
+                <td className="px-3 py-2 font-mono text-xs text-slate-500">{item.code ?? '—'}</td>
                 <td className="px-3 py-2 text-right">{item.expected_qty}</td>
                 <td className="px-3 py-2 text-right">{item.scannedQty}</td>
                 <td className="px-3 py-2 text-right">{item.remaining}</td>

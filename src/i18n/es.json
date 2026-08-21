@@ -88,6 +88,7 @@
   "newContainer.mapping.colTarget": "Mapear a",
   "newContainer.mapping.column": "Columna {n}",
   "newContainer.mapping.missing": "Falta asignar: {fields}",
+  "newContainer.mapping.codeOptionalHint": "El código es opcional: si el proveedor no lo incluye, se asigna automáticamente la primera vez que se escanea y se asocia a un producto durante el conteo.",
   "newContainer.mapping.preview": "Previsualizar",
 
   "newContainer.preview.valid": "{count} filas válidas",
@@ -118,7 +119,6 @@
   "fieldTarget.notes": "Notas (opcional)",
   "fieldTarget.ignore": "Ignorar columna",
 
-  "rowError.emptyCode": "Código vacío",
   "rowError.emptyProduct": "Producto vacío",
   "rowError.invalidQty": "Cantidad inválida",
   "rowError.duplicateCode": "Código repetido con otro producto/calidad distinto en este contenedor",

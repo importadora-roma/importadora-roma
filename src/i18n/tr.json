@@ -88,6 +88,7 @@
   "newContainer.mapping.colTarget": "Eşleştir",
   "newContainer.mapping.column": "Sütun {n}",
   "newContainer.mapping.missing": "Eksik olanlar: {fields}",
+  "newContainer.mapping.codeOptionalHint": "Kod opsiyoneldir: tedarikçi kodu vermiyorsa, sayım sırasında ilk okutulduğunda bir ürüne eşleştirilerek otomatik olarak atanır.",
   "newContainer.mapping.preview": "Önizle",
 
   "newContainer.preview.valid": "{count} geçerli satır",
@@ -118,7 +119,6 @@
   "fieldTarget.notes": "Notlar (opsiyonel)",
   "fieldTarget.ignore": "Sütunu yok say",
 
-  "rowError.emptyCode": "Kod boş",
   "rowError.emptyProduct": "Ürün boş",
   "rowError.invalidQty": "Geçersiz adet",
   "rowError.duplicateCode": "Bu kod bu konteynerde farklı bir ürün/kalite ile zaten kullanılıyor",
