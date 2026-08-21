@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { ShoppingCart, Wallet, AlertTriangle, FileText } from 'lucide-react'
+import { ShoppingCart, Wallet, AlertTriangle, FileText, Boxes } from 'lucide-react'
 import { formatCLP } from '@/lib/format'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
@@ -8,6 +8,7 @@ import { useReports } from '@/features/reports/useReports'
 import { useCash } from '@/features/cash/useCash'
 import { useInventory } from '@/features/inventory/useInventory'
 import { useProducts } from '@/features/products/useProducts'
+import { useContainers } from '@/features/containers/useContainers'
 
 function today(): string {
   return new Date().toISOString().slice(0, 10)
@@ -33,6 +34,9 @@ export function DashboardPage() {
   }, [inventory, variants, effectiveBranchId])
 
   const canSeeCash = (profile?.role === 'admin' || profile?.role === 'supervisor') && !isTienda
+  const canSeeContainers = (profile?.role === 'admin' || profile?.role === 'supervisor') && !isTienda
+  const { containers } = useContainers(effectiveBranchId)
+  const containersInCounting = containers.filter((c) => c.status === 'counting').length
 
   return (
     <div>
@@ -82,6 +86,22 @@ export function DashboardPage() {
           <p className={`mt-2 text-xl font-semibold ${lowStockCount > 0 ? 'text-red-600' : 'text-slate-900'}`}>{lowStockCount}</p>
           <p className="text-xs text-slate-400">variantes en 0 o negativo</p>
         </div>
+
+        {canSeeContainers && (
+          <Link
+            to="/contenedores/activo"
+            className="rounded-lg border border-slate-200 bg-white p-4 hover:border-slate-300 hover:shadow-sm"
+          >
+            <div className="flex items-center gap-2 text-xs uppercase text-slate-500">
+              <Boxes size={14} />
+              Contenedores en conteo
+            </div>
+            <p className={`mt-2 text-xl font-semibold ${containersInCounting > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
+              {containersInCounting}
+            </p>
+            <p className="text-xs text-slate-400">en preparación o en conteo activo</p>
+          </Link>
+        )}
 
         {isTienda ? (
           <Link to="/transferencias" className="flex flex-col justify-center rounded-lg border border-slate-200 bg-slate-900 p-4 text-white hover:bg-slate-800">

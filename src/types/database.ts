@@ -23,6 +23,15 @@ export type InventoryMovementType =
   | 'adjustment'
   | 'initial'
 
+// Contenedores module
+export type ContainerStatus = 'draft' | 'importing' | 'counting' | 'completed'
+export type ContainerItemSource = 'import' | 'manual' | 'added_during_count'
+export type ScanEventType = 'scan' | 'undo'
+export type ScanMethod = 'barcode' | 'manual' | 'ocr' | 'usb_scanner'
+export type ScanMatchStatus = 'matched' | 'unknown' | 'over'
+export type UnknownCodeStatus = 'pending' | 'added_to_list' | 'manually_matched' | 'ignored' | 'review_later'
+export type ContainerLanguage = 'es' | 'tr'
+
 export interface Database {
   public: {
     Tables: {
@@ -524,8 +533,260 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['sale_credit_payments']['Insert']>
         Relationships: []
       }
+      containers: {
+        Row: {
+          id: string
+          internal_number: string | null
+          code: string
+          branch_id: string
+          supplier: string | null
+          arrival_date: string | null
+          status: ContainerStatus
+          notes: string | null
+          created_by: string | null
+          completed_at: string | null
+          completed_by: string | null
+          reopened_at: string | null
+          reopened_by: string | null
+          reopen_count: number
+          pushed_to_inventory_at: string | null
+          pushed_to_inventory_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          delete_reason: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          internal_number?: string | null
+          code: string
+          branch_id: string
+          supplier?: string | null
+          arrival_date?: string | null
+          status?: ContainerStatus
+          notes?: string | null
+          created_by?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+          reopen_count?: number
+          pushed_to_inventory_at?: string | null
+          pushed_to_inventory_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          delete_reason?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['containers']['Insert']>
+        Relationships: []
+      }
+      container_items: {
+        Row: {
+          id: string
+          container_id: string
+          code: string
+          code_normalized: string
+          product_name: string
+          calidad: string | null
+          expected_qty: number
+          unit: string
+          notes: string | null
+          source: ContainerItemSource
+          variant_id: string | null
+          mapped_at: string | null
+          mapped_by: string | null
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          delete_reason: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          container_id: string
+          code: string
+          product_name: string
+          calidad?: string | null
+          expected_qty: number
+          unit?: string
+          notes?: string | null
+          source?: ContainerItemSource
+          variant_id?: string | null
+          mapped_at?: string | null
+          mapped_by?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          delete_reason?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['container_items']['Insert']>
+        Relationships: []
+      }
+      product_codes: {
+        Row: {
+          id: string
+          code: string
+          code_normalized: string
+          product_name: string
+          calidad: string | null
+          default_unit: string | null
+          supplier: string | null
+          last_seen_container_id: string | null
+          times_seen: number
+          active: boolean
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          delete_reason: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          code: string
+          product_name: string
+          calidad?: string | null
+          default_unit?: string | null
+          supplier?: string | null
+          last_seen_container_id?: string | null
+          times_seen?: number
+          active?: boolean
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          delete_reason?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['product_codes']['Insert']>
+        Relationships: []
+      }
+      container_scan_events: {
+        Row: {
+          id: string
+          container_id: string
+          container_item_id: string | null
+          code_raw: string
+          code_normalized: string
+          event_type: ScanEventType
+          delta: number
+          undoes_event_id: string | null
+          method: ScanMethod
+          confidence: number | null
+          corrected: boolean
+          photo_path: string | null
+          device_info: Record<string, unknown> | null
+          match_status: ScanMatchStatus
+          client_event_id: string
+          client_scanned_at: string | null
+          created_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          container_id: string
+          container_item_id?: string | null
+          code_raw: string
+          code_normalized: string
+          event_type: ScanEventType
+          delta: number
+          undoes_event_id?: string | null
+          method: ScanMethod
+          confidence?: number | null
+          corrected?: boolean
+          photo_path?: string | null
+          device_info?: Record<string, unknown> | null
+          match_status: ScanMatchStatus
+          client_event_id: string
+          client_scanned_at?: string | null
+          created_by: string
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['container_scan_events']['Insert']>
+        Relationships: []
+      }
+      container_unknown_codes: {
+        Row: {
+          id: string
+          container_id: string
+          code_normalized: string
+          first_raw_code: string
+          first_seen_scan_event_id: string | null
+          scan_count: number
+          status: UnknownCodeStatus
+          resolved_container_item_id: string | null
+          resolution_notes: string | null
+          resolved_by: string | null
+          resolved_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          container_id: string
+          code_normalized: string
+          first_raw_code: string
+          first_seen_scan_event_id?: string | null
+          scan_count?: number
+          status?: UnknownCodeStatus
+          resolved_container_item_id?: string | null
+          resolution_notes?: string | null
+          resolved_by?: string | null
+          resolved_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['container_unknown_codes']['Insert']>
+        Relationships: []
+      }
+      container_settings: {
+        Row: {
+          id: string
+          branch_id: string | null
+          ocr_confidence_threshold: number
+          duplicate_scan_window_ms: number
+          photo_archive_enabled: boolean
+          default_language: ContainerLanguage
+          block_over_scan: boolean
+          updated_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          branch_id?: string | null
+          ocr_confidence_threshold?: number
+          duplicate_scan_window_ms?: number
+          photo_archive_enabled?: boolean
+          default_language?: ContainerLanguage
+          block_over_scan?: boolean
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['container_settings']['Insert']>
+        Relationships: []
+      }
     }
-    Views: Record<string, never>
+    Views: {
+      container_summary: {
+        Row: {
+          container_id: string
+          expected_qty: number
+          scanned_qty: number
+          items_total: number
+          items_complete: number
+          pending_unknown_count: number
+        }
+        Relationships: []
+      }
+    }
     Functions: {
       create_sale: {
         Args: {
@@ -603,6 +864,81 @@ export interface Database {
           p_reason?: string | null
         }
         Returns: undefined
+      }
+      import_container_items: {
+        Args: {
+          p_container_id: string
+          p_items: {
+            code: string
+            product_name: string
+            calidad?: string | null
+            expected_qty: number
+            unit?: string | null
+            notes?: string | null
+          }[]
+        }
+        Returns: { inserted: number; merged: number }
+      }
+      set_container_status: {
+        Args: {
+          p_container_id: string
+          p_new_status: ContainerStatus
+          p_override_mismatch?: boolean
+          p_reason?: string | null
+        }
+        Returns: undefined
+      }
+      record_scan: {
+        Args: {
+          p_container_id: string
+          p_client_event_id: string
+          p_code_raw: string
+          p_method: ScanMethod
+          p_delta?: number
+          p_confidence?: number | null
+          p_corrected?: boolean
+          p_photo_path?: string | null
+          p_device_info?: Record<string, unknown> | null
+          p_client_scanned_at?: string | null
+          p_confirm_over?: boolean
+        }
+        Returns: {
+          event_id: string
+          match_status: ScanMatchStatus
+          container_item_id: string | null
+          code_normalized: string
+          scanned_qty_for_item: number | null
+          expected_qty_for_item: number | null
+          already_recorded: boolean
+        }
+      }
+      undo_scan: {
+        Args: {
+          p_scan_event_id: string
+          p_client_event_id?: string | null
+          p_reason?: string | null
+        }
+        Returns: string
+      }
+      resolve_unknown_code: {
+        Args: {
+          p_container_id: string
+          p_code_normalized: string
+          p_action: 'add_to_list' | 'manual_match' | 'ignore' | 'review_later'
+          p_product_name?: string | null
+          p_calidad?: string | null
+          p_expected_qty?: number | null
+          p_matched_item_id?: string | null
+          p_notes?: string | null
+        }
+        Returns: { unknown_code_id: string; container_item_id: string | null; action: string }
+      }
+      push_container_to_inventory: {
+        Args: {
+          p_container_id: string
+          p_variant_mappings?: { container_item_id: string; variant_id: string }[] | null
+        }
+        Returns: { itemsPushed: number; itemsSkippedUnmapped: number }
       }
     }
   }

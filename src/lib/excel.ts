@@ -23,3 +23,14 @@ export function exportToExcel(filename: string, sheetName: string, rows: Record<
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
   XLSX.writeFile(workbook, filename)
 }
+
+export function exportMultiSheetExcel(filename: string, sheets: { name: string; rows: Record<string, unknown>[] }[]) {
+  const workbook = XLSX.utils.book_new()
+  for (const sheet of sheets) {
+    const worksheet = XLSX.utils.json_to_sheet(sheet.rows)
+    // Sheet names are capped at 31 chars and can't contain []:*?/\\
+    const safeName = sheet.name.replace(/[[\]:*?/\\]/g, '').slice(0, 31)
+    XLSX.utils.book_append_sheet(workbook, worksheet, safeName)
+  }
+  XLSX.writeFile(workbook, filename)
+}
