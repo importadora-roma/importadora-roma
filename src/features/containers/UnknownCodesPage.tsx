@@ -34,7 +34,7 @@ export function UnknownCodesPage() {
       ) : items.length === 0 ? (
         <p className="mt-6 text-sm text-slate-400">{t('unknownPage.empty')}</p>
       ) : (
-        <div className="mt-6 overflow-hidden rounded-lg border border-slate-200 bg-white">
+        <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>

@@ -113,7 +113,7 @@ export function CashPage() {
 
       {register && (
         <div className="mt-6 space-y-6">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="rounded-lg border border-slate-200 bg-white p-4">
               <p className="text-xs uppercase text-slate-500">Apertura</p>
               <p className="mt-1 text-lg font-semibold text-slate-900">{formatCLP(register.opening_amount)}</p>
@@ -138,7 +138,7 @@ export function CashPage() {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+          <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>

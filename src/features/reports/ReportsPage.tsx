@@ -93,7 +93,7 @@ export function ReportsPage() {
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
-      <div className="mt-6 grid grid-cols-4 gap-4">
+      <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div className="rounded-lg border border-slate-200 bg-white p-4">
           <p className="text-xs uppercase text-slate-500">Total ventas</p>
           <p className="mt-1 text-xl font-semibold text-slate-900">{formatCLP(grandTotal)}</p>

@@ -91,7 +91,7 @@ export function NewTransferPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <p className="block text-sm font-medium text-slate-700">Sucursal origen</p>
           <p className="mt-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
@@ -112,7 +112,7 @@ export function NewTransferPage() {
         <ProductSearch catalog={catalog} onSelect={addItem} />
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>

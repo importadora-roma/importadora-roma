@@ -518,7 +518,7 @@ export function ImportPage() {
             <p className="mb-2 text-sm font-medium text-slate-700">
               Asigna cada columna detectada ({rawRows.length} filas de datos):
             </p>
-            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+            <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                   <tr>

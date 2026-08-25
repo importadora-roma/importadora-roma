@@ -56,7 +56,7 @@ export function DashboardPage() {
         {isTienda && ' Esta sucursal es una tienda: solo recibe stock por traslado, no tiene ventas ni caja en este sistema.'}
       </p>
 
-      <div className="mt-6 grid grid-cols-4 gap-4">
+      <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {!isTienda && (
           <div className="rounded-lg border border-slate-200 bg-white p-4">
             <div className="flex items-center gap-2 text-xs uppercase text-slate-500">

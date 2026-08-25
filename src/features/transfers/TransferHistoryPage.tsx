@@ -59,7 +59,7 @@ export function TransferHistoryPage() {
     <div>
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>

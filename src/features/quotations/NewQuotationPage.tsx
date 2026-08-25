@@ -92,11 +92,11 @@ export function NewQuotationPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-6">
-        <div className="col-span-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
           <ProductSearch catalog={catalog} onSelect={addItem} />
 
-          <div className="mt-4 overflow-hidden rounded-lg border border-slate-200 bg-white">
+          <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white">
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
