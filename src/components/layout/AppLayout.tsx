@@ -88,6 +88,7 @@ export function AppLayout() {
             <LogOut size={18} />
             Cerrar sesión
           </button>
+          <p className="mt-1 select-none px-3 text-[10px] text-slate-300">Hecho por Deniz Semiz</p>
         </div>
       </aside>
       <main className="flex-1 overflow-y-auto">

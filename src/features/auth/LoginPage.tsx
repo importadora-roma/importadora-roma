@@ -24,7 +24,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
         <h1 className="text-lg font-semibold text-slate-900">Importadora Roma</h1>
         <p className="mt-1 text-sm text-slate-500">Inicia sesión para continuar</p>
@@ -68,6 +68,7 @@ export function LoginPage() {
           </button>
         </form>
       </div>
+      <p className="absolute inset-x-0 bottom-3 select-none text-center text-[10px] text-slate-300">Hecho por Deniz Semiz</p>
     </div>
   )
 }

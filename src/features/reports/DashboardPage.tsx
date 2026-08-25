@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { lazy, Suspense, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { ShoppingCart, Wallet, AlertTriangle, FileText, Boxes, Receipt } from 'lucide-react'
 import { formatCLP } from '@/lib/format'
@@ -10,6 +10,11 @@ import { useInventory } from '@/features/inventory/useInventory'
 import { useProducts } from '@/features/products/useProducts'
 import { useContainers } from '@/features/containers/useContainers'
 import { useInvoices } from '@/features/invoices/useInvoices'
+
+// Dashboard is loaded eagerly (see App.tsx) — this chart section pulls in
+// recharts, so it's lazy-loaded on its own to keep that out of the main
+// bundle, same as ReportsPage.tsx already gets lazy-loaded as a route.
+const BranchSalesOverview = lazy(() => import('./BranchSalesOverview').then((m) => ({ default: m.BranchSalesOverview })))
 
 function today(): string {
   return new Date().toISOString().slice(0, 10)
@@ -137,6 +142,12 @@ export function DashboardPage() {
           </Link>
         )}
       </div>
+
+      {canSeeCash && (
+        <Suspense fallback={<div className="mt-6 h-40 animate-pulse rounded-lg border border-slate-200 bg-slate-100" />}>
+          <BranchSalesOverview />
+        </Suspense>
+      )}
     </div>
   )
 }
