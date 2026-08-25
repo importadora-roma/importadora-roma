@@ -13,6 +13,7 @@ export interface Sale {
   total: number
   cancel_reason: string | null
   notes: string | null
+  requires_invoice: boolean
   created_at: string
 }
 
@@ -97,5 +98,12 @@ export function useSales(branchId: string) {
     return { error: null }
   }
 
-  return { sales, loading, error, reload, loadSaleDetail, cancelSale, exchangeSaleItem }
+  async function setRequiresInvoice(saleId: string, requires: boolean) {
+    const { error } = await supabase.rpc('set_sale_requires_invoice', { p_sale_id: saleId, p_requires: requires })
+    if (error) return { error: error.message }
+    await reload()
+    return { error: null }
+  }
+
+  return { sales, loading, error, reload, loadSaleDetail, cancelSale, exchangeSaleItem, setRequiresInvoice }
 }

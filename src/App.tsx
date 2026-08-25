@@ -19,6 +19,7 @@ const QuotationsTabsPage = lazy(() => import('@/features/quotations/QuotationsTa
 const ReportsPage = lazy(() => import('@/features/reports/ReportsPage').then((m) => ({ default: m.ReportsPage })))
 const AuditLogsPage = lazy(() => import('@/features/audit/AuditLogsPage').then((m) => ({ default: m.AuditLogsPage })))
 const CreditsPage = lazy(() => import('@/features/credit/CreditsPage').then((m) => ({ default: m.CreditsPage })))
+const InvoicesPage = lazy(() => import('@/features/invoices/InvoicesPage').then((m) => ({ default: m.InvoicesPage })))
 const ContenedoresLandingPage = lazy(() =>
   import('@/features/containers/ContenedoresLandingPage').then((m) => ({ default: m.ContenedoresLandingPage }))
 )
@@ -122,6 +123,16 @@ function App() {
                   <RoleGate roles={['admin', 'supervisor']}>
                     <RequireImportadoraGate>
                       <CreditsPage />
+                    </RequireImportadoraGate>
+                  </RoleGate>
+                }
+              />
+              <Route
+                path="facturas"
+                element={
+                  <RoleGate roles={['admin', 'supervisor']}>
+                    <RequireImportadoraGate>
+                      <InvoicesPage />
                     </RequireImportadoraGate>
                   </RoleGate>
                 }

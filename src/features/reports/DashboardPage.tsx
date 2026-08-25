@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { ShoppingCart, Wallet, AlertTriangle, FileText, Boxes } from 'lucide-react'
+import { ShoppingCart, Wallet, AlertTriangle, FileText, Boxes, Receipt } from 'lucide-react'
 import { formatCLP } from '@/lib/format'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
@@ -9,6 +9,7 @@ import { useCash } from '@/features/cash/useCash'
 import { useInventory } from '@/features/inventory/useInventory'
 import { useProducts } from '@/features/products/useProducts'
 import { useContainers } from '@/features/containers/useContainers'
+import { useInvoices } from '@/features/invoices/useInvoices'
 
 function today(): string {
   return new Date().toISOString().slice(0, 10)
@@ -37,6 +38,10 @@ export function DashboardPage() {
   const canSeeContainers = (profile?.role === 'admin' || profile?.role === 'supervisor') && !isTienda
   const { containers } = useContainers(effectiveBranchId)
   const containersInCounting = containers.filter((c) => c.status === 'counting').length
+
+  const canSeeInvoices = (profile?.role === 'admin' || profile?.role === 'supervisor') && !isTienda
+  const { invoices } = useInvoices(effectiveBranchId)
+  const pendingInvoices = invoices.filter((i) => i.status === 'pending').length
 
   return (
     <div>
@@ -100,6 +105,17 @@ export function DashboardPage() {
               {containersInCounting}
             </p>
             <p className="text-xs text-slate-400">en preparación o en conteo activo</p>
+          </Link>
+        )}
+
+        {canSeeInvoices && (
+          <Link to="/facturas" className="rounded-lg border border-slate-200 bg-white p-4 hover:border-slate-300 hover:shadow-sm">
+            <div className="flex items-center gap-2 text-xs uppercase text-slate-500">
+              <Receipt size={14} />
+              Facturas pendientes
+            </div>
+            <p className={`mt-2 text-xl font-semibold ${pendingInvoices > 0 ? 'text-amber-600' : 'text-slate-900'}`}>{pendingInvoices}</p>
+            <p className="text-xs text-slate-400">ventas esperando ser facturadas</p>
           </Link>
         )}
 

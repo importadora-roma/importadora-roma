@@ -25,7 +25,7 @@ export function SalesHistoryPage() {
   const { customers } = useCustomers()
   const [branchId, setBranchId] = useState(activeBranchId)
 
-  const { sales, loading, error, loadSaleDetail, cancelSale, exchangeSaleItem } = useSales(branchId)
+  const { sales, loading, error, loadSaleDetail, cancelSale, exchangeSaleItem, setRequiresInvoice } = useSales(branchId)
 
   const productNameById = useMemo(() => new Map(products.map((p) => [p.id, p.name])), [products])
   const variantById = useMemo(() => new Map(variants.map((v) => [v.id, v])), [variants])
@@ -117,6 +117,9 @@ export function SalesHistoryPage() {
                   >
                     {statusLabels[sale.status]}
                   </span>
+                  {sale.requires_invoice && (
+                    <span className="ml-1 rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">Factura</span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-right">
                   <button onClick={() => openDetail(sale)} className="text-slate-400 hover:text-slate-700">
@@ -175,6 +178,21 @@ export function SalesHistoryPage() {
               </div>
             ))}
           </div>
+
+          {detailSale?.status === 'completed' && (
+            <label className="flex items-center gap-2 border-t border-slate-200 pt-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={detailSale.requires_invoice}
+                onChange={async (e) => {
+                  const requires = e.target.checked
+                  const { error } = await setRequiresInvoice(detailSale.id, requires)
+                  if (!error) setDetailSale((s) => (s ? { ...s, requires_invoice: requires } : s))
+                }}
+              />
+              Requiere factura (aparecerá en el pool de Facturas)
+            </label>
+          )}
 
           <div className="flex gap-2">
             <Button

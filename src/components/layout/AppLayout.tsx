@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   CreditCard,
   Boxes,
+  Receipt,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
@@ -39,6 +40,7 @@ const navItems: NavItem[] = [
   { to: '/contenedores', label: 'Contenedores', icon: Boxes, importadoraOnly: true },
   { to: '/caja', label: 'Caja', icon: Wallet, roles: ['admin', 'supervisor'], importadoraOnly: true },
   { to: '/creditos', label: 'Créditos', icon: CreditCard, roles: ['admin', 'supervisor'], importadoraOnly: true },
+  { to: '/facturas', label: 'Facturas', icon: Receipt, roles: ['admin', 'supervisor'], importadoraOnly: true },
   { to: '/reportes', label: 'Reportes', icon: BarChart3, roles: ['admin', 'supervisor'] },
   { to: '/auditoria', label: 'Auditoría', icon: ShieldCheck, roles: ['admin'] },
   { to: '/configuracion', label: 'Configuración', icon: Settings, roles: ['admin'] },

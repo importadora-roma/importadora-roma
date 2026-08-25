@@ -31,6 +31,7 @@ export type ScanMethod = 'barcode' | 'manual' | 'ocr' | 'usb_scanner'
 export type ScanMatchStatus = 'matched' | 'unknown' | 'over'
 export type UnknownCodeStatus = 'pending' | 'added_to_list' | 'manually_matched' | 'ignored' | 'review_later'
 export type ContainerLanguage = 'es' | 'tr'
+export type InvoiceStatus = 'pending' | 'issued' | 'cancelled'
 
 export interface Database {
   public: {
@@ -247,6 +248,7 @@ export interface Database {
           cancelled_by: string | null
           cancelled_at: string | null
           notes: string | null
+          requires_invoice: boolean
           created_at: string
           updated_at: string
         }
@@ -263,6 +265,7 @@ export interface Database {
           cancelled_by?: string | null
           cancelled_at?: string | null
           notes?: string | null
+          requires_invoice?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -533,6 +536,44 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['sale_credit_payments']['Insert']>
         Relationships: []
       }
+      invoices: {
+        Row: {
+          id: string
+          internal_number: string | null
+          sale_id: string
+          branch_id: string
+          status: InvoiceStatus
+          sii_folio: string | null
+          notes: string | null
+          issued_at: string | null
+          issued_by: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancel_reason: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          internal_number?: string | null
+          sale_id: string
+          branch_id: string
+          status?: InvoiceStatus
+          sii_folio?: string | null
+          notes?: string | null
+          issued_at?: string | null
+          issued_by?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancel_reason?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['invoices']['Insert']>
+        Relationships: []
+      }
       containers: {
         Row: {
           id: string
@@ -786,6 +827,29 @@ export interface Database {
         }
         Relationships: []
       }
+      invoice_queue: {
+        Row: {
+          invoice_id: string
+          internal_number: string | null
+          sale_id: string
+          branch_id: string
+          status: InvoiceStatus
+          sii_folio: string | null
+          notes: string | null
+          issued_at: string | null
+          cancelled_at: string | null
+          cancel_reason: string | null
+          created_at: string
+          sale_number: string | null
+          gross_total: number
+          net_total: number
+          iva_total: number
+          customer_id: string | null
+          customer_name: string | null
+          customer_rut: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       create_sale: {
@@ -939,6 +1003,18 @@ export interface Database {
           p_variant_mappings?: { container_item_id: string; variant_id: string }[] | null
         }
         Returns: { itemsPushed: number; itemsSkippedUnmapped: number }
+      }
+      set_sale_requires_invoice: {
+        Args: { p_sale_id: string; p_requires: boolean }
+        Returns: string
+      }
+      issue_invoice: {
+        Args: { p_invoice_id: string; p_sii_folio?: string | null }
+        Returns: undefined
+      }
+      cancel_invoice: {
+        Args: { p_invoice_id: string; p_reason: string }
+        Returns: undefined
       }
     }
   }
