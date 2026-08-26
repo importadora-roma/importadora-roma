@@ -952,6 +952,15 @@ export interface Database {
         }
         Returns: string
       }
+      return_sale_item: {
+        Args: {
+          p_sale_item_id: string
+          p_quantity: number
+          p_reason: string
+          p_refund_method?: PaymentMethod | 'ninguno'
+        }
+        Returns: string
+      }
       create_transfer: {
         Args: {
           p_origin_branch_id: string

@@ -25,7 +25,7 @@ export function SalesHistoryPage() {
   const { customers } = useCustomers()
   const [branchId, setBranchId] = useState(activeBranchId)
 
-  const { sales, loading, error, loadSaleDetail, cancelSale, exchangeSaleItem, setRequiresInvoice } = useSales(branchId)
+  const { sales, loading, error, loadSaleDetail, cancelSale, exchangeSaleItem, returnSaleItem, setRequiresInvoice } = useSales(branchId)
 
   const productNameById = useMemo(() => new Map(products.map((p) => [p.id, p.name])), [products])
   const variantById = useMemo(() => new Map(variants.map((v) => [v.id, v])), [variants])
@@ -44,6 +44,7 @@ export function SalesHistoryPage() {
   const [detailPayments, setDetailPayments] = useState<SalePayment[]>([])
   const [cancelTarget, setCancelTarget] = useState<Sale | null>(null)
   const [exchangeTarget, setExchangeTarget] = useState<SaleItem | null>(null)
+  const [returnTarget, setReturnTarget] = useState<SaleItem | null>(null)
 
   const canManage = profile?.role === 'admin' || profile?.role === 'supervisor'
 
@@ -156,11 +157,16 @@ export function SalesHistoryPage() {
                     <td className="py-1.5 pr-2">{item.quantity}</td>
                     <td className="py-1.5 pr-2">{formatCLP(item.sold_price)}</td>
                     <td className="py-1.5 pr-2 text-xs text-slate-500">{item.status}</td>
-                    <td className="py-1.5">
+                    <td className="py-1.5 space-x-2">
                       {canManage && item.status === 'active' && detailSale?.status === 'completed' && (
-                        <button onClick={() => setExchangeTarget(item)} className="text-xs text-slate-500 underline hover:text-slate-800">
-                          Cambiar
-                        </button>
+                        <>
+                          <button onClick={() => setExchangeTarget(item)} className="text-xs text-slate-500 underline hover:text-slate-800">
+                            Cambiar
+                          </button>
+                          <button onClick={() => setReturnTarget(item)} className="text-xs text-slate-500 underline hover:text-slate-800">
+                            Devolver
+                          </button>
+                        </>
                       )}
                     </td>
                   </tr>
@@ -244,6 +250,21 @@ export function SalesHistoryPage() {
             const result = await exchangeSaleItem(exchangeTarget.id, newVariantId, newQuantity, reason, additionalPayments)
             if (!result.error) {
               setExchangeTarget(null)
+              await refreshDetail()
+            }
+            return result
+          }}
+        />
+      )}
+
+      {returnTarget && (
+        <ReturnModal
+          item={returnTarget}
+          onClose={() => setReturnTarget(null)}
+          onConfirm={async (quantity, reason, refundMethod) => {
+            const result = await returnSaleItem(returnTarget.id, quantity, reason, refundMethod)
+            if (!result.error) {
+              setReturnTarget(null)
               await refreshDetail()
             }
             return result
@@ -345,6 +366,73 @@ function ExchangeModal({
           </Button>
           <Button onClick={handleConfirm} disabled={saving}>
             {saving ? 'Procesando...' : 'Confirmar cambio'}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
+function ReturnModal({
+  item,
+  onClose,
+  onConfirm,
+}: {
+  item: SaleItem
+  onClose: () => void
+  onConfirm: (quantity: number, reason: string, refundMethod: PaymentMethod | 'ninguno') => Promise<{ error: string | null }>
+}) {
+  const [quantity, setQuantity] = useState(String(item.quantity))
+  const [reason, setReason] = useState('')
+  const [refundMethod, setRefundMethod] = useState<PaymentMethod | 'ninguno'>('efectivo')
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  const qtyNum = Number(quantity) || 0
+  const refundAmount = item.sold_price * qtyNum
+
+  async function handleConfirm() {
+    if (!qtyNum || qtyNum <= 0 || qtyNum > item.quantity) {
+      setError(`Cantidad inválida (máximo ${item.quantity})`)
+      return
+    }
+    if (!reason.trim()) {
+      setError('Indica un motivo')
+      return
+    }
+    setSaving(true)
+    const result = await onConfirm(qtyNum, reason.trim(), refundMethod)
+    setSaving(false)
+    if (result.error) setError(result.error)
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Devolver producto">
+      <div className="space-y-4">
+        <p className="text-sm text-slate-500">
+          Cantidad vendida: {item.quantity} · Precio unitario: {formatCLP(item.sold_price)}
+        </p>
+        <Input label="Cantidad a devolver" type="number" min={1} max={item.quantity} value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+        <Input label="Motivo" value={reason} onChange={(e) => setReason(e.target.value)} />
+        <Select label="Devolución" value={refundMethod} onChange={(e) => setRefundMethod(e.target.value as PaymentMethod | 'ninguno')}>
+          <option value="efectivo">Reembolso en efectivo</option>
+          <option value="tarjeta">Reembolso con tarjeta (fuera del sistema)</option>
+          <option value="transferencia">Reembolso por transferencia (fuera del sistema)</option>
+          <option value="ninguno">Sin reembolso (solo reingresar a stock)</option>
+        </Select>
+        <p className="text-sm font-medium text-slate-700">Monto a devolver: {formatCLP(refundAmount)}</p>
+        {refundMethod === 'efectivo' && (
+          <p className="text-xs text-amber-600">Se descontará de la caja abierta de esta sucursal.</p>
+        )}
+
+        {error && <p className="text-sm text-red-600">{error}</p>}
+
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button variant="danger" onClick={handleConfirm} disabled={saving}>
+            {saving ? 'Procesando...' : 'Confirmar devolución'}
           </Button>
         </div>
       </div>

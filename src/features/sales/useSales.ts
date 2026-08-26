@@ -105,5 +105,17 @@ export function useSales(branchId: string) {
     return { error: null }
   }
 
-  return { sales, loading, error, reload, loadSaleDetail, cancelSale, exchangeSaleItem, setRequiresInvoice }
+  async function returnSaleItem(saleItemId: string, quantity: number, reason: string, refundMethod: PaymentMethod | 'ninguno') {
+    const { error } = await supabase.rpc('return_sale_item', {
+      p_sale_item_id: saleItemId,
+      p_quantity: quantity,
+      p_reason: reason,
+      p_refund_method: refundMethod,
+    })
+    if (error) return { error: error.message }
+    await reload()
+    return { error: null }
+  }
+
+  return { sales, loading, error, reload, loadSaleDetail, cancelSale, exchangeSaleItem, returnSaleItem, setRequiresInvoice }
 }
