@@ -5,14 +5,17 @@ import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { formatKilo } from '@/lib/format'
 import { exportToExcel } from '@/lib/excel'
+import { useAuthStore } from '@/stores/authStore'
 import { useInventory } from './useInventory'
 import { useProducts } from '@/features/products/useProducts'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import type { ProductVariant } from '@/types/models'
 
 export function InventoryPage() {
+  const profile = useAuthStore((s) => s.profile)
+  const canSeeCost = profile?.role === 'admin' || profile?.role === 'supervisor'
   const { branchId: effectiveBranchId, branches } = useEffectiveBranch()
-  const { products, variants, loading: loadingProducts } = useProducts()
+  const { products, variants, loading: loadingProducts, updateVariant } = useProducts()
   const { inventory, loading: loadingInventory, adjustInventory } = useInventory()
 
   const [search, setSearch] = useState('')
@@ -105,6 +108,7 @@ export function InventoryPage() {
               <th className="px-4 py-3">Producto</th>
               <th className="px-4 py-3">Calidad</th>
               <th className="px-4 py-3">Kilo</th>
+              {canSeeCost && <th className="px-4 py-3">Costo</th>}
               <th className="px-4 py-3">Stock</th>
               <th className="px-4 py-3" />
             </tr>
@@ -112,21 +116,21 @@ export function InventoryPage() {
           <tbody className="divide-y divide-slate-100">
             {loading && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={canSeeCost ? 6 : 5} className="px-4 py-6 text-center text-slate-400">
                   Cargando...
                 </td>
               </tr>
             )}
             {!loading && !effectiveBranchId && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={canSeeCost ? 6 : 5} className="px-4 py-6 text-center text-slate-400">
                   Primero crea una sucursal en Configuración.
                 </td>
               </tr>
             )}
             {!loading && effectiveBranchId && rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={canSeeCost ? 6 : 5} className="px-4 py-6 text-center text-slate-400">
                   No hay variantes de producto todavía.
                 </td>
               </tr>
@@ -136,6 +140,20 @@ export function InventoryPage() {
                 <td className="px-4 py-3 font-medium text-slate-900">{productName}</td>
                 <td className="px-4 py-3 text-slate-600">{variant.calidad}</td>
                 <td className="px-4 py-3 text-slate-600">{formatKilo(variant.kilo)}</td>
+                {canSeeCost && (
+                  <td className="px-4 py-3">
+                    <input
+                      type="number"
+                      min={0}
+                      defaultValue={variant.cost}
+                      onBlur={(e) => {
+                        const value = Number(e.target.value)
+                        if (value !== variant.cost && !Number.isNaN(value) && value >= 0) updateVariant(variant.id, { cost: value })
+                      }}
+                      className="w-24 rounded-md border border-slate-300 px-2 py-1 text-sm"
+                    />
+                  </td>
+                )}
                 <td className="px-4 py-3">
                   <span className={stock <= 0 ? 'text-red-600' : 'text-slate-900'}>{stock}</span>
                 </td>
