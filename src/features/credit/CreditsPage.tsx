@@ -40,6 +40,24 @@ export function CreditsPage() {
     return source.filter((r) => (r.customerId ? (customerNameById.get(r.customerId) ?? '').toLowerCase().includes(term) : false))
   }, [onlyPending, pending, rows, search, customerNameById])
 
+  // Aging: how much of the outstanding balance is current vs. how many days
+  // overdue, bucketed the way a receivables aging report normally is.
+  const aging = useMemo(() => {
+    const buckets = { current: 0, d1_30: 0, d31_60: 0, d61_90: 0, d90plus: 0 }
+    for (const r of pending) {
+      if (!r.dueDate || r.dueDate >= today) {
+        buckets.current += r.remaining
+        continue
+      }
+      const days = Math.round((Date.parse(today) - Date.parse(r.dueDate)) / 86400000)
+      if (days <= 30) buckets.d1_30 += r.remaining
+      else if (days <= 60) buckets.d31_60 += r.remaining
+      else if (days <= 90) buckets.d61_90 += r.remaining
+      else buckets.d90plus += r.remaining
+    }
+    return buckets
+  }, [pending, today])
+
   async function openDetail(row: CreditSaleRow) {
     setDetail(row)
     setAmount(String(row.remaining))
@@ -115,6 +133,29 @@ export function CreditsPage() {
       </div>
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <div className="rounded-lg border border-slate-200 bg-white p-3">
+          <p className="text-xs uppercase text-slate-400">Al día</p>
+          <p className="mt-1 text-base font-semibold text-slate-900">{formatCLP(aging.current)}</p>
+        </div>
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <p className="text-xs uppercase text-amber-600">1-30 días</p>
+          <p className="mt-1 text-base font-semibold text-amber-800">{formatCLP(aging.d1_30)}</p>
+        </div>
+        <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
+          <p className="text-xs uppercase text-orange-600">31-60 días</p>
+          <p className="mt-1 text-base font-semibold text-orange-800">{formatCLP(aging.d31_60)}</p>
+        </div>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+          <p className="text-xs uppercase text-red-600">61-90 días</p>
+          <p className="mt-1 text-base font-semibold text-red-800">{formatCLP(aging.d61_90)}</p>
+        </div>
+        <div className="rounded-lg border border-red-300 bg-red-100 p-3">
+          <p className="text-xs uppercase text-red-700">+90 días</p>
+          <p className="mt-1 text-base font-semibold text-red-900">{formatCLP(aging.d90plus)}</p>
+        </div>
+      </div>
 
       <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
         <table className="w-full text-left text-sm">
