@@ -17,6 +17,7 @@ const SalesTabsPage = lazy(() => import('@/features/sales/SalesTabsPage').then((
 const TransfersTabsPage = lazy(() => import('@/features/transfers/TransfersTabsPage').then((m) => ({ default: m.TransfersTabsPage })))
 const QuotationsTabsPage = lazy(() => import('@/features/quotations/QuotationsTabsPage').then((m) => ({ default: m.QuotationsTabsPage })))
 const ReportsPage = lazy(() => import('@/features/reports/ReportsPage').then((m) => ({ default: m.ReportsPage })))
+const RentabilidadPage = lazy(() => import('@/features/reports/RentabilidadPage').then((m) => ({ default: m.RentabilidadPage })))
 const AuditLogsPage = lazy(() => import('@/features/audit/AuditLogsPage').then((m) => ({ default: m.AuditLogsPage })))
 const CreditsPage = lazy(() => import('@/features/credit/CreditsPage').then((m) => ({ default: m.CreditsPage })))
 const InvoicesPage = lazy(() => import('@/features/invoices/InvoicesPage').then((m) => ({ default: m.InvoicesPage })))
@@ -186,6 +187,14 @@ function App() {
                 element={
                   <RoleGate roles={['admin', 'supervisor']}>
                     <ReportsPage />
+                  </RoleGate>
+                }
+              />
+              <Route
+                path="rentabilidad"
+                element={
+                  <RoleGate roles={['admin', 'supervisor']}>
+                    <RentabilidadPage />
                   </RoleGate>
                 }
               />

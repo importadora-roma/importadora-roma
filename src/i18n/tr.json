@@ -100,6 +100,7 @@
   "newContainer.preview.col.quality": "Kalite",
   "newContainer.preview.col.expectedQty": "Beklenen adet",
   "newContainer.preview.col.unit": "Birim",
+  "newContainer.preview.col.costUsdKilo": "Maliyet USD/kg",
   "newContainer.preview.back": "Geri",
   "newContainer.preview.import": "Konteyneri içe aktar ({count} satır)",
 
@@ -116,11 +117,13 @@
   "fieldTarget.calidad": "Kalite",
   "fieldTarget.expected_qty": "Beklenen adet",
   "fieldTarget.unit": "Birim (opsiyonel)",
+  "fieldTarget.cost_usd_per_kilo": "Maliyet USD/kilo (opsiyonel)",
   "fieldTarget.notes": "Notlar (opsiyonel)",
   "fieldTarget.ignore": "Sütunu yok say",
 
   "rowError.emptyProduct": "Ürün boş",
   "rowError.invalidQty": "Geçersiz adet",
+  "rowError.invalidCost": "Geçersiz maliyet",
   "rowError.duplicateCode": "Bu kod bu konteynerde farklı bir ürün/kalite ile zaten kullanılıyor",
 
   "activeScreen.back": "Geri",
@@ -198,6 +201,7 @@
   "variantMapping.skip": "Atla (envantere gönderme)",
   "variantMapping.allMapped": "Tüm ürünler zaten eşleştirildi.",
   "variantMapping.confirm": "Onayla ve gönder",
+  "variantMapping.estimatedCost": "Tahmini maliyet: {cost}",
   "variantMapping.processing": "İşleniyor...",
 
   "photoOcr.title": "Etiket fotoğrafı",

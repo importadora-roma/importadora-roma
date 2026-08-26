@@ -14,6 +14,9 @@ export function ContainerSettingsPage() {
   const [photoArchive, setPhotoArchive] = useState(false)
   const [defaultLanguage, setDefaultLanguage] = useState<'es' | 'tr'>('es')
   const [blockOverScan, setBlockOverScan] = useState(true)
+  const [usdClpRate, setUsdClpRate] = useState('')
+  const [operationalMarkupPct, setOperationalMarkupPct] = useState('')
+  const [costRounding, setCostRounding] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -25,6 +28,9 @@ export function ContainerSettingsPage() {
     setPhotoArchive(settings.photo_archive_enabled)
     setDefaultLanguage(settings.default_language)
     setBlockOverScan(settings.block_over_scan)
+    setUsdClpRate(String(settings.usd_clp_rate))
+    setOperationalMarkupPct(String(settings.operational_markup_pct))
+    setCostRounding(String(settings.cost_rounding))
   }, [loading, settings])
 
   async function handleSave() {
@@ -37,6 +43,9 @@ export function ContainerSettingsPage() {
       photo_archive_enabled: photoArchive,
       default_language: defaultLanguage,
       block_over_scan: blockOverScan,
+      usd_clp_rate: Number(usdClpRate),
+      operational_markup_pct: Number(operationalMarkupPct),
+      cost_rounding: Number(costRounding),
     })
     setSaving(false)
     if (error) {
@@ -91,6 +100,25 @@ export function ContainerSettingsPage() {
         <option value="es">Español</option>
         <option value="tr">Türkçe</option>
       </Select>
+
+      <div className="border-t border-slate-200 pt-4">
+        <p className="text-sm font-medium text-slate-700">Costeo de fardos</p>
+        <p className="mt-1 text-xs text-slate-400">
+          Al enviar un contenedor a inventario, el costo de cada producto se calcula como: costo USD/kilo × kilos del producto × valor
+          del dólar × (1 + % operacional), redondeado al múltiplo más cercano.
+        </p>
+        <div className="mt-3 grid grid-cols-3 gap-3">
+          <Input label="Valor del dólar (CLP)" type="number" min={0} value={usdClpRate} onChange={(e) => setUsdClpRate(e.target.value)} />
+          <Input
+            label="% operacional"
+            type="number"
+            min={0}
+            value={operationalMarkupPct}
+            onChange={(e) => setOperationalMarkupPct(e.target.value)}
+          />
+          <Input label="Redondear a" type="number" min={1} value={costRounding} onChange={(e) => setCostRounding(e.target.value)} />
+        </div>
+      </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       {saved && !error && <p className="text-sm text-green-600">Configuración guardada.</p>}

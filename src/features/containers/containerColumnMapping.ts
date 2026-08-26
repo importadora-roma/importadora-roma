@@ -1,4 +1,12 @@
-export type ContainerFieldTarget = 'code' | 'product_name' | 'calidad' | 'expected_qty' | 'unit' | 'notes' | 'ignore'
+export type ContainerFieldTarget =
+  | 'code'
+  | 'product_name'
+  | 'calidad'
+  | 'expected_qty'
+  | 'unit'
+  | 'cost_usd_per_kilo'
+  | 'notes'
+  | 'ignore'
 
 // i18n keys, not literal text — this file has no access to the translation
 // hook (it's plain data/logic, not a component), so callers resolve these
@@ -9,6 +17,7 @@ export const fieldTargetI18nKey: Record<ContainerFieldTarget, string> = {
   calidad: 'fieldTarget.calidad',
   expected_qty: 'fieldTarget.expected_qty',
   unit: 'fieldTarget.unit',
+  cost_usd_per_kilo: 'fieldTarget.cost_usd_per_kilo',
   notes: 'fieldTarget.notes',
   ignore: 'fieldTarget.ignore',
 }
@@ -25,6 +34,8 @@ export function guessContainerField(header: string): ContainerFieldTarget {
   if (h.includes('produc') || h.includes('descrip')) return 'product_name'
   if (h.includes('calidad') || h.includes('quality')) return 'calidad'
   if (h.includes('cantidad') || h.includes('qty') || h.includes('quant') || h.includes('fardo')) return 'expected_qty'
+  if (h.includes('usd') || h.includes('costo') || h.includes('cost') || h.includes('precio') || h.includes('price') || h.includes('dolar'))
+    return 'cost_usd_per_kilo'
   if (h.includes('unidad') || h.includes('unit')) return 'unit'
   if (h.includes('nota') || h.includes('note') || h.includes('observ')) return 'notes'
   return 'ignore'

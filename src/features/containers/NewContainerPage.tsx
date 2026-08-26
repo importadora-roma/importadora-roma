@@ -26,11 +26,12 @@ interface PreviewRow {
   calidad: string
   expected_qty: string
   unit: string
+  cost_usd_per_kilo: string
   notes: string
 }
 
 function emptyRow(): PreviewRow {
-  return { code: '', product_name: '', calidad: '', expected_qty: '', unit: '', notes: '' }
+  return { code: '', product_name: '', calidad: '', expected_qty: '', unit: '', cost_usd_per_kilo: '', notes: '' }
 }
 
 export function NewContainerPage() {
@@ -139,6 +140,7 @@ export function NewContainerPage() {
         calidad: get(row, 'calidad'),
         expected_qty: get(row, 'expected_qty'),
         unit: get(row, 'unit'),
+        cost_usd_per_kilo: get(row, 'cost_usd_per_kilo'),
         notes: get(row, 'notes'),
       }))
     setPreviewRows(rows)
@@ -173,6 +175,11 @@ export function NewContainerPage() {
       const qty = Number(row.expected_qty)
       if (row.expected_qty.trim() === '' || Number.isNaN(qty) || qty < 0) errors.push(t('rowError.invalidQty'))
 
+      if (row.cost_usd_per_kilo.trim()) {
+        const cost = Number(row.cost_usd_per_kilo)
+        if (Number.isNaN(cost) || cost < 0) errors.push(t('rowError.invalidCost'))
+      }
+
       if (row.code.trim()) {
         const norm = normalizeCode(row.code)
         const variants = conflictKeys.get(norm)
@@ -201,6 +208,7 @@ export function NewContainerPage() {
         calidad: row.calidad.trim() || null,
         expected_qty: Number(row.expected_qty),
         unit: row.unit.trim() || null,
+        cost_usd_per_kilo: row.cost_usd_per_kilo.trim() ? Number(row.cost_usd_per_kilo) : null,
         notes: row.notes.trim() || null,
       }))
 
@@ -423,6 +431,7 @@ export function NewContainerPage() {
                   <th className="px-3 py-2">{t('newContainer.preview.col.quality')}</th>
                   <th className="px-3 py-2">{t('newContainer.preview.col.expectedQty')}</th>
                   <th className="px-3 py-2">{t('newContainer.preview.col.unit')}</th>
+                  <th className="px-3 py-2">{t('newContainer.preview.col.costUsdKilo')}</th>
                   <th className="px-3 py-2"></th>
                 </tr>
               </thead>
@@ -463,6 +472,14 @@ export function NewContainerPage() {
                         value={row.unit}
                         onChange={(e) => updatePreviewRow(i, 'unit', e.target.value)}
                         className="w-24 rounded border border-slate-200 px-2 py-1 text-sm"
+                      />
+                    </td>
+                    <td className="px-2 py-1">
+                      <input
+                        value={row.cost_usd_per_kilo}
+                        onChange={(e) => updatePreviewRow(i, 'cost_usd_per_kilo', e.target.value)}
+                        placeholder="0.00"
+                        className="w-20 rounded border border-slate-200 px-2 py-1 text-sm"
                       />
                     </td>
                     <td className="px-2 py-1">

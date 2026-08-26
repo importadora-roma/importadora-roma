@@ -16,6 +16,7 @@ import {
   CreditCard,
   Boxes,
   Receipt,
+  TrendingUp,
   Menu,
   X,
 } from 'lucide-react'
@@ -46,6 +47,7 @@ const navItems: NavItem[] = [
   { to: '/creditos', label: 'Créditos', icon: CreditCard, roles: ['admin', 'supervisor'], importadoraOnly: true },
   { to: '/facturas', label: 'Facturas', icon: Receipt, roles: ['admin', 'supervisor'], importadoraOnly: true },
   { to: '/reportes', label: 'Reportes', icon: BarChart3, roles: ['admin', 'supervisor'] },
+  { to: '/rentabilidad', label: 'Rentabilidad', icon: TrendingUp, roles: ['admin', 'supervisor'] },
   { to: '/auditoria', label: 'Auditoría', icon: ShieldCheck, roles: ['admin'] },
   { to: '/configuracion', label: 'Configuración', icon: Settings, roles: ['admin'] },
 ]

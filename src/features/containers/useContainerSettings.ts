@@ -10,6 +10,9 @@ const FALLBACK: ContainerSettings = {
   photo_archive_enabled: false,
   default_language: 'es',
   block_over_scan: true,
+  usd_clp_rate: 950,
+  operational_markup_pct: 10,
+  cost_rounding: 500,
 }
 
 // Resolves effective settings as branch-specific row ?? global row ??
@@ -42,7 +45,14 @@ export function useContainerSettings(branchId?: string | null) {
     input: Partial<
       Pick<
         ContainerSettings,
-        'ocr_confidence_threshold' | 'duplicate_scan_window_ms' | 'photo_archive_enabled' | 'default_language' | 'block_over_scan'
+        | 'ocr_confidence_threshold'
+        | 'duplicate_scan_window_ms'
+        | 'photo_archive_enabled'
+        | 'default_language'
+        | 'block_over_scan'
+        | 'usd_clp_rate'
+        | 'operational_markup_pct'
+        | 'cost_rounding'
       >
     >
   ) {

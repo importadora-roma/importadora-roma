@@ -2,10 +2,20 @@ import { useState } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { supabase } from '@/lib/supabase'
-import { formatKilo } from '@/lib/format'
+import { formatCLP, formatKilo } from '@/lib/format'
 import { useProducts } from '@/features/products/useProducts'
+import { useContainerSettings } from './useContainerSettings'
 import { useTranslation } from '@/i18n/I18nProvider'
 import type { ContainerItem } from './types'
+
+// Mirrors the landed-cost formula computed server-side in
+// push_container_to_inventory (0017_landed_cost_and_expenses.sql) — shown
+// here purely as a preview so the admin can sanity-check it before
+// confirming, the RPC is the actual source of truth.
+function estimateLandedCost(costUsdPerKilo: number, kilo: number, rate: number, markupPct: number, rounding: number): number {
+  const raw = costUsdPerKilo * kilo * rate * (1 + markupPct / 100)
+  return Math.round(raw / rounding) * rounding
+}
 
 // Container items carry product_name + calidad only (no kilo — the physical
 // bale weight isn't part of the supplier's shipping list), so mapping to a
@@ -27,6 +37,7 @@ export function VariantMappingModal({
 }) {
   const { t } = useTranslation()
   const { products, variants } = useProducts()
+  const { settings } = useContainerSettings(null)
   const [mapping, setMapping] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -81,6 +92,24 @@ export function VariantMappingModal({
                   </option>
                 ))}
               </select>
+              {item.cost_usd_per_kilo != null &&
+                mapping[item.id] &&
+                (() => {
+                  const variant = variants.find((v) => v.id === mapping[item.id])
+                  if (!variant || !variant.kilo) return null
+                  const cost = estimateLandedCost(
+                    item.cost_usd_per_kilo,
+                    variant.kilo,
+                    settings.usd_clp_rate,
+                    settings.operational_markup_pct,
+                    settings.cost_rounding
+                  )
+                  return (
+                    <p className="mt-1 text-xs text-slate-500">
+                      {t('variantMapping.estimatedCost', { cost: formatCLP(cost) })}
+                    </p>
+                  )
+                })()}
             </div>
           ))}
           {items.length === 0 && <p className="text-sm text-slate-400">{t('variantMapping.allMapped')}</p>}

@@ -100,6 +100,7 @@
   "newContainer.preview.col.quality": "Calidad",
   "newContainer.preview.col.expectedQty": "Cant. esperada",
   "newContainer.preview.col.unit": "Unidad",
+  "newContainer.preview.col.costUsdKilo": "Costo USD/kg",
   "newContainer.preview.back": "Volver",
   "newContainer.preview.import": "Importar contenedor {count} filas",
 
@@ -116,11 +117,13 @@
   "fieldTarget.calidad": "Calidad",
   "fieldTarget.expected_qty": "Cantidad esperada",
   "fieldTarget.unit": "Unidad (opcional)",
+  "fieldTarget.cost_usd_per_kilo": "Costo USD/kilo (opcional)",
   "fieldTarget.notes": "Notas (opcional)",
   "fieldTarget.ignore": "Ignorar columna",
 
   "rowError.emptyProduct": "Producto vacío",
   "rowError.invalidQty": "Cantidad inválida",
+  "rowError.invalidCost": "Costo inválido",
   "rowError.duplicateCode": "Código repetido con otro producto/calidad distinto en este contenedor",
 
   "activeScreen.back": "Volver",
@@ -198,6 +201,7 @@
   "variantMapping.skip": "Omitir (no enviar a inventario)",
   "variantMapping.allMapped": "Todos los productos ya están asociados.",
   "variantMapping.confirm": "Confirmar y enviar",
+  "variantMapping.estimatedCost": "Costo estimado: {cost}",
   "variantMapping.processing": "Procesando...",
 
   "photoOcr.title": "Foto de la etiqueta",

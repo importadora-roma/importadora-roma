@@ -39,6 +39,7 @@ export interface ContainerItem {
   notes: string | null
   source: ContainerItemSource
   variant_id: string | null
+  cost_usd_per_kilo: number | null
   created_at: string
 }
 
@@ -93,6 +94,9 @@ export interface ContainerSettings {
   photo_archive_enabled: boolean
   default_language: ContainerLanguage
   block_over_scan: boolean
+  usd_clp_rate: number
+  operational_markup_pct: number
+  cost_rounding: number
 }
 
 // One expected item plus its scan progress, derived client-side from

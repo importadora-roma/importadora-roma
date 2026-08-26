@@ -32,6 +32,7 @@ export type ScanMatchStatus = 'matched' | 'unknown' | 'over'
 export type UnknownCodeStatus = 'pending' | 'added_to_list' | 'manually_matched' | 'ignored' | 'review_later'
 export type ContainerLanguage = 'es' | 'tr'
 export type InvoiceStatus = 'pending' | 'issued' | 'cancelled'
+export type ExpenseCategory = 'sueldo' | 'arriendo' | 'servicios' | 'otro'
 
 export interface Database {
   public: {
@@ -639,6 +640,7 @@ export interface Database {
           notes: string | null
           source: ContainerItemSource
           variant_id: string | null
+          cost_usd_per_kilo: number | null
           mapped_at: string | null
           mapped_by: string | null
           created_by: string | null
@@ -659,6 +661,7 @@ export interface Database {
           notes?: string | null
           source?: ContainerItemSource
           variant_id?: string | null
+          cost_usd_per_kilo?: number | null
           mapped_at?: string | null
           mapped_by?: string | null
           created_by?: string | null
@@ -797,6 +800,9 @@ export interface Database {
           photo_archive_enabled: boolean
           default_language: ContainerLanguage
           block_over_scan: boolean
+          usd_clp_rate: number
+          operational_markup_pct: number
+          cost_rounding: number
           updated_by: string | null
           created_at: string
           updated_at: string
@@ -809,6 +815,9 @@ export interface Database {
           photo_archive_enabled?: boolean
           default_language?: ContainerLanguage
           block_over_scan?: boolean
+          usd_clp_rate?: number
+          operational_markup_pct?: number
+          cost_rounding?: number
           updated_by?: string | null
           created_at?: string
           updated_at?: string
@@ -836,6 +845,40 @@ export interface Database {
           updated_at?: string
         }
         Update: Partial<Database['public']['Tables']['alert_settings']['Insert']>
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          id: string
+          branch_id: string
+          category: ExpenseCategory
+          description: string
+          amount: number
+          expense_date: string
+          notes: string | null
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          delete_reason: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          branch_id: string
+          category: ExpenseCategory
+          description: string
+          amount: number
+          expense_date?: string
+          notes?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          delete_reason?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['expenses']['Insert']>
         Relationships: []
       }
     }
