@@ -19,7 +19,8 @@ export function CreditsPage() {
   const [onlyPending, setOnlyPending] = useState(true)
   const [search, setSearch] = useState('')
 
-  const { rows, pending, totalOutstanding, loading, error, loadPayments, recordPayment } = useCreditSales(branchId)
+  const { rows, pending, totalOutstanding, loading, error, loadPayments, recordPayment, updateDueDate } = useCreditSales(branchId)
+  const today = new Date().toISOString().slice(0, 10)
   const { customers } = useCustomers()
   const customerNameById = useMemo(() => new Map(customers.map((c) => [c.id, c.name])), [customers])
 
@@ -28,6 +29,7 @@ export function CreditsPage() {
   const [amount, setAmount] = useState('')
   const [method, setMethod] = useState<PaymentMethod>('efectivo')
   const [notes, setNotes] = useState('')
+  const [dueDateEdit, setDueDateEdit] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -43,9 +45,22 @@ export function CreditsPage() {
     setAmount(String(row.remaining))
     setMethod('efectivo')
     setNotes('')
+    setDueDateEdit(row.dueDate ?? '')
     setFormError(null)
     const { payments } = await loadPayments(row.saleId)
     setPayments(payments)
+  }
+
+  async function handleSaveDueDate() {
+    if (!detail) return
+    setSaving(true)
+    const result = await updateDueDate(detail.saleId, dueDateEdit || null)
+    setSaving(false)
+    if (result.error) {
+      setFormError(result.error)
+      return
+    }
+    setDetail({ ...detail, dueDate: dueDateEdit || null })
   }
 
   async function handleRecordPayment() {
@@ -111,20 +126,21 @@ export function CreditsPage() {
               <th className="px-4 py-3">Crédito</th>
               <th className="px-4 py-3">Pagado</th>
               <th className="px-4 py-3">Saldo</th>
+              <th className="px-4 py-3">Vencimiento</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading && (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={8} className="px-4 py-6 text-center text-slate-400">
                   Cargando...
                 </td>
               </tr>
             )}
             {!loading && displayRows.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={8} className="px-4 py-6 text-center text-slate-400">
                   Sin ventas a crédito.
                 </td>
               </tr>
@@ -138,6 +154,21 @@ export function CreditsPage() {
                 <td className="px-4 py-3 text-green-700">{formatCLP(row.paidAmount)}</td>
                 <td className={`px-4 py-3 font-medium ${row.remaining > 0 ? 'text-red-600' : 'text-slate-400'}`}>
                   {formatCLP(row.remaining)}
+                </td>
+                <td className="px-4 py-3">
+                  {row.dueDate ? (
+                    <span
+                      className={
+                        row.dueDate < today && row.remaining > 0
+                          ? 'rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700'
+                          : 'text-slate-500'
+                      }
+                    >
+                      {row.dueDate}
+                    </span>
+                  ) : (
+                    <span className="text-slate-300">—</span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-right">
                   <button onClick={() => openDetail(row)} className="text-slate-400 hover:text-slate-700">
@@ -165,6 +196,19 @@ export function CreditsPage() {
               <p className="text-xs uppercase text-slate-400">Saldo</p>
               <p className="font-medium text-red-600">{formatCLP(detail?.remaining ?? 0)}</p>
             </div>
+          </div>
+
+          <div className="flex items-end gap-2">
+            <Input
+              label="Fecha de vencimiento"
+              type="date"
+              value={dueDateEdit}
+              onChange={(e) => setDueDateEdit(e.target.value)}
+              className="max-w-xs"
+            />
+            <Button variant="secondary" onClick={handleSaveDueDate} disabled={saving}>
+              Guardar
+            </Button>
           </div>
 
           <div>

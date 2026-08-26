@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { BranchesPage } from '@/features/branches/BranchesPage'
 import { UsersPage } from '@/features/users/UsersPage'
 import { ContainerSettingsPage } from '@/features/containers/ContainerSettingsPage'
+import { AlertSettingsPage } from '@/features/alerts/AlertSettingsPage'
 
 const tabs = [
   { key: 'sucursales', label: 'Sucursales' },
   { key: 'usuarios', label: 'Usuarios' },
   { key: 'contenedores', label: 'Contenedores' },
+  { key: 'alertas', label: 'Alertas' },
 ] as const
 
 type TabKey = (typeof tabs)[number]['key']
@@ -38,6 +40,7 @@ export function ConfiguracionPage() {
         {active === 'sucursales' && <BranchesPage />}
         {active === 'usuarios' && <UsersPage />}
         {active === 'contenedores' && <ContainerSettingsPage />}
+        {active === 'alertas' && <AlertSettingsPage />}
       </div>
     </div>
   )

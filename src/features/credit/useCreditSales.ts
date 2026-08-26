@@ -13,6 +13,7 @@ export interface CreditSaleRow {
   creditAmount: number
   paidAmount: number
   remaining: number
+  dueDate: string | null
 }
 
 export interface CreditPayment {
@@ -52,7 +53,7 @@ export function useCreditSales(branchId: string) {
     }
 
     const [salesRes, paymentsRes] = await Promise.all([
-      supabase.from('sales').select('id, sale_number, branch_id, customer_id, total, status, created_at').in('id', saleIds),
+      supabase.from('sales').select('id, sale_number, branch_id, customer_id, total, status, created_at, due_date').in('id', saleIds),
       supabase.from('sale_credit_payments').select('sale_id, amount').in('sale_id', saleIds),
     ])
 
@@ -88,6 +89,7 @@ export function useCreditSales(branchId: string) {
           creditAmount,
           paidAmount,
           remaining: creditAmount - paidAmount,
+          dueDate: (s.due_date as string | null) ?? null,
         }
       })
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
@@ -125,5 +127,12 @@ export function useCreditSales(branchId: string) {
     return { error: null }
   }
 
-  return { rows, pending, totalOutstanding, loading, error, reload, loadPayments, recordPayment }
+  async function updateDueDate(saleId: string, dueDate: string | null) {
+    const { error } = await supabase.from('sales').update({ due_date: dueDate }).eq('id', saleId)
+    if (error) return { error: error.message }
+    await reload()
+    return { error: null }
+  }
+
+  return { rows, pending, totalOutstanding, loading, error, reload, loadPayments, recordPayment, updateDueDate }
 }

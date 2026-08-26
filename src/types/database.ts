@@ -249,6 +249,7 @@ export interface Database {
           cancelled_at: string | null
           notes: string | null
           requires_invoice: boolean
+          due_date: string | null
           created_at: string
           updated_at: string
         }
@@ -266,6 +267,7 @@ export interface Database {
           cancelled_at?: string | null
           notes?: string | null
           requires_invoice?: boolean
+          due_date?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -812,6 +814,28 @@ export interface Database {
           updated_at?: string
         }
         Update: Partial<Database['public']['Tables']['container_settings']['Insert']>
+        Relationships: []
+      }
+      alert_settings: {
+        Row: {
+          id: string
+          branch_id: string | null
+          low_stock_threshold: number
+          credit_default_term_days: number
+          updated_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          branch_id?: string | null
+          low_stock_threshold?: number
+          credit_default_term_days?: number
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['alert_settings']['Insert']>
         Relationships: []
       }
     }

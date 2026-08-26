@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
+import { AlertsBell } from '@/features/alerts/AlertsBell'
 import { BranchSwitcher } from './BranchSwitcher'
 import type { UserRole } from '@/types/models'
 
@@ -52,8 +53,9 @@ const navItems: NavItem[] = [
 export function AppLayout() {
   const profile = useAuthStore((s) => s.profile)
   const signOut = useAuthStore((s) => s.signOut)
-  const { branch } = useEffectiveBranch()
+  const { branchId: effectiveBranchId, branch } = useEffectiveBranch()
   const isTienda = branch?.branch_type === 'tienda'
+  const showFinancialAlerts = (profile?.role === 'admin' || profile?.role === 'supervisor') && !isTienda
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -133,6 +135,7 @@ export function AppLayout() {
             <Menu size={22} />
           </button>
           <div className="min-w-0 flex-1 md:hidden" />
+          <AlertsBell branchId={effectiveBranchId} includeFinancial={showFinancialAlerts} />
           <BranchSwitcher />
         </div>
         <div className="flex-1 p-4 sm:p-6">

@@ -1,14 +1,21 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Trash2, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { Textarea } from '@/components/ui/Input'
+import { Input, Textarea } from '@/components/ui/Input'
 import { formatCLP, formatKilo } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
+import { useAlertSettings } from '@/features/alerts/useAlertSettings'
 import { useSaleCatalog, type CatalogEntry } from './useSaleCatalog'
 import { ProductSearch } from './ProductSearch'
 import { PaymentSplit, type PaymentLine } from './PaymentSplit'
 import { CustomerSelect } from './CustomerSelect'
+
+function addDays(days: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() + days)
+  return d.toISOString().slice(0, 10)
+}
 
 interface CartItem {
   variantId: string
@@ -25,15 +32,23 @@ export function NewSalePage() {
   const { branchId: effectiveBranchId, branches } = useEffectiveBranch()
 
   const { catalog, loading: catalogLoading, reloadInventory } = useSaleCatalog(effectiveBranchId)
+  const { settings: alertSettings } = useAlertSettings()
   const [cart, setCart] = useState<CartItem[]>([])
   const [customerId, setCustomerId] = useState<string | null>(null)
   const [payments, setPayments] = useState<PaymentLine[]>([{ method: 'efectivo', amount: '' }])
+  const [dueDate, setDueDate] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const total = cart.reduce((sum, item) => sum + (Number(item.soldPrice) || 0) * item.quantity, 0)
+  const hasCredit = payments.some((p) => p.method === 'credito')
+
+  useEffect(() => {
+    if (hasCredit && !dueDate) setDueDate(addDays(alertSettings.credit_default_term_days))
+    if (!hasCredit && dueDate) setDueDate('')
+  }, [hasCredit, dueDate, alertSettings.credit_default_term_days])
 
   function addToCart(entry: CatalogEntry) {
     setCart((prev) => {
@@ -73,6 +88,7 @@ export function NewSalePage() {
     setCart([])
     setCustomerId(null)
     setPayments([{ method: 'efectivo', amount: '' }])
+    setDueDate('')
     setNotes('')
     setError(null)
   }
@@ -109,12 +125,17 @@ export function NewSalePage() {
       p_payments: paymentsPayload,
       p_notes: notes.trim() || null,
     })
-    setSubmitting(false)
 
     if (error) {
+      setSubmitting(false)
       setError(error.message)
       return
     }
+
+    if (hasCredit && dueDate) {
+      await supabase.from('sales').update({ due_date: dueDate }).eq('id', data)
+    }
+    setSubmitting(false)
 
     setSuccessMessage(`Venta registrada correctamente (folio interno ${data}).`)
     resetSale()
@@ -217,6 +238,10 @@ export function NewSalePage() {
           </div>
 
           <PaymentSplit payments={payments} total={total} onChange={setPayments} allowCredit />
+
+          {hasCredit && (
+            <Input label="Fecha de vencimiento del crédito" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          )}
 
           <Textarea label="Notas (opcional)" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
 
