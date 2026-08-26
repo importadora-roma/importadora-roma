@@ -57,7 +57,14 @@ export async function resolveUnknownCode(
   containerId: string,
   codeNormalized: string,
   action: 'add_to_list' | 'manual_match' | 'ignore' | 'review_later',
-  payload: { productName?: string; calidad?: string; expectedQty?: number; matchedItemId?: string; notes?: string }
+  payload: {
+    productName?: string
+    calidad?: string
+    expectedQty?: number
+    matchedItemId?: string
+    variantId?: string
+    notes?: string
+  }
 ): Promise<{ error: string | null }> {
   const { error } = await supabase.rpc('resolve_unknown_code', {
     p_container_id: containerId,
@@ -67,6 +74,7 @@ export async function resolveUnknownCode(
     p_calidad: payload.calidad ?? null,
     p_expected_qty: payload.expectedQty ?? null,
     p_matched_item_id: payload.matchedItemId ?? null,
+    p_variant_id: payload.variantId ?? null,
     p_notes: payload.notes ?? null,
   })
   return { error: error?.message ?? null }

@@ -1017,9 +1017,10 @@ export interface Database {
             expected_qty: number
             unit?: string | null
             notes?: string | null
+            cost_usd_per_kilo?: number | null
           }[]
         }
-        Returns: { inserted: number; merged: number }
+        Returns: { inserted: number; merged: number; autoMapped: number }
       }
       set_container_status: {
         Args: {
@@ -1071,9 +1072,10 @@ export interface Database {
           p_calidad?: string | null
           p_expected_qty?: number | null
           p_matched_item_id?: string | null
+          p_variant_id?: string | null
           p_notes?: string | null
         }
-        Returns: { unknown_code_id: string; container_item_id: string | null; action: string; learned_code: boolean }
+        Returns: { itemId: string | null; learned: boolean }
       }
       push_container_to_inventory: {
         Args: {
