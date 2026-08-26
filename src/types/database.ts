@@ -75,6 +75,7 @@ export interface Database {
           role: UserRole
           branch_id: string | null
           active: boolean
+          commission_pct: number
           created_at: string
           updated_at: string
         }
@@ -85,6 +86,7 @@ export interface Database {
           role?: UserRole
           branch_id?: string | null
           active?: boolean
+          commission_pct?: number
           created_at?: string
           updated_at?: string
         }

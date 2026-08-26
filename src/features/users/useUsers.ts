@@ -23,7 +23,7 @@ export function useUsers() {
     reload()
   }, [reload])
 
-  async function updateUser(id: string, input: { role?: UserRole; branch_id?: string | null; active?: boolean }) {
+  async function updateUser(id: string, input: { role?: UserRole; branch_id?: string | null; active?: boolean; commission_pct?: number }) {
     const { error } = await supabase.from('users').update(input).eq('id', id)
     if (error) return { error: error.message }
     await reload()

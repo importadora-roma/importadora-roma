@@ -8,6 +8,7 @@ export interface Profile {
   role: UserRole
   branch_id: string | null
   active: boolean
+  commission_pct: number
 }
 
 export interface Branch {

@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useProfitReport } from './useProfitReport'
 import { useProductProfitReport } from './useProductProfitReport'
+import { useCommissionReport } from './useCommissionReport'
 import { useExpenses } from '@/features/expenses/useExpenses'
 import type { ExpenseCategory } from '@/types/database'
 
@@ -38,6 +39,7 @@ export function RentabilidadPage() {
   const { revenue, cogs, grossMargin, loading: loadingMargin } = useProfitReport(branchId, from, to)
   const { expenses, total: totalExpenses, loading: loadingExpenses, createExpense, deleteExpense } = useExpenses(branchId, from, to)
   const { rows: productRows, loading: loadingProducts } = useProductProfitReport(branchId, from, to)
+  const { rows: commissionRows, loading: loadingCommissions } = useCommissionReport(branchId, from, to)
 
   const netProfit = grossMargin - totalExpenses
 
@@ -226,6 +228,45 @@ export function RentabilidadPage() {
                   <td className={`px-4 py-2 text-right ${r.marginPct >= 0 ? 'text-green-700' : 'text-red-600'}`}>
                     {r.marginPct.toFixed(1)}%
                   </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <p className="text-sm font-medium text-slate-700">Comisiones por vendedor</p>
+        <p className="mt-1 text-xs text-slate-400">
+          Calculada sobre ingresos (no margen), usando el % de comisión de cada usuario en Configuración &gt; Usuarios.
+        </p>
+
+        <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+              <tr>
+                <th className="px-4 py-2">Vendedor</th>
+                <th className="px-4 py-2 text-right">Ventas</th>
+                <th className="px-4 py-2 text-right">Ingresos</th>
+                <th className="px-4 py-2 text-right">% Comisión</th>
+                <th className="px-4 py-2 text-right">Comisión</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {!loadingCommissions && commissionRows.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                    Sin ventas en este período.
+                  </td>
+                </tr>
+              )}
+              {commissionRows.map((r) => (
+                <tr key={r.userId}>
+                  <td className="px-4 py-2 font-medium text-slate-900">{r.userName}</td>
+                  <td className="px-4 py-2 text-right">{r.salesCount}</td>
+                  <td className="px-4 py-2 text-right">{formatCLP(r.revenue)}</td>
+                  <td className="px-4 py-2 text-right text-slate-500">{r.commissionPct}%</td>
+                  <td className="px-4 py-2 text-right font-medium text-green-700">{formatCLP(r.commission)}</td>
                 </tr>
               ))}
             </tbody>

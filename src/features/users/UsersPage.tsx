@@ -36,13 +36,14 @@ export function UsersPage() {
               <th className="px-4 py-3">Correo</th>
               <th className="px-4 py-3">Rol</th>
               <th className="px-4 py-3">Sucursal</th>
+              <th className="px-4 py-3">Comisión %</th>
               <th className="px-4 py-3">Estado</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
                   Cargando...
                 </td>
               </tr>
@@ -77,6 +78,20 @@ export function UsersPage() {
                       </option>
                     ))}
                   </select>
+                </td>
+                <td className="px-4 py-3">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.5}
+                    defaultValue={user.commission_pct}
+                    onBlur={(e) => {
+                      const value = Number(e.target.value)
+                      if (value !== user.commission_pct) updateUser(user.id, { commission_pct: value })
+                    }}
+                    className="w-20 rounded-md border border-slate-300 px-2 py-1 text-sm"
+                  />
                 </td>
                 <td className="px-4 py-3">
                   <button
