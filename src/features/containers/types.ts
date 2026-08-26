@@ -40,6 +40,7 @@ export interface ContainerItem {
   source: ContainerItemSource
   variant_id: string | null
   cost_usd_per_kilo: number | null
+  pushed_to_inventory_at: string | null
   created_at: string
 }
 

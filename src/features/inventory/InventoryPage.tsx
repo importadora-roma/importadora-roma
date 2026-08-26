@@ -24,6 +24,14 @@ export function InventoryPage() {
   const [reason, setReason] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [skuError, setSkuError] = useState<{ variantId: string; message: string } | null>(null)
+
+  async function handleSkuBlur(variant: ProductVariant, value: string) {
+    const next = value.trim() || null
+    if (next === (variant.sku ?? null)) return
+    const { error } = await updateVariant(variant.id, { sku: next })
+    setSkuError(error ? { variantId: variant.id, message: error } : null)
+  }
 
   const productNameById = useMemo(() => new Map(products.map((p) => [p.id, p.name])), [products])
 
@@ -108,6 +116,7 @@ export function InventoryPage() {
               <th className="px-4 py-3">Producto</th>
               <th className="px-4 py-3">Calidad</th>
               <th className="px-4 py-3">Kilo</th>
+              <th className="px-4 py-3">Código (barra)</th>
               {canSeeCost && <th className="px-4 py-3">Costo</th>}
               <th className="px-4 py-3">Stock</th>
               <th className="px-4 py-3" />
@@ -116,21 +125,21 @@ export function InventoryPage() {
           <tbody className="divide-y divide-slate-100">
             {loading && (
               <tr>
-                <td colSpan={canSeeCost ? 6 : 5} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={canSeeCost ? 7 : 6} className="px-4 py-6 text-center text-slate-400">
                   Cargando...
                 </td>
               </tr>
             )}
             {!loading && !effectiveBranchId && (
               <tr>
-                <td colSpan={canSeeCost ? 6 : 5} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={canSeeCost ? 7 : 6} className="px-4 py-6 text-center text-slate-400">
                   Primero crea una sucursal en Configuración.
                 </td>
               </tr>
             )}
             {!loading && effectiveBranchId && rows.length === 0 && (
               <tr>
-                <td colSpan={canSeeCost ? 6 : 5} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={canSeeCost ? 7 : 6} className="px-4 py-6 text-center text-slate-400">
                   No hay variantes de producto todavía.
                 </td>
               </tr>
@@ -140,6 +149,22 @@ export function InventoryPage() {
                 <td className="px-4 py-3 font-medium text-slate-900">{productName}</td>
                 <td className="px-4 py-3 text-slate-600">{variant.calidad}</td>
                 <td className="px-4 py-3 text-slate-600">{formatKilo(variant.kilo)}</td>
+                <td className="px-4 py-3">
+                  {canSeeCost ? (
+                    <>
+                      <input
+                        type="text"
+                        defaultValue={variant.sku ?? ''}
+                        placeholder="Sin código"
+                        onBlur={(e) => handleSkuBlur(variant, e.target.value)}
+                        className="w-36 rounded-md border border-slate-300 px-2 py-1 font-mono text-sm"
+                      />
+                      {skuError?.variantId === variant.id && <p className="mt-0.5 text-xs text-red-600">{skuError.message}</p>}
+                    </>
+                  ) : (
+                    <span className="font-mono text-slate-500">{variant.sku ?? '—'}</span>
+                  )}
+                </td>
                 {canSeeCost && (
                   <td className="px-4 py-3">
                     <input

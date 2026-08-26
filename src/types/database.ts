@@ -643,6 +643,7 @@ export interface Database {
           source: ContainerItemSource
           variant_id: string | null
           cost_usd_per_kilo: number | null
+          pushed_to_inventory_at: string | null
           mapped_at: string | null
           mapped_by: string | null
           created_by: string | null
@@ -664,6 +665,7 @@ export interface Database {
           source?: ContainerItemSource
           variant_id?: string | null
           cost_usd_per_kilo?: number | null
+          pushed_to_inventory_at?: string | null
           mapped_at?: string | null
           mapped_by?: string | null
           created_by?: string | null

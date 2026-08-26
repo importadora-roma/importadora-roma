@@ -82,10 +82,15 @@ export function ContainerDetailPage() {
 
       {canManage && container.status === 'completed' && (
         <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
-          {container.pushed_to_inventory_at ? (
+          {unmappedItems.length === 0 ? (
             <p className="text-sm text-green-700">{t('containerDetail.pushed')}</p>
           ) : (
-            <Button onClick={() => setMappingOpen(true)}>{t('containerDetail.pushToInventory')}</Button>
+            <>
+              <p className="text-sm text-amber-700">{t('containerDetail.unmappedRemaining', { count: unmappedItems.length })}</p>
+              <Button className="mt-2" onClick={() => setMappingOpen(true)}>
+                {t('containerDetail.pushToInventory')}
+              </Button>
+            </>
           )}
           {pushResult && (
             <p className="mt-2 text-sm text-slate-600">
