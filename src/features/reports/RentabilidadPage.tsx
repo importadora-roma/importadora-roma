@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/Button'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { ReasonModal } from '@/components/ui/ReasonModal'
-import { formatCLP, formatDate } from '@/lib/format'
+import { formatCLP, formatDate, formatKilo } from '@/lib/format'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useProfitReport } from './useProfitReport'
+import { useProductProfitReport } from './useProductProfitReport'
 import { useExpenses } from '@/features/expenses/useExpenses'
 import type { ExpenseCategory } from '@/types/database'
 
@@ -36,6 +37,7 @@ export function RentabilidadPage() {
 
   const { revenue, cogs, grossMargin, loading: loadingMargin } = useProfitReport(branchId, from, to)
   const { expenses, total: totalExpenses, loading: loadingExpenses, createExpense, deleteExpense } = useExpenses(branchId, from, to)
+  const { rows: productRows, loading: loadingProducts } = useProductProfitReport(branchId, from, to)
 
   const netProfit = grossMargin - totalExpenses
 
@@ -176,6 +178,53 @@ export function RentabilidadPage() {
                     <button onClick={() => setDeleteTarget(e.id)} className="text-slate-400 hover:text-red-600">
                       <Trash2 size={16} />
                     </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <p className="text-sm font-medium text-slate-700">Rentabilidad por producto</p>
+        <p className="mt-1 text-xs text-slate-400">Ordenado por ingresos. El costo usa el costo registrado en cada producto al momento de la venta.</p>
+
+        <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+              <tr>
+                <th className="px-4 py-2">Producto</th>
+                <th className="px-4 py-2">Calidad</th>
+                <th className="px-4 py-2 text-right">Cant. vendida</th>
+                <th className="px-4 py-2 text-right">Ingresos</th>
+                <th className="px-4 py-2 text-right">Costo</th>
+                <th className="px-4 py-2 text-right">Margen</th>
+                <th className="px-4 py-2 text-right">Margen %</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {!loadingProducts && productRows.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
+                    Sin ventas en este período.
+                  </td>
+                </tr>
+              )}
+              {productRows.map((r) => (
+                <tr key={r.variantId}>
+                  <td className="px-4 py-2 font-medium text-slate-900">{r.productName}</td>
+                  <td className="px-4 py-2 text-slate-500">
+                    {r.calidad} {r.kilo ? formatKilo(r.kilo) : ''}
+                  </td>
+                  <td className="px-4 py-2 text-right">{r.quantity}</td>
+                  <td className="px-4 py-2 text-right">{formatCLP(r.revenue)}</td>
+                  <td className="px-4 py-2 text-right text-slate-500">{formatCLP(r.cost)}</td>
+                  <td className={`px-4 py-2 text-right font-medium ${r.margin >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                    {formatCLP(r.margin)}
+                  </td>
+                  <td className={`px-4 py-2 text-right ${r.marginPct >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                    {r.marginPct.toFixed(1)}%
                   </td>
                 </tr>
               ))}
