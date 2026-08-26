@@ -47,7 +47,6 @@ export function NewSalePage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const total = cart.reduce((sum, item) => sum + (Number(item.soldPrice) || 0) * item.quantity, 0)
-  const totalMargin = cart.reduce((sum, item) => sum + ((Number(item.soldPrice) || 0) - item.cost) * item.quantity, 0)
   const hasCredit = payments.some((p) => p.method === 'credito')
 
   useEffect(() => {
@@ -174,21 +173,20 @@ export function NewSalePage() {
                   <th className="px-4 py-2">Precio original</th>
                   <th className="px-4 py-2">Precio venta</th>
                   <th className="px-4 py-2">Subtotal</th>
-                  {canSeeCost && <th className="px-4 py-2">Margen</th>}
                   <th className="px-4 py-2" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {catalogLoading && cart.length === 0 && (
                   <tr>
-                    <td colSpan={canSeeCost ? 7 : 6} className="px-4 py-6 text-center text-slate-400">
+                    <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
                       Cargando catálogo...
                     </td>
                   </tr>
                 )}
                 {cart.length === 0 && !catalogLoading && (
                   <tr>
-                    <td colSpan={canSeeCost ? 7 : 6} className="px-4 py-6 text-center text-slate-400">
+                    <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
                       Busca un producto para agregarlo a la venta.
                     </td>
                   </tr>
@@ -202,6 +200,7 @@ export function NewSalePage() {
                         stock disponible: {item.maxStock}
                         {item.quantity > item.maxStock && ' (quedará negativo)'}
                       </div>
+                      {canSeeCost && <div className="text-[11px] text-slate-300">costo: {formatCLP(item.cost)}</div>}
                     </td>
                     <td className="px-4 py-2">
                       <input
@@ -224,13 +223,6 @@ export function NewSalePage() {
                     <td className="px-4 py-2 font-medium text-slate-900">
                       {formatCLP((Number(item.soldPrice) || 0) * item.quantity)}
                     </td>
-                    {canSeeCost && (
-                      <td
-                        className={`px-4 py-2 ${(Number(item.soldPrice) || 0) - item.cost >= 0 ? 'text-green-700' : 'text-red-600'}`}
-                      >
-                        {formatCLP(((Number(item.soldPrice) || 0) - item.cost) * item.quantity)}
-                      </td>
-                    )}
                     <td className="px-4 py-2">
                       <button onClick={() => removeFromCart(item.variantId)} className="text-slate-400 hover:text-red-600">
                         <Trash2 size={16} />
@@ -250,13 +242,6 @@ export function NewSalePage() {
             <span>Total</span>
             <span>{formatCLP(total)}</span>
           </div>
-
-          {canSeeCost && cart.length > 0 && (
-            <div className={`flex justify-between text-sm ${totalMargin >= 0 ? 'text-green-700' : 'text-red-600'}`}>
-              <span>Margen estimado</span>
-              <span className="font-medium">{formatCLP(totalMargin)}</span>
-            </div>
-          )}
 
           <PaymentSplit payments={payments} total={total} onChange={setPayments} allowCredit />
 
