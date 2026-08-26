@@ -23,6 +23,7 @@ import {
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { AlertsBell } from '@/features/alerts/AlertsBell'
+import { GlobalSearch } from '@/features/search/GlobalSearch'
 import { BranchSwitcher } from './BranchSwitcher'
 import type { UserRole } from '@/types/models'
 
@@ -137,6 +138,9 @@ export function AppLayout() {
             <Menu size={22} />
           </button>
           <div className="min-w-0 flex-1 md:hidden" />
+          <div className="hidden md:block md:flex-1">
+            <GlobalSearch />
+          </div>
           <AlertsBell branchId={effectiveBranchId} includeFinancial={showFinancialAlerts} />
           <BranchSwitcher />
         </div>
