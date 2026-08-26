@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
-import { Eye } from 'lucide-react'
+import { Eye, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Input, Select } from '@/components/ui/Input'
-import { formatCLP, formatDateTime } from '@/lib/format'
+import { formatCLP, formatDate, formatDateTime } from '@/lib/format'
+import { whatsappUrl } from '@/lib/share'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useAuthStore } from '@/stores/authStore'
 import { useCustomers } from '@/features/customers/useCustomers'
@@ -23,6 +24,14 @@ export function CreditsPage() {
   const today = new Date().toISOString().slice(0, 10)
   const { customers } = useCustomers()
   const customerNameById = useMemo(() => new Map(customers.map((c) => [c.id, c.name])), [customers])
+  const customerById = useMemo(() => new Map(customers.map((c) => [c.id, c])), [customers])
+
+  function reminderMessage(row: CreditSaleRow): string {
+    const name = row.customerId ? customerNameById.get(row.customerId) ?? '' : ''
+    const greeting = name ? `Hola ${name},` : 'Hola,'
+    const due = row.dueDate ? ` (venció el ${formatDate(row.dueDate)})` : ''
+    return `${greeting} te recordamos que tienes un saldo pendiente de ${formatCLP(row.remaining)} de tu compra ${row.saleNumber}${due}. ¡Gracias!`
+  }
 
   const [detail, setDetail] = useState<CreditSaleRow | null>(null)
   const [payments, setPayments] = useState<CreditPayment[]>([])
@@ -211,7 +220,18 @@ export function CreditsPage() {
                     <span className="text-slate-300">—</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3 text-right space-x-2">
+                  {row.customerId && (
+                    <button
+                      title="Recordar por WhatsApp"
+                      onClick={() =>
+                        window.open(whatsappUrl(customerById.get(row.customerId!)?.phone ?? null, reminderMessage(row)), '_blank')
+                      }
+                      className="text-slate-400 hover:text-green-600"
+                    >
+                      <MessageCircle size={16} />
+                    </button>
+                  )}
                   <button onClick={() => openDetail(row)} className="text-slate-400 hover:text-slate-700">
                     <Eye size={16} />
                   </button>

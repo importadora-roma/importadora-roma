@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
-import { Eye, Printer } from 'lucide-react'
+import { Eye, Mail, MessageCircle, Printer } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Select } from '@/components/ui/Input'
 import { formatCLP, formatDate, formatDateTime, formatKilo } from '@/lib/format'
+import { whatsappUrl, mailtoUrl } from '@/lib/share'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useProducts } from '@/features/products/useProducts'
@@ -32,6 +33,7 @@ export function QuotationsHistoryPage() {
   const productNameById = useMemo(() => new Map(products.map((p) => [p.id, p.name])), [products])
   const variantById = useMemo(() => new Map(variants.map((v) => [v.id, v])), [variants])
   const customerNameById = useMemo(() => new Map(customers.map((c) => [c.id, c.name])), [customers])
+  const customerById = useMemo(() => new Map(customers.map((c) => [c.id, c])), [customers])
   const branchNameById = useMemo(() => new Map(branches.map((b) => [b.id, b.name])), [branches])
 
   function variantLabel(variantId: string): string {
@@ -78,6 +80,20 @@ export function QuotationsHistoryPage() {
     }
     setConvertOpen(false)
     setDetail(null)
+  }
+
+  function shareMessage(q: Quotation): string {
+    const lines = [
+      `Cotización ${q.quotation_number}`,
+      ...detailItems.map((item) => {
+        const variant = variantById.get(item.variant_id)
+        const name = variant ? productNameById.get(variant.product_id) ?? '—' : '—'
+        return `- ${item.quantity} x ${name}${variant ? ` (${variant.calidad} ${formatKilo(variant.kilo)})` : ''}: ${formatCLP(item.unit_price * item.quantity)}`
+      }),
+      `Total: ${formatCLP(q.total)}`,
+      q.valid_until ? `Válida hasta: ${formatDate(q.valid_until)}` : '',
+    ]
+    return lines.filter(Boolean).join('\n')
   }
 
   async function handleCancel() {
@@ -199,6 +215,33 @@ export function QuotationsHistoryPage() {
               <Printer size={16} />
               Imprimir
             </Button>
+            {detail && (
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={() => window.open(whatsappUrl(detail.customer_id ? customerById.get(detail.customer_id)?.phone ?? null : null, shareMessage(detail)), '_blank')}
+                >
+                  <MessageCircle size={16} />
+                  WhatsApp
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() =>
+                    window.open(
+                      mailtoUrl(
+                        detail.customer_id ? customerById.get(detail.customer_id)?.email ?? null : null,
+                        `Cotización ${detail.quotation_number}`,
+                        shareMessage(detail)
+                      ),
+                      '_self'
+                    )
+                  }
+                >
+                  <Mail size={16} />
+                  Email
+                </Button>
+              </>
+            )}
             {detail?.status === 'pending' && (
               <>
                 <Button onClick={openConvert}>Convertir en venta</Button>
