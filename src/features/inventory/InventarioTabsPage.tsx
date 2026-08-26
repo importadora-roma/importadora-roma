@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ProductsPage } from '@/features/products/ProductsPage'
+import { PrintLabelsPage } from '@/features/products/PrintLabelsPage'
 import { InventoryPage } from './InventoryPage'
 import { ImportPage } from './ImportPage'
 
@@ -7,6 +8,7 @@ const tabs = [
   { key: 'stock', label: 'Stock' },
   { key: 'productos', label: 'Productos' },
   { key: 'importar', label: 'Importar' },
+  { key: 'etiquetas', label: 'Etiquetas' },
 ] as const
 
 type TabKey = (typeof tabs)[number]['key']
@@ -38,6 +40,7 @@ export function InventarioTabsPage() {
         {active === 'stock' && <InventoryPage />}
         {active === 'productos' && <ProductsPage />}
         {active === 'importar' && <ImportPage />}
+        {active === 'etiquetas' && <PrintLabelsPage />}
       </div>
     </div>
   )

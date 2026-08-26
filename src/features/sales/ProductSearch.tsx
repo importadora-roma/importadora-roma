@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type KeyboardEvent } from 'react'
 import { Search } from 'lucide-react'
 import { formatCLP, formatKilo } from '@/lib/format'
 import type { CatalogEntry } from './useSaleCatalog'
@@ -11,9 +11,28 @@ export function ProductSearch({ catalog, onSelect }: { catalog: CatalogEntry[]; 
     const q = term.trim().toLowerCase()
     if (!q) return []
     return catalog
-      .filter((c) => c.productName.toLowerCase().includes(q) || c.calidad.toLowerCase().includes(q))
+      .filter(
+        (c) => c.productName.toLowerCase().includes(q) || c.calidad.toLowerCase().includes(q) || c.sku?.toLowerCase() === q
+      )
       .slice(0, 20)
   }, [catalog, term])
+
+  function selectAndClear(entry: CatalogEntry) {
+    onSelect(entry)
+    setTerm('')
+    setOpen(false)
+  }
+
+  // A USB barcode scanner types the code into whatever input is focused and
+  // ends with Enter — if that matches a SKU exactly, add it straight to the
+  // cart instead of requiring a manual click, same as a real POS scan.
+  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== 'Enter') return
+    const code = term.trim().toLowerCase()
+    if (!code) return
+    const scanned = catalog.find((c) => c.sku?.toLowerCase() === code)
+    if (scanned) selectAndClear(scanned)
+  }
 
   return (
     <div className="relative">
@@ -26,7 +45,8 @@ export function ProductSearch({ catalog, onSelect }: { catalog: CatalogEntry[]; 
             setOpen(true)
           }}
           onFocus={() => setOpen(true)}
-          placeholder="Buscar producto por nombre o calidad..."
+          onKeyDown={handleKeyDown}
+          placeholder="Buscar producto por nombre, calidad o escanear código..."
           className="w-full rounded-md border border-slate-300 py-2 pl-9 pr-3 text-sm focus:border-slate-500 focus:outline-none"
         />
       </div>
@@ -36,11 +56,7 @@ export function ProductSearch({ catalog, onSelect }: { catalog: CatalogEntry[]; 
           {results.map((r) => (
             <button
               key={r.variantId}
-              onClick={() => {
-                onSelect(r)
-                setTerm('')
-                setOpen(false)
-              }}
+              onClick={() => selectAndClear(r)}
               className="flex w-full items-center justify-between px-4 py-2 text-left text-sm hover:bg-slate-50"
             >
               <span>

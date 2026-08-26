@@ -10,6 +10,7 @@ export interface CatalogEntry {
   price: number
   cost: number
   stock: number
+  sku: string | null
 }
 
 export function useSaleCatalog(branchId: string) {
@@ -28,6 +29,7 @@ export function useSaleCatalog(branchId: string) {
         price: v.price,
         cost: v.cost,
         stock: inventory.find((i) => i.variant_id === v.id && i.branch_id === branchId)?.quantity ?? 0,
+        sku: v.sku,
       }))
   }, [products, variants, inventory, branchId])
 
