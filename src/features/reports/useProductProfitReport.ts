@@ -79,5 +79,5 @@ export function useProductProfitReport(branchId: string, from: string, to: strin
     reload()
   }, [reload])
 
-  return { rows, loading: loadingSales || loadingItems }
+  return { rows, loading: loadingSales || loadingItems, reload }
 }

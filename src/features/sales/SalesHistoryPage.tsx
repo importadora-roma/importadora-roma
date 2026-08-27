@@ -26,7 +26,8 @@ export function SalesHistoryPage() {
   const { customers } = useCustomers()
   const [branchId, setBranchId] = useState(activeBranchId)
 
-  const { sales, loading, error, loadSaleDetail, cancelSale, exchangeSaleItem, returnSaleItem, setRequiresInvoice } = useSales(branchId)
+  const { sales, loading, error, loadSaleDetail, cancelSale, exchangeSaleItem, returnSaleItem, setRequiresInvoice, updateSaleItemCost } =
+    useSales(branchId)
 
   const productNameById = useMemo(() => new Map(products.map((p) => [p.id, p.name])), [products])
   const variantById = useMemo(() => new Map(variants.map((v) => [v.id, v])), [variants])
@@ -47,6 +48,7 @@ export function SalesHistoryPage() {
   const [cancelTarget, setCancelTarget] = useState<Sale | null>(null)
   const [exchangeTarget, setExchangeTarget] = useState<SaleItem | null>(null)
   const [returnTarget, setReturnTarget] = useState<SaleItem | null>(null)
+  const [costError, setCostError] = useState<{ itemId: string; message: string } | null>(null)
 
   const canManage = profile?.role === 'admin' || profile?.role === 'supervisor'
 
@@ -74,6 +76,20 @@ export function SalesHistoryPage() {
     const { items, payments } = await loadSaleDetail(detailSale.id)
     setDetailItems(items)
     setDetailPayments(payments)
+  }
+
+  async function handleCostBlur(item: SaleItem, value: string) {
+    const raw = Number(value)
+    if (Number.isNaN(raw) || raw < 0) return
+    const cost = raw > 0 && raw < 1000 ? raw * 1000 : raw
+    if (cost === item.cost) return
+    const { error } = await updateSaleItemCost(item.id, cost)
+    if (error) {
+      setCostError({ itemId: item.id, message: error })
+      return
+    }
+    setCostError(null)
+    setDetailItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, cost } : i)))
   }
 
   return (
@@ -155,6 +171,7 @@ export function SalesHistoryPage() {
                 <th className="py-1 pr-2">Producto</th>
                 <th className="py-1 pr-2">Cant.</th>
                 <th className="py-1 pr-2">Precio</th>
+                {canManage && <th className="py-1 pr-2">Costo</th>}
                 <th className="py-1 pr-2">Estado</th>
                 <th className="py-1" />
               </tr>
@@ -170,6 +187,18 @@ export function SalesHistoryPage() {
                     </td>
                     <td className="py-1.5 pr-2">{item.quantity}</td>
                     <td className="py-1.5 pr-2">{formatCLP(item.sold_price)}</td>
+                    {canManage && (
+                      <td className="py-1.5 pr-2">
+                        <input
+                          type="number"
+                          min={0}
+                          defaultValue={item.cost}
+                          onBlur={(e) => handleCostBlur(item, e.target.value)}
+                          className="w-24 rounded-md border border-slate-300 px-2 py-1 text-xs"
+                        />
+                        {costError?.itemId === item.id && <p className="mt-0.5 text-xs text-red-600">{costError.message}</p>}
+                      </td>
+                    )}
                     <td className="py-1.5 pr-2 text-xs text-slate-500">{item.status}</td>
                     <td className="py-1.5 space-x-2">
                       {canManage && item.status === 'active' && detailSale?.status === 'completed' && (

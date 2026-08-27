@@ -37,5 +37,5 @@ export function useProfitReport(branchId: string, from: string, to: string) {
 
   const revenue = sales.reduce((s, sale) => s + sale.total, 0)
 
-  return { revenue, cogs, grossMargin: revenue - cogs, loading: loadingSales || loadingCogs }
+  return { revenue, cogs, grossMargin: revenue - cogs, loading: loadingSales || loadingCogs, reload }
 }

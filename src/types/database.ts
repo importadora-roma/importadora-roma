@@ -1039,6 +1039,10 @@ export interface Database {
         Args: { p_count: number }
         Returns: number
       }
+      backfill_sale_item_costs: {
+        Args: { p_branch_id: string | null; p_from: string; p_to: string }
+        Returns: { itemsUpdated: number }
+      }
       import_container_items: {
         Args: {
           p_container_id: string

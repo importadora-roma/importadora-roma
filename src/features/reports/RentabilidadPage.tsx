@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { ReasonModal } from '@/components/ui/ReasonModal'
 import { formatCLP, formatDate, formatKilo } from '@/lib/format'
+import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useProfitReport } from './useProfitReport'
@@ -36,12 +37,39 @@ export function RentabilidadPage() {
   const [from, setFrom] = useState(startOfMonth())
   const [to, setTo] = useState(today())
 
-  const { revenue, cogs, grossMargin, loading: loadingMargin } = useProfitReport(branchId, from, to)
+  const { revenue, cogs, grossMargin, loading: loadingMargin, reload: reloadProfit } = useProfitReport(branchId, from, to)
   const { expenses, total: totalExpenses, loading: loadingExpenses, createExpense, deleteExpense } = useExpenses(branchId, from, to)
-  const { rows: productRows, loading: loadingProducts } = useProductProfitReport(branchId, from, to)
+  const { rows: productRows, loading: loadingProducts, reload: reloadProductRows } = useProductProfitReport(branchId, from, to)
   const { rows: commissionRows, loading: loadingCommissions } = useCommissionReport(branchId, from, to)
 
   const netProfit = grossMargin - totalExpenses
+
+  const [backfilling, setBackfilling] = useState(false)
+  const [backfillMessage, setBackfillMessage] = useState<string | null>(null)
+  const [backfillError, setBackfillError] = useState<string | null>(null)
+
+  async function handleBackfillCosts() {
+    setBackfilling(true)
+    setBackfillError(null)
+    setBackfillMessage(null)
+    const { data, error } = await supabase.rpc('backfill_sale_item_costs', {
+      p_branch_id: branchId || null,
+      p_from: from,
+      p_to: to,
+    })
+    setBackfilling(false)
+    if (error) {
+      setBackfillError(error.message)
+      return
+    }
+    const itemsUpdated = (data as unknown as { itemsUpdated: number })?.itemsUpdated ?? 0
+    setBackfillMessage(
+      itemsUpdated > 0
+        ? `${itemsUpdated} línea(s) de venta actualizadas con el costo actual del producto.`
+        : 'No había líneas con costo en 0 en este período.'
+    )
+    await Promise.all([reloadProfit(), reloadProductRows()])
+  }
 
   const [addOpen, setAddOpen] = useState(false)
   const [category, setCategory] = useState<ExpenseCategory>('sueldo')
@@ -106,7 +134,16 @@ export function RentabilidadPage() {
         </Select>
         <Input label="Desde" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
         <Input label="Hasta" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+        {profile?.role === 'admin' && (
+          <Button variant="secondary" onClick={handleBackfillCosts} disabled={backfilling}>
+            <RefreshCw size={14} />
+            {backfilling ? 'Recalculando...' : 'Recalcular costos en 0'}
+          </Button>
+        )}
       </div>
+
+      {backfillMessage && <p className="mt-2 text-sm text-green-700">{backfillMessage}</p>}
+      {backfillError && <p className="mt-2 text-sm text-red-600">{backfillError}</p>}
 
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
         <div className="rounded-lg border border-slate-200 bg-white p-4">
