@@ -77,9 +77,11 @@ export function RentabilidadPage() {
   const [amount, setAmount] = useState('')
   const [expenseDate, setExpenseDate] = useState(today())
   const [notes, setNotes] = useState('')
+  const [paidFromCash, setPaidFromCash] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [addedMessage, setAddedMessage] = useState<string | null>(null)
 
   function resetForm() {
     setCategory('sueldo')
@@ -87,6 +89,7 @@ export function RentabilidadPage() {
     setAmount('')
     setExpenseDate(today())
     setNotes('')
+    setPaidFromCash(false)
     setFormError(null)
   }
 
@@ -101,13 +104,15 @@ export function RentabilidadPage() {
       setFormError('Ingresa un monto válido')
       return
     }
+    const deductFromCash = paidFromCash && expenseDate === today()
     setSaving(true)
-    const { error } = await createExpense({
+    const { error, registerAdjusted } = await createExpense({
       category,
       description: description.trim(),
       amount: amt,
       expense_date: expenseDate,
       notes: notes.trim() || null,
+      paid_from_cash: deductFromCash,
     })
     setSaving(false)
     if (error) {
@@ -115,6 +120,11 @@ export function RentabilidadPage() {
       return
     }
     setAddOpen(false)
+    setAddedMessage(
+      deductFromCash && !registerAdjusted
+        ? 'Gasto guardado. La caja está cerrada, así que no se descontó del efectivo.'
+        : null
+    )
     resetForm()
   }
 
@@ -185,6 +195,8 @@ export function RentabilidadPage() {
           </Button>
         </div>
 
+        {addedMessage && <p className="mt-2 text-sm text-amber-600">{addedMessage}</p>}
+
         <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
@@ -212,7 +224,10 @@ export function RentabilidadPage() {
                     {e.description}
                     {e.notes && <span className="text-slate-400"> — {e.notes}</span>}
                   </td>
-                  <td className="px-4 py-2 font-medium text-slate-900">{formatCLP(e.amount)}</td>
+                  <td className="px-4 py-2 font-medium text-slate-900">
+                    {formatCLP(e.amount)}
+                    {e.paid_from_cash && <span className="ml-1 text-xs font-normal text-slate-400">(caja)</span>}
+                  </td>
                   <td className="px-4 py-2 text-right">
                     <button onClick={() => setDeleteTarget(e.id)} className="text-slate-400 hover:text-red-600">
                       <Trash2 size={16} />
@@ -329,6 +344,12 @@ export function RentabilidadPage() {
             <Input label="Monto" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
             <Input label="Fecha" type="date" value={expenseDate} onChange={(e) => setExpenseDate(e.target.value)} />
           </div>
+          {expenseDate === today() && (
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input type="checkbox" checked={paidFromCash} onChange={(e) => setPaidFromCash(e.target.checked)} />
+              Pagado en efectivo desde la caja (descuenta del efectivo esperado)
+            </label>
+          )}
           <Textarea label="Notas (opcional)" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
           {formError && <p className="text-sm text-red-600">{formError}</p>}
           <div className="flex justify-end gap-2">

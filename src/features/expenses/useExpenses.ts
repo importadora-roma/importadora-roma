@@ -10,6 +10,7 @@ export interface Expense {
   amount: number
   expense_date: string
   notes: string | null
+  paid_from_cash: boolean
   created_at: string
 }
 
@@ -48,18 +49,25 @@ export function useExpenses(branchId: string, dateFrom: string, dateTo: string) 
     amount: number
     expense_date: string
     notes: string | null
+    paid_from_cash?: boolean
   }) {
-    const { error } = await supabase.from('expenses').insert({ ...input, branch_id: branchId })
-    if (error) return { error: error.message }
+    const { data, error } = await supabase.rpc('create_expense', {
+      p_branch_id: branchId,
+      p_category: input.category,
+      p_description: input.description,
+      p_amount: input.amount,
+      p_expense_date: input.expense_date,
+      p_notes: input.notes,
+      p_paid_from_cash: input.paid_from_cash ?? false,
+    })
+    if (error) return { error: error.message, registerAdjusted: false }
     await reload()
-    return { error: null }
+    const result = data as unknown as { id: string; registerAdjusted: boolean }
+    return { error: null, registerAdjusted: result?.registerAdjusted ?? false }
   }
 
   async function deleteExpense(id: string, reason: string) {
-    const { error } = await supabase
-      .from('expenses')
-      .update({ deleted_at: new Date().toISOString(), delete_reason: reason })
-      .eq('id', id)
+    const { error } = await supabase.rpc('delete_expense', { p_expense_id: id, p_reason: reason })
     if (error) return { error: error.message }
     await reload()
     return { error: null }

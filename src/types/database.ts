@@ -882,6 +882,7 @@ export interface Database {
           amount: number
           expense_date: string
           notes: string | null
+          paid_from_cash: boolean
           created_by: string | null
           deleted_at: string | null
           deleted_by: string | null
@@ -897,6 +898,7 @@ export interface Database {
           amount: number
           expense_date?: string
           notes?: string | null
+          paid_from_cash?: boolean
           created_by?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
@@ -1042,6 +1044,22 @@ export interface Database {
       backfill_sale_item_costs: {
         Args: { p_branch_id: string | null; p_from: string; p_to: string }
         Returns: { itemsUpdated: number }
+      }
+      create_expense: {
+        Args: {
+          p_branch_id: string
+          p_category: string
+          p_description: string
+          p_amount: number
+          p_expense_date: string
+          p_notes?: string | null
+          p_paid_from_cash?: boolean
+        }
+        Returns: { id: string; registerAdjusted: boolean }
+      }
+      delete_expense: {
+        Args: { p_expense_id: string; p_reason: string }
+        Returns: undefined
       }
       import_container_items: {
         Args: {

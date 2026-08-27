@@ -39,14 +39,17 @@ export function DailyFinancialSummary({ branchId }: { branchId: string }) {
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
   const [notes, setNotes] = useState('')
+  const [paidFromCash, setPaidFromCash] = useState(true)
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [savedMessage, setSavedMessage] = useState<string | null>(null)
 
   function openAdd() {
     setCategory('otro')
     setDescription('')
     setAmount('')
     setNotes('')
+    setPaidFromCash(true)
     setFormError(null)
     setAddOpen(true)
   }
@@ -63,12 +66,13 @@ export function DailyFinancialSummary({ branchId }: { branchId: string }) {
       return
     }
     setSaving(true)
-    const { error } = await createExpense({
+    const { error, registerAdjusted } = await createExpense({
       category,
       description: description.trim(),
       amount: amt,
       expense_date: day,
       notes: notes.trim() || null,
+      paid_from_cash: paidFromCash,
     })
     setSaving(false)
     if (error) {
@@ -76,6 +80,11 @@ export function DailyFinancialSummary({ branchId }: { branchId: string }) {
       return
     }
     setAddOpen(false)
+    setSavedMessage(
+      paidFromCash && !registerAdjusted
+        ? 'Gasto guardado. La caja está cerrada, así que no se descontó del efectivo — ábrela y regístralo ahí si corresponde.'
+        : null
+    )
   }
 
   return (
@@ -127,6 +136,8 @@ export function DailyFinancialSummary({ branchId }: { branchId: string }) {
         </p>
       )}
 
+      {savedMessage && <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-amber-600">{savedMessage}</p>}
+
       <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Agregar gasto de hoy">
         <div className="space-y-4">
           <Select label="Categoría" value={category} onChange={(e) => setCategory(e.target.value as ExpenseCategory)}>
@@ -142,6 +153,10 @@ export function DailyFinancialSummary({ branchId }: { branchId: string }) {
             placeholder="Ej: compra de insumos, flete, colación..."
           />
           <Input label="Monto" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input type="checkbox" checked={paidFromCash} onChange={(e) => setPaidFromCash(e.target.checked)} />
+            Pagado en efectivo desde la caja (descuenta del efectivo esperado)
+          </label>
           <Textarea label="Notas (opcional)" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
           {formError && <p className="text-sm text-red-600">{formError}</p>}
           <div className="flex justify-end gap-2">
