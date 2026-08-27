@@ -3,12 +3,14 @@ import { BranchesPage } from '@/features/branches/BranchesPage'
 import { UsersPage } from '@/features/users/UsersPage'
 import { ContainerSettingsPage } from '@/features/containers/ContainerSettingsPage'
 import { AlertSettingsPage } from '@/features/alerts/AlertSettingsPage'
+import { CalidadCostDefaultsPage } from '@/features/products/CalidadCostDefaultsPage'
 
 const tabs = [
   { key: 'sucursales', label: 'Sucursales' },
   { key: 'usuarios', label: 'Usuarios' },
   { key: 'contenedores', label: 'Contenedores' },
   { key: 'alertas', label: 'Alertas' },
+  { key: 'costos', label: 'Costos por calidad' },
 ] as const
 
 type TabKey = (typeof tabs)[number]['key']
@@ -41,6 +43,7 @@ export function ConfiguracionPage() {
         {active === 'usuarios' && <UsersPage />}
         {active === 'contenedores' && <ContainerSettingsPage />}
         {active === 'alertas' && <AlertSettingsPage />}
+        {active === 'costos' && <CalidadCostDefaultsPage />}
       </div>
     </div>
   )

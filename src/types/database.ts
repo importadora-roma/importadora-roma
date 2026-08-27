@@ -851,6 +851,24 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['alert_settings']['Insert']>
         Relationships: []
       }
+      calidad_cost_defaults: {
+        Row: {
+          calidad: string
+          default_cost: number
+          updated_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          calidad: string
+          default_cost: number
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['calidad_cost_defaults']['Insert']>
+        Relationships: []
+      }
       expenses: {
         Row: {
           id: string

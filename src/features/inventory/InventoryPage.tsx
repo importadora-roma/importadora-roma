@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Pencil, Download, Trash2, AlertTriangle } from 'lucide-react'
+import { Pencil, Download, Trash2, AlertTriangle, Plus, Minus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Input, Textarea } from '@/components/ui/Input'
@@ -26,6 +26,7 @@ export function InventoryPage() {
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [skuError, setSkuError] = useState<{ variantId: string; message: string } | null>(null)
+  const [adjustingId, setAdjustingId] = useState<string | null>(null)
 
   const [clearOpen, setClearOpen] = useState(false)
   const [clearReason, setClearReason] = useState('')
@@ -56,6 +57,14 @@ export function InventoryPage() {
           !term || row.productName.toLowerCase().includes(term) || row.variant.calidad.toLowerCase().includes(term)
       )
   }, [variants, inventory, effectiveBranchId, productNameById, search])
+
+  async function handleStep(variant: ProductVariant, currentStock: number, delta: 1 | -1) {
+    const next = currentStock + delta
+    if (next < 0) return
+    setAdjustingId(variant.id)
+    await adjustInventory(variant.id, effectiveBranchId, next, `Ajuste manual (${delta > 0 ? '+1' : '-1'})`)
+    setAdjustingId(null)
+  }
 
   function openAdjust(variant: ProductVariant, currentStock: number) {
     setAdjustTarget(variant)
@@ -228,7 +237,23 @@ export function InventoryPage() {
                   </td>
                 )}
                 <td className="px-4 py-3">
-                  <span className={stock <= 0 ? 'text-red-600' : 'text-slate-900'}>{stock}</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleStep(variant, stock, -1)}
+                      disabled={stock <= 0 || adjustingId === variant.id}
+                      className="rounded-md border border-slate-300 p-1 text-slate-500 hover:bg-slate-100 disabled:opacity-40"
+                    >
+                      <Minus size={14} />
+                    </button>
+                    <span className={`w-8 text-center ${stock <= 0 ? 'text-red-600' : 'text-slate-900'}`}>{stock}</span>
+                    <button
+                      onClick={() => handleStep(variant, stock, 1)}
+                      disabled={adjustingId === variant.id}
+                      className="rounded-md border border-slate-300 p-1 text-slate-500 hover:bg-slate-100 disabled:opacity-40"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-right">
                   <button onClick={() => openAdjust(variant, stock)} className="text-slate-400 hover:text-slate-700">

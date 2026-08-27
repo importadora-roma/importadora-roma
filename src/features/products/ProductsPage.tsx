@@ -6,7 +6,10 @@ import { Input, Select, Textarea } from '@/components/ui/Input'
 import { ReasonModal } from '@/components/ui/ReasonModal'
 import { formatCLP, formatKilo } from '@/lib/format'
 import { useProducts } from './useProducts'
+import { useCalidadCostDefaults } from './useCalidadCostDefaults'
 import type { Product, ProductVariant } from '@/types/models'
+
+const CALIDAD_OPTIONS = ['Primera', 'Segunda', 'Tercera', 'A', 'B', 'E']
 
 interface ProductForm {
   name: string
@@ -39,6 +42,7 @@ export function ProductsPage() {
     updateVariant,
     softDeleteVariant,
   } = useProducts()
+  const { defaults: calidadDefaults } = useCalidadCostDefaults()
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [productModalOpen, setProductModalOpen] = useState(false)
@@ -120,6 +124,15 @@ export function ProductsPage() {
     })
     setVariantFormError(null)
     setVariantModalOpen(true)
+  }
+
+  function handleCalidadChange(calidad: string) {
+    const defaultCost = calidadDefaults.find((d) => d.calidad === calidad)?.default_cost
+    setVariantForm((prev) => ({
+      ...prev,
+      calidad,
+      cost: !editingVariant && !prev.cost && defaultCost !== undefined ? String(defaultCost) : prev.cost,
+    }))
   }
 
   async function handleSaveVariant() {
@@ -344,16 +357,14 @@ export function ProductsPage() {
 
       <Modal open={variantModalOpen} onClose={() => setVariantModalOpen(false)} title={editingVariant ? 'Editar variante' : 'Nueva variante'}>
         <div className="space-y-4">
-          <Select
-            label="Calidad"
-            value={variantForm.calidad}
-            onChange={(e) => setVariantForm({ ...variantForm, calidad: e.target.value })}
-          >
+          <Select label="Calidad" value={variantForm.calidad} onChange={(e) => handleCalidadChange(e.target.value)}>
             <option value="">Selecciona...</option>
-            <option value="Primera">Primera</option>
-            <option value="Segunda">Segunda</option>
-            <option value="Tercera">Tercera</option>
-            {variantForm.calidad && !['Primera', 'Segunda', 'Tercera'].includes(variantForm.calidad) && (
+            {CALIDAD_OPTIONS.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+            {variantForm.calidad && !CALIDAD_OPTIONS.includes(variantForm.calidad) && variantForm.calidad !== '__custom__' && (
               <option value={variantForm.calidad}>{variantForm.calidad}</option>
             )}
             <option value="__custom__">Otra (escribir abajo)</option>
@@ -361,7 +372,7 @@ export function ProductsPage() {
           {variantForm.calidad === '__custom__' && (
             <Input
               label="Calidad personalizada"
-              onChange={(e) => setVariantForm({ ...variantForm, calidad: e.target.value })}
+              onChange={(e) => handleCalidadChange(e.target.value)}
               placeholder="Ej: Cuarta"
             />
           )}
