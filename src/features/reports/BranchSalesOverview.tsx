@@ -3,9 +3,8 @@ import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recha
 import { formatCLP } from '@/lib/format'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useReports } from './useReports'
+import { useTransferValue } from '@/features/transfers/useTransferValue'
 import type { SalePaymentMethod } from '@/types/database'
-
-const branchColors = ['#0f172a', '#2563eb', '#16a34a', '#f59e0b', '#9333ea', '#dc2626', '#0891b2', '#db2777']
 
 type Period = 'today' | 'week' | 'month'
 
@@ -29,6 +28,15 @@ const methodColors: Record<SalePaymentMethod, string> = {
   credito: '#f59e0b',
 }
 
+const methodLabels: Record<SalePaymentMethod, string> = {
+  efectivo: 'Efectivo',
+  tarjeta: 'Tarjeta',
+  transferencia: 'Transferencia',
+  credito: 'Crédito',
+}
+
+const transferColor = '#64748b'
+
 interface BranchRow {
   branchId: string
   branchName: string
@@ -49,6 +57,7 @@ export function BranchSalesOverview() {
   const [period, setPeriod] = useState<Period>('today')
   const { from, to } = rangeFor(period)
   const { sales, payments, loading } = useReports('', from, to)
+  const { total: transferValue, loading: loadingTransfers } = useTransferValue('', from, to)
 
   const branchNameById = useMemo(() => new Map(branches.map((b) => [b.id, b.name])), [branches])
 
@@ -89,10 +98,23 @@ export function BranchSalesOverview() {
   const grandTotal = rows.reduce((s, r) => s + r.total, 0)
   const grandCount = rows.reduce((s, r) => s + r.count, 0)
 
+  const pieData = useMemo(() => {
+    const methods = (Object.keys(methodColors) as SalePaymentMethod[]).map((method) => ({
+      key: method,
+      name: methodLabels[method],
+      value: rows.reduce((s, r) => s + r[method], 0),
+      color: methodColors[method],
+    }))
+    return [
+      ...methods,
+      { key: 'traslados', name: 'Traslados a sucursales', value: transferValue, color: transferColor },
+    ].filter((item) => item.value > 0)
+  }, [rows, transferValue])
+
   return (
     <div className="mt-6 rounded-lg border border-slate-200 bg-white p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-medium text-slate-700">Ventas por sucursal</p>
+        <p className="text-sm font-medium text-slate-700">Ventas por método de pago</p>
         <div className="flex gap-1">
           {(['today', 'week', 'month'] as Period[]).map((p) => (
             <button
@@ -108,25 +130,25 @@ export function BranchSalesOverview() {
         </div>
       </div>
 
-      {loading ? (
+      {loading || loadingTransfers ? (
         <p className="py-10 text-center text-sm text-slate-400">Cargando...</p>
-      ) : rows.length === 0 ? (
-        <p className="py-10 text-center text-sm text-slate-400">Sin ventas en el período seleccionado.</p>
+      ) : pieData.length === 0 ? (
+        <p className="py-10 text-center text-sm text-slate-400">Sin ventas ni traslados en el período seleccionado.</p>
       ) : (
         <>
           <div className="mt-4">
             <ResponsiveContainer width="100%" height={280}>
               <PieChart>
                 <Pie
-                  data={rows}
-                  dataKey="total"
-                  nameKey="branchName"
+                  data={pieData}
+                  dataKey="value"
+                  nameKey="name"
                   innerRadius="55%"
                   outerRadius="85%"
-                  paddingAngle={rows.length > 1 ? 2 : 0}
+                  paddingAngle={pieData.length > 1 ? 2 : 0}
                 >
-                  {rows.map((r, i) => (
-                    <Cell key={r.branchId} fill={branchColors[i % branchColors.length]} />
+                  {pieData.map((item) => (
+                    <Cell key={item.key} fill={item.color} />
                   ))}
                 </Pie>
                 <Tooltip formatter={(v) => formatCLP(Number(v))} />
@@ -135,6 +157,7 @@ export function BranchSalesOverview() {
             </ResponsiveContainer>
           </div>
 
+          {rows.length > 0 && (
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="text-xs uppercase text-slate-500">
@@ -174,6 +197,7 @@ export function BranchSalesOverview() {
               </tfoot>
             </table>
           </div>
+          )}
         </>
       )}
     </div>
