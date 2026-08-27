@@ -1,23 +1,54 @@
 import { useMemo, useState } from 'react'
-import { Pencil, Download, Trash2, AlertTriangle, Plus, Minus } from 'lucide-react'
+import { Pencil, Download, Trash2, AlertTriangle, Plus, Minus, PackagePlus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { Input, Textarea } from '@/components/ui/Input'
+import { Input, Select, Textarea } from '@/components/ui/Input'
 import { formatKilo } from '@/lib/format'
 import { exportToExcel } from '@/lib/excel'
 import { useAuthStore } from '@/stores/authStore'
 import { useInventory } from './useInventory'
 import { useProducts } from '@/features/products/useProducts'
+import { useCalidadCostDefaults } from '@/features/products/useCalidadCostDefaults'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import type { ProductVariant } from '@/types/models'
+
+const CALIDAD_OPTIONS = ['Primera', 'Segunda', 'Tercera', 'A', 'B', 'E']
+const NEW_PRODUCT_VALUE = '__new__'
+
+interface NewProductForm {
+  productId: string
+  newProductName: string
+  calidad: string
+  kilo: string
+  sku: string
+  cost: string
+  price: string
+  quantity: string
+}
+
+const emptyNewProductForm: NewProductForm = {
+  productId: '',
+  newProductName: '',
+  calidad: '',
+  kilo: '',
+  sku: '',
+  cost: '',
+  price: '',
+  quantity: '1',
+}
+
+function scaleIfShorthand(value: number): number {
+  return value > 0 && value < 1000 ? value * 1000 : value
+}
 
 export function InventoryPage() {
   const profile = useAuthStore((s) => s.profile)
   const isAdmin = profile?.role === 'admin'
   const canSeeCost = profile?.role === 'admin' || profile?.role === 'supervisor'
   const { branchId: effectiveBranchId, branches } = useEffectiveBranch()
-  const { products, variants, loading: loadingProducts, updateVariant } = useProducts()
+  const { products, variants, loading: loadingProducts, updateVariant, createProduct, createVariant } = useProducts()
   const { inventory, loading: loadingInventory, adjustInventory, clearBranchInventory } = useInventory()
+  const { defaults: calidadDefaults } = useCalidadCostDefaults()
 
   const [search, setSearch] = useState('')
   const [adjustTarget, setAdjustTarget] = useState<ProductVariant | null>(null)
@@ -34,6 +65,11 @@ export function InventoryPage() {
   const [clearError, setClearError] = useState<string | null>(null)
   const [clearing, setClearing] = useState(false)
   const [clearedMessage, setClearedMessage] = useState<string | null>(null)
+
+  const [addOpen, setAddOpen] = useState(false)
+  const [addForm, setAddForm] = useState<NewProductForm>(emptyNewProductForm)
+  const [addError, setAddError] = useState<string | null>(null)
+  const [addSaving, setAddSaving] = useState(false)
 
   async function handleSkuBlur(variant: ProductVariant, value: string) {
     const next = value.trim() || null
@@ -129,6 +165,94 @@ export function InventoryPage() {
     setClearedMessage(`Inventario de ${branchName} vaciado: ${itemsCleared} producto(s) puestos en 0.`)
   }
 
+  function openAddProduct() {
+    setAddForm(emptyNewProductForm)
+    setAddError(null)
+    setAddOpen(true)
+  }
+
+  function handleAddCalidadChange(calidad: string) {
+    const defaultCost = calidadDefaults.find((d) => d.calidad === calidad)?.default_cost
+    setAddForm((prev) => ({
+      ...prev,
+      calidad,
+      cost: !prev.cost && defaultCost !== undefined ? String(defaultCost) : prev.cost,
+    }))
+  }
+
+  async function handleSaveNewProduct() {
+    setAddError(null)
+    const usingNewProduct = addForm.productId === NEW_PRODUCT_VALUE
+    if (!addForm.productId) {
+      setAddError('Selecciona un producto o crea uno nuevo')
+      return
+    }
+    if (usingNewProduct && !addForm.newProductName.trim()) {
+      setAddError('Ingresa el nombre del producto nuevo')
+      return
+    }
+    if (!addForm.calidad.trim()) {
+      setAddError('La calidad es obligatoria')
+      return
+    }
+    const kilo = Number(addForm.kilo)
+    if (!kilo || kilo <= 0) {
+      setAddError('El kilo debe ser mayor a 0')
+      return
+    }
+    const cost = scaleIfShorthand(Number(addForm.cost))
+    const price = scaleIfShorthand(Number(addForm.price))
+    if (Number.isNaN(cost) || cost < 0 || Number.isNaN(price) || price < 0) {
+      setAddError('Costo y precio deben ser números válidos')
+      return
+    }
+    const quantity = Number(addForm.quantity)
+    if (Number.isNaN(quantity) || quantity < 0) {
+      setAddError('La cantidad debe ser un número válido')
+      return
+    }
+
+    setAddSaving(true)
+
+    let productId = addForm.productId
+    if (usingNewProduct) {
+      const { product, error } = await createProduct({ name: addForm.newProductName.trim(), description: null, category: null })
+      if (error || !product) {
+        setAddSaving(false)
+        setAddError(error ?? 'No se pudo crear el producto')
+        return
+      }
+      productId = product.id
+    }
+
+    const { variant, error: variantError } = await createVariant({
+      product_id: productId,
+      calidad: addForm.calidad.trim(),
+      kilo,
+      sku: addForm.sku.trim() || null,
+      cost,
+      price,
+      supplier: null,
+    })
+    if (variantError || !variant) {
+      setAddSaving(false)
+      setAddError(variantError ?? 'No se pudo crear la variante')
+      return
+    }
+
+    if (quantity > 0) {
+      const { error: stockError } = await adjustInventory(variant.id, effectiveBranchId, quantity, 'Alta manual de producto (fardo faltante)')
+      if (stockError) {
+        setAddSaving(false)
+        setAddError(`Producto creado, pero no se pudo cargar el stock: ${stockError}`)
+        return
+      }
+    }
+
+    setAddSaving(false)
+    setAddOpen(false)
+  }
+
   function handleExport() {
     exportToExcel(`inventario-${branchName || 'sucursal'}.xlsx`, 'Inventario', [
       ...rows.map((row) => ({
@@ -157,6 +281,12 @@ export function InventoryPage() {
           <Download size={16} />
           Exportar Excel
         </Button>
+        {canSeeCost && (
+          <Button variant="secondary" onClick={openAddProduct} disabled={!effectiveBranchId}>
+            <PackagePlus size={16} />
+            Agregar producto
+          </Button>
+        )}
         {isAdmin && (
           <Button variant="danger" onClick={openClear} disabled={stockedRows.length === 0}>
             <Trash2 size={16} />
@@ -282,6 +412,88 @@ export function InventoryPage() {
             </Button>
             <Button onClick={handleAdjust} disabled={saving}>
               {saving ? 'Guardando...' : 'Guardar'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Agregar producto al inventario">
+        <div className="space-y-4">
+          <p className="text-sm text-slate-500">
+            Para un fardo que quedó fuera del sistema (llegada no registrada, error de conteo, etc.). Crea el producto si
+            hace falta y carga el stock inicial directo en {branchName || 'esta sucursal'}.
+          </p>
+
+          <Select
+            label="Producto"
+            value={addForm.productId}
+            onChange={(e) => setAddForm({ ...addForm, productId: e.target.value })}
+          >
+            <option value="">Selecciona...</option>
+            <option value={NEW_PRODUCT_VALUE}>+ Producto nuevo</option>
+            {products
+              .filter((p) => p.active)
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+          </Select>
+          {addForm.productId === NEW_PRODUCT_VALUE && (
+            <Input
+              label="Nombre del producto nuevo"
+              value={addForm.newProductName}
+              onChange={(e) => setAddForm({ ...addForm, newProductName: e.target.value })}
+              placeholder="Ej: Poleras algodón"
+            />
+          )}
+
+          <Select label="Calidad" value={addForm.calidad} onChange={(e) => handleAddCalidadChange(e.target.value)}>
+            <option value="">Selecciona...</option>
+            {CALIDAD_OPTIONS.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+            {addForm.calidad && !CALIDAD_OPTIONS.includes(addForm.calidad) && addForm.calidad !== '__custom__' && (
+              <option value={addForm.calidad}>{addForm.calidad}</option>
+            )}
+            <option value="__custom__">Otra (escribir abajo)</option>
+          </Select>
+          {addForm.calidad === '__custom__' && (
+            <Input label="Calidad personalizada" onChange={(e) => handleAddCalidadChange(e.target.value)} placeholder="Ej: Cuarta" />
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Kilo"
+              type="number"
+              step="0.01"
+              value={addForm.kilo}
+              onChange={(e) => setAddForm({ ...addForm, kilo: e.target.value })}
+              placeholder="Ej: 20"
+            />
+            <Input
+              label="Cantidad en stock"
+              type="number"
+              min={0}
+              value={addForm.quantity}
+              onChange={(e) => setAddForm({ ...addForm, quantity: e.target.value })}
+            />
+          </div>
+          <Input label="Código de barra (opcional)" value={addForm.sku} onChange={(e) => setAddForm({ ...addForm, sku: e.target.value })} />
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="Costo" type="number" value={addForm.cost} onChange={(e) => setAddForm({ ...addForm, cost: e.target.value })} />
+            <Input label="Precio" type="number" value={addForm.price} onChange={(e) => setAddForm({ ...addForm, price: e.target.value })} />
+          </div>
+
+          {addError && <p className="text-sm text-red-600">{addError}</p>}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setAddOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveNewProduct} disabled={addSaving}>
+              {addSaving ? 'Guardando...' : 'Guardar'}
             </Button>
           </div>
         </div>

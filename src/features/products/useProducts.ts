@@ -38,10 +38,10 @@ export function useProducts() {
   }, [reload])
 
   async function createProduct(input: { name: string; description: string | null; category: string | null }) {
-    const { error } = await supabase.from('products').insert(input)
-    if (error) return { error: error.message }
+    const { data, error } = await supabase.from('products').insert(input).select().single()
+    if (error) return { product: null, error: error.message }
     await reload()
-    return { error: null }
+    return { product: data as unknown as Product, error: null }
   }
 
   async function updateProduct(id: string, input: Partial<Pick<Product, 'name' | 'description' | 'category' | 'active'>>) {
@@ -70,10 +70,10 @@ export function useProducts() {
     price: number
     supplier: string | null
   }) {
-    const { error } = await supabase.from('product_variants').insert(input)
-    if (error) return { error: error.message }
+    const { data, error } = await supabase.from('product_variants').insert(input).select().single()
+    if (error) return { variant: null, error: error.message }
     await reload()
-    return { error: null }
+    return { variant: data as unknown as ProductVariant, error: null }
   }
 
   async function updateVariant(
