@@ -166,6 +166,7 @@ export interface Database {
           price: number
           supplier: string | null
           active: boolean
+          sort_order: number
           deleted_at: string | null
           deleted_by: string | null
           delete_reason: string | null
@@ -182,6 +183,7 @@ export interface Database {
           price?: number
           supplier?: string | null
           active?: boolean
+          sort_order?: number
           deleted_at?: string | null
           deleted_by?: string | null
           delete_reason?: string | null
@@ -1030,6 +1032,10 @@ export interface Database {
       clear_branch_inventory: {
         Args: { p_branch_id: string; p_reason: string }
         Returns: { itemsCleared: number }
+      }
+      reserve_variant_sort_order_block: {
+        Args: { p_count: number }
+        Returns: number
       }
       import_container_items: {
         Args: {

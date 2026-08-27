@@ -56,6 +56,7 @@ export function InventoryPage() {
         (row) =>
           !term || row.productName.toLowerCase().includes(term) || row.variant.calidad.toLowerCase().includes(term)
       )
+      .sort((a, b) => a.variant.sort_order - b.variant.sort_order)
   }, [variants, inventory, effectiveBranchId, productNameById, search])
 
   async function handleStep(variant: ProductVariant, currentStock: number, delta: 1 | -1) {

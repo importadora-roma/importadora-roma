@@ -38,6 +38,7 @@ export interface ProductVariant {
   price: number
   supplier: string | null
   active: boolean
+  sort_order: number
 }
 
 export interface InventoryRow {

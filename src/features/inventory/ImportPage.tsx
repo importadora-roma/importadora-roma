@@ -250,6 +250,30 @@ export function ImportPage() {
 
     const productByName = new Map(products.map((p) => [p.name.toLowerCase(), p]))
     const variantByKey = new Map(variants.map((v) => [`${v.product_id}|${v.calidad.toLowerCase()}|${v.kilo}`, v]))
+
+    // Reserve sort_order values up front, in file order, for every row that
+    // will create a brand-new variant — so Inventario > Stock can show them
+    // in the same order as this file, regardless of how the concurrent
+    // workers below actually finish creating them.
+    const rowSortOrder: (number | undefined)[] = new Array(rowsToImport.length).fill(undefined)
+    const newVariantRowIndexes: number[] = []
+    rowsToImport.forEach((row, i) => {
+      const existingProduct = productByName.get(row.producto.toLowerCase())
+      const isNewVariant = existingProduct
+        ? !variantByKey.has(`${existingProduct.id}|${row.calidad.toLowerCase()}|${row.kilo}`)
+        : true
+      if (isNewVariant) newVariantRowIndexes.push(i)
+    })
+    if (newVariantRowIndexes.length > 0) {
+      const { data: blockStart, error: reserveError } = await supabase.rpc('reserve_variant_sort_order_block', {
+        p_count: newVariantRowIndexes.length,
+      })
+      if (!reserveError && blockStart !== null) {
+        newVariantRowIndexes.forEach((rowIndex, offset) => {
+          rowSortOrder[rowIndex] = (blockStart as unknown as number) + offset
+        })
+      }
+    }
     // Snapshot of current stock at the target branch, used in "add" mode to
     // compute existing + incoming instead of overwriting.
     const currentStockByVariant = new Map(
@@ -289,7 +313,8 @@ export function ImportPage() {
       sku: string | null,
       cost: number,
       price: number,
-      supplier: string | null
+      supplier: string | null,
+      sortOrder: number | undefined
     ): Promise<{ variant: ProductVariant; created: boolean }> {
       const key = `${productId}|${calidad.toLowerCase()}|${kilo}`
       const existing = variantByKey.get(key)
@@ -301,7 +326,7 @@ export function ImportPage() {
       const creation = (async () => {
         const { data, error } = await supabase
           .from('product_variants')
-          .insert({ product_id: productId, calidad, kilo, sku, cost, price, supplier })
+          .insert({ product_id: productId, calidad, kilo, sku, cost, price, supplier, sort_order: sortOrder })
           .select()
           .single()
         if (error) throw error
@@ -324,7 +349,8 @@ export function ImportPage() {
 
     async function worker() {
       while (cursor < rowsToImport.length) {
-        const row = rowsToImport[cursor]
+        const rowIndex = cursor
+        const row = rowsToImport[rowIndex]
         cursor += 1
         try {
           const product = await getOrCreateProduct(row.producto, row.categoria)
@@ -336,7 +362,8 @@ export function ImportPage() {
             row.sku || null,
             row.costo ?? 0,
             row.precio ?? 0,
-            row.proveedor || null
+            row.proveedor || null,
+            rowSortOrder[rowIndex]
           )
           if (created) {
             variantsCreated += 1
