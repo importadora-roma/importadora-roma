@@ -48,16 +48,15 @@ interface BranchRow {
   credito: number
 }
 
-// Real-time (period-scoped) per-branch sales + payment-method breakdown for
-// the Panel. Admins see every branch they have access to; supervisors see
-// only their own branch (RLS on `sales` already enforces this regardless of
-// what branch filter the client sends, so passing '' here is safe for both).
+// Real-time (period-scoped) sales + payment-method breakdown for the Panel,
+// scoped to whichever branch is currently selected in the topbar — same as
+// every other card on this page (Ventas de hoy, Caja, etc.).
 export function BranchSalesOverview() {
-  const { branches } = useEffectiveBranch()
+  const { branchId: effectiveBranchId, branches } = useEffectiveBranch()
   const [period, setPeriod] = useState<Period>('today')
   const { from, to } = rangeFor(period)
-  const { sales, payments, loading } = useReports('', from, to)
-  const { total: transferValue, loading: loadingTransfers } = useTransferValue('', from, to)
+  const { sales, payments, loading } = useReports(effectiveBranchId, from, to)
+  const { total: transferValue, loading: loadingTransfers } = useTransferValue(effectiveBranchId, from, to)
 
   const branchNameById = useMemo(() => new Map(branches.map((b) => [b.id, b.name])), [branches])
 
@@ -146,6 +145,7 @@ export function BranchSalesOverview() {
                   innerRadius="55%"
                   outerRadius="85%"
                   paddingAngle={pieData.length > 1 ? 2 : 0}
+                  isAnimationActive={false}
                 >
                   {pieData.map((item) => (
                     <Cell key={item.key} fill={item.color} />
