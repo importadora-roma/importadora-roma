@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react'
-import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { formatCLP } from '@/lib/format'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useReports } from './useReports'
 import type { SalePaymentMethod } from '@/types/database'
+
+const branchColors = ['#0f172a', '#2563eb', '#16a34a', '#f59e0b', '#9333ea', '#dc2626', '#0891b2', '#db2777']
 
 type Period = 'today' | 'week' | 'month'
 
@@ -114,17 +116,22 @@ export function BranchSalesOverview() {
         <>
           <div className="mt-4">
             <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={rows}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="branchName" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => formatCLP(v)} width={90} />
+              <PieChart>
+                <Pie
+                  data={rows}
+                  dataKey="total"
+                  nameKey="branchName"
+                  innerRadius="55%"
+                  outerRadius="85%"
+                  paddingAngle={rows.length > 1 ? 2 : 0}
+                >
+                  {rows.map((r, i) => (
+                    <Cell key={r.branchId} fill={branchColors[i % branchColors.length]} />
+                  ))}
+                </Pie>
                 <Tooltip formatter={(v) => formatCLP(Number(v))} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="efectivo" name="Efectivo" stackId="a" fill={methodColors.efectivo} />
-                <Bar dataKey="tarjeta" name="Tarjeta" stackId="a" fill={methodColors.tarjeta} />
-                <Bar dataKey="transferencia" name="Transferencia" stackId="a" fill={methodColors.transferencia} />
-                <Bar dataKey="credito" name="Crédito" stackId="a" fill={methodColors.credito} />
-              </BarChart>
+              </PieChart>
             </ResponsiveContainer>
           </div>
 
