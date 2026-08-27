@@ -35,5 +35,12 @@ export function useInventory() {
     return { error: null }
   }
 
-  return { inventory, loading, error, reload, adjustInventory }
+  async function clearBranchInventory(branchId: string, reason: string) {
+    const { data, error } = await supabase.rpc('clear_branch_inventory', { p_branch_id: branchId, p_reason: reason })
+    if (error) return { itemsCleared: 0, error: error.message }
+    await reload()
+    return { itemsCleared: (data as unknown as { itemsCleared: number })?.itemsCleared ?? 0, error: null }
+  }
+
+  return { inventory, loading, error, reload, adjustInventory, clearBranchInventory }
 }

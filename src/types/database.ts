@@ -1009,6 +1009,10 @@ export interface Database {
         }
         Returns: undefined
       }
+      clear_branch_inventory: {
+        Args: { p_branch_id: string; p_reason: string }
+        Returns: { itemsCleared: number }
+      }
       import_container_items: {
         Args: {
           p_container_id: string

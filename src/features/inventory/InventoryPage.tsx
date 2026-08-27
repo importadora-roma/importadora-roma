@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
-import { Pencil, Download } from 'lucide-react'
+import { Pencil, Download, Trash2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { Input } from '@/components/ui/Input'
+import { Input, Textarea } from '@/components/ui/Input'
 import { formatKilo } from '@/lib/format'
 import { exportToExcel } from '@/lib/excel'
 import { useAuthStore } from '@/stores/authStore'
@@ -13,10 +13,11 @@ import type { ProductVariant } from '@/types/models'
 
 export function InventoryPage() {
   const profile = useAuthStore((s) => s.profile)
+  const isAdmin = profile?.role === 'admin'
   const canSeeCost = profile?.role === 'admin' || profile?.role === 'supervisor'
   const { branchId: effectiveBranchId, branches } = useEffectiveBranch()
   const { products, variants, loading: loadingProducts, updateVariant } = useProducts()
-  const { inventory, loading: loadingInventory, adjustInventory } = useInventory()
+  const { inventory, loading: loadingInventory, adjustInventory, clearBranchInventory } = useInventory()
 
   const [search, setSearch] = useState('')
   const [adjustTarget, setAdjustTarget] = useState<ProductVariant | null>(null)
@@ -25,6 +26,13 @@ export function InventoryPage() {
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [skuError, setSkuError] = useState<{ variantId: string; message: string } | null>(null)
+
+  const [clearOpen, setClearOpen] = useState(false)
+  const [clearReason, setClearReason] = useState('')
+  const [clearConfirmText, setClearConfirmText] = useState('')
+  const [clearError, setClearError] = useState<string | null>(null)
+  const [clearing, setClearing] = useState(false)
+  const [clearedMessage, setClearedMessage] = useState<string | null>(null)
 
   async function handleSkuBlur(variant: ProductVariant, value: string) {
     const next = value.trim() || null
@@ -78,8 +86,40 @@ export function InventoryPage() {
 
   const loading = loadingProducts || loadingInventory
 
+  const branchName = branches.find((b) => b.id === effectiveBranchId)?.name ?? ''
+  const stockedRows = useMemo(() => rows.filter((r) => r.stock !== 0), [rows])
+  const totalUnitsInBranch = useMemo(() => stockedRows.reduce((s, r) => s + r.stock, 0), [stockedRows])
+
+  function openClear() {
+    setClearReason('')
+    setClearConfirmText('')
+    setClearError(null)
+    setClearedMessage(null)
+    setClearOpen(true)
+  }
+
+  async function handleClear() {
+    setClearError(null)
+    if (!clearReason.trim()) {
+      setClearError('Debes indicar un motivo')
+      return
+    }
+    if (clearConfirmText.trim() !== branchName) {
+      setClearError(`Escribe exactamente "${branchName}" para confirmar`)
+      return
+    }
+    setClearing(true)
+    const { itemsCleared, error } = await clearBranchInventory(effectiveBranchId, clearReason.trim())
+    setClearing(false)
+    if (error) {
+      setClearError(error)
+      return
+    }
+    setClearOpen(false)
+    setClearedMessage(`Inventario de ${branchName} vaciado: ${itemsCleared} producto(s) puestos en 0.`)
+  }
+
   function handleExport() {
-    const branchName = branches.find((b) => b.id === effectiveBranchId)?.name ?? ''
     exportToExcel(`inventario-${branchName || 'sucursal'}.xlsx`, 'Inventario', [
       ...rows.map((row) => ({
         Producto: row.productName,
@@ -101,13 +141,21 @@ export function InventoryPage() {
         arriba a la derecha).
       </p>
 
-      <div className="mt-4 flex gap-3">
+      <div className="mt-4 flex flex-wrap gap-3">
         <Input placeholder="Buscar producto o calidad..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
         <Button variant="secondary" onClick={handleExport} disabled={rows.length === 0}>
           <Download size={16} />
           Exportar Excel
         </Button>
+        {isAdmin && (
+          <Button variant="danger" onClick={openClear} disabled={stockedRows.length === 0}>
+            <Trash2 size={16} />
+            Vaciar inventario
+          </Button>
+        )}
       </div>
+
+      {clearedMessage && <p className="mt-3 text-sm text-green-700">{clearedMessage}</p>}
 
       <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
         <table className="w-full text-left text-sm">
@@ -207,6 +255,39 @@ export function InventoryPage() {
             </Button>
             <Button onClick={handleAdjust} disabled={saving}>
               {saving ? 'Guardando...' : 'Guardar'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={clearOpen} onClose={() => setClearOpen(false)} title="Vaciar inventario">
+        <div className="space-y-4">
+          <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+            <p>
+              Esto pondrá en 0 el stock de <strong>{stockedRows.length}</strong> producto(s) ({totalUnitsInBranch} unidades en
+              total) en <strong>{branchName}</strong>. Queda registrado en el Kardex, pero no se puede deshacer con un clic.
+            </p>
+          </div>
+          <Textarea
+            label="Motivo"
+            value={clearReason}
+            onChange={(e) => setClearReason(e.target.value)}
+            rows={2}
+            placeholder="Ej: reinicio de inventario, conteo físico general..."
+          />
+          <Input
+            label={`Escribe "${branchName}" para confirmar`}
+            value={clearConfirmText}
+            onChange={(e) => setClearConfirmText(e.target.value)}
+          />
+          {clearError && <p className="text-sm text-red-600">{clearError}</p>}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setClearOpen(false)}>
+              Cancelar
+            </Button>
+            <Button variant="danger" onClick={handleClear} disabled={clearing || clearConfirmText.trim() !== branchName}>
+              {clearing ? 'Vaciando...' : 'Vaciar inventario'}
             </Button>
           </div>
         </div>
