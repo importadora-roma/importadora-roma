@@ -1,4 +1,8 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { Plus } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { Modal } from '@/components/ui/Modal'
+import { Input, Select, Textarea } from '@/components/ui/Input'
 import { formatCLP } from '@/lib/format'
 import { useProfitReport } from './useProfitReport'
 import { useExpenses } from '@/features/expenses/useExpenses'
@@ -19,7 +23,7 @@ function today(): string {
 export function DailyFinancialSummary({ branchId }: { branchId: string }) {
   const day = today()
   const { cogs, grossMargin, loading: loadingMargin } = useProfitReport(branchId, day, day)
-  const { expenses, total: totalExpenses, loading: loadingExpenses } = useExpenses(branchId, day, day)
+  const { expenses, total: totalExpenses, loading: loadingExpenses, createExpense } = useExpenses(branchId, day, day)
   const { total: transferValue, transferCount, loading: loadingTransfers } = useTransferValue(branchId, day, day)
 
   const netProfit = grossMargin - totalExpenses
@@ -30,9 +34,59 @@ export function DailyFinancialSummary({ branchId }: { branchId: string }) {
     return totals
   }, [expenses])
 
+  const [addOpen, setAddOpen] = useState(false)
+  const [category, setCategory] = useState<ExpenseCategory>('otro')
+  const [description, setDescription] = useState('')
+  const [amount, setAmount] = useState('')
+  const [notes, setNotes] = useState('')
+  const [formError, setFormError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  function openAdd() {
+    setCategory('otro')
+    setDescription('')
+    setAmount('')
+    setNotes('')
+    setFormError(null)
+    setAddOpen(true)
+  }
+
+  async function handleAddExpense() {
+    setFormError(null)
+    if (!description.trim()) {
+      setFormError('Ingresa una descripción')
+      return
+    }
+    const amt = Number(amount)
+    if (!amt || amt <= 0) {
+      setFormError('Ingresa un monto válido')
+      return
+    }
+    setSaving(true)
+    const { error } = await createExpense({
+      category,
+      description: description.trim(),
+      amount: amt,
+      expense_date: day,
+      notes: notes.trim() || null,
+    })
+    setSaving(false)
+    if (error) {
+      setFormError(error)
+      return
+    }
+    setAddOpen(false)
+  }
+
   return (
     <div className="mt-6 rounded-lg border border-slate-200 bg-white p-4">
-      <p className="text-sm font-medium text-slate-700">Resumen financiero de hoy</p>
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium text-slate-700">Resumen financiero de hoy</p>
+        <Button variant="secondary" onClick={openAdd} disabled={!branchId}>
+          <Plus size={14} />
+          Agregar gasto
+        </Button>
+      </div>
       <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div>
           <p className="text-xs uppercase text-slate-500">Costo (COGS)</p>
@@ -72,6 +126,34 @@ export function DailyFinancialSummary({ branchId }: { branchId: string }) {
           {transferCount} traslado{transferCount === 1 ? '' : 's'}, no cuenta como venta)
         </p>
       )}
+
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Agregar gasto de hoy">
+        <div className="space-y-4">
+          <Select label="Categoría" value={category} onChange={(e) => setCategory(e.target.value as ExpenseCategory)}>
+            <option value="sueldo">Sueldo</option>
+            <option value="arriendo">Arriendo</option>
+            <option value="servicios">Servicios</option>
+            <option value="otro">Otro</option>
+          </Select>
+          <Input
+            label="Descripción"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Ej: compra de insumos, flete, colación..."
+          />
+          <Input label="Monto" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          <Textarea label="Notas (opcional)" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          {formError && <p className="text-sm text-red-600">{formError}</p>}
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setAddOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleAddExpense} disabled={saving}>
+              {saving ? 'Guardando...' : 'Guardar'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
