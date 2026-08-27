@@ -70,6 +70,7 @@ export function InventoryPage() {
   const [addForm, setAddForm] = useState<NewProductForm>(emptyNewProductForm)
   const [addError, setAddError] = useState<string | null>(null)
   const [addSaving, setAddSaving] = useState(false)
+  const [addInfo, setAddInfo] = useState<string | null>(null)
 
   async function handleSkuBlur(variant: ProductVariant, value: string) {
     const next = value.trim() || null
@@ -168,6 +169,7 @@ export function InventoryPage() {
   function openAddProduct() {
     setAddForm(emptyNewProductForm)
     setAddError(null)
+    setAddInfo(null)
     setAddOpen(true)
   }
 
@@ -225,23 +227,45 @@ export function InventoryPage() {
       productId = product.id
     }
 
-    const { variant, error: variantError } = await createVariant({
-      product_id: productId,
-      calidad: addForm.calidad.trim(),
-      kilo,
-      sku: addForm.sku.trim() || null,
-      cost,
-      price,
-      supplier: null,
-    })
-    if (variantError || !variant) {
-      setAddSaving(false)
-      setAddError(variantError ?? 'No se pudo crear la variante')
-      return
+    // The product may already have exactly this calidad+kilo as a variant
+    // (product_variants has a unique constraint on that combo) — in that
+    // case there's nothing to create, just add stock to the existing one
+    // instead of failing with a duplicate-key error.
+    const existingVariant = variants.find(
+      (v) => v.product_id === productId && v.calidad.trim().toLowerCase() === addForm.calidad.trim().toLowerCase() && v.kilo === kilo
+    )
+
+    let variantId: string
+    if (existingVariant) {
+      variantId = existingVariant.id
+    } else {
+      const { variant, error: variantError } = await createVariant({
+        product_id: productId,
+        calidad: addForm.calidad.trim(),
+        kilo,
+        sku: addForm.sku.trim() || null,
+        cost,
+        price,
+        supplier: null,
+      })
+      if (variantError || !variant) {
+        setAddSaving(false)
+        setAddError(variantError ?? 'No se pudo crear la variante')
+        return
+      }
+      variantId = variant.id
     }
 
     if (quantity > 0) {
-      const { error: stockError } = await adjustInventory(variant.id, effectiveBranchId, quantity, 'Alta manual de producto (fardo faltante)')
+      const currentStock = existingVariant
+        ? (inventory.find((i) => i.variant_id === variantId && i.branch_id === effectiveBranchId)?.quantity ?? 0)
+        : 0
+      const { error: stockError } = await adjustInventory(
+        variantId,
+        effectiveBranchId,
+        currentStock + quantity,
+        'Alta manual de producto (fardo faltante)'
+      )
       if (stockError) {
         setAddSaving(false)
         setAddError(`Producto creado, pero no se pudo cargar el stock: ${stockError}`)
@@ -251,6 +275,7 @@ export function InventoryPage() {
 
     setAddSaving(false)
     setAddOpen(false)
+    setAddInfo(existingVariant ? 'Esa calidad y kilo ya existían para este producto — se sumó el stock a la variante existente.' : null)
   }
 
   function handleExport() {
@@ -296,6 +321,7 @@ export function InventoryPage() {
       </div>
 
       {clearedMessage && <p className="mt-3 text-sm text-green-700">{clearedMessage}</p>}
+      {addInfo && <p className="mt-3 text-sm text-green-700">{addInfo}</p>}
 
       <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
         <table className="w-full text-left text-sm">
