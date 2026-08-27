@@ -29,6 +29,10 @@ interface VariantForm {
 const emptyProductForm: ProductForm = { name: '', description: '', category: '' }
 const emptyVariantForm: VariantForm = { calidad: '', kilo: '', sku: '', cost: '', price: '', supplier: '' }
 
+function scaleIfShorthand(value: number): number {
+  return value > 0 && value < 1000 ? value * 1000 : value
+}
+
 export function ProductsPage() {
   const {
     products,
@@ -137,8 +141,12 @@ export function ProductsPage() {
 
   async function handleSaveVariant() {
     const kilo = Number(variantForm.kilo)
-    const cost = Number(variantForm.cost)
-    const price = Number(variantForm.price)
+    // Fardos never actually cost/sell under $1.000 — a value in that range
+    // almost always means someone typed the amount in miles (ej. "149" for
+    // $149.000) the way the old winter price list is written. Scale it up
+    // instead of silently saving a broken price.
+    const cost = scaleIfShorthand(Number(variantForm.cost))
+    const price = scaleIfShorthand(Number(variantForm.price))
 
     if (!variantForm.calidad.trim()) {
       setVariantFormError('La calidad es obligatoria')

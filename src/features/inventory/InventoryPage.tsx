@@ -230,7 +230,8 @@ export function InventoryPage() {
                       min={0}
                       defaultValue={variant.cost}
                       onBlur={(e) => {
-                        const value = Number(e.target.value)
+                        const raw = Number(e.target.value)
+                        const value = raw > 0 && raw < 1000 ? raw * 1000 : raw
                         if (value !== variant.cost && !Number.isNaN(value) && value >= 0) updateVariant(variant.id, { cost: value })
                       }}
                       className="w-24 rounded-md border border-slate-300 px-2 py-1 text-sm"

@@ -19,20 +19,16 @@ export function useExpenses(branchId: string, dateFrom: string, dateTo: string) 
   const [error, setError] = useState<string | null>(null)
 
   const reload = useCallback(async () => {
-    if (!branchId) {
-      setExpenses([])
-      setLoading(false)
-      return
-    }
     setLoading(true)
-    const { data, error } = await supabase
+    let query = supabase
       .from('expenses')
       .select('*')
-      .eq('branch_id', branchId)
       .is('deleted_at', null)
       .gte('expense_date', dateFrom)
       .lte('expense_date', dateTo)
       .order('expense_date', { ascending: false })
+    if (branchId) query = query.eq('branch_id', branchId)
+    const { data, error } = await query
     if (error) {
       setError(error.message)
     } else {

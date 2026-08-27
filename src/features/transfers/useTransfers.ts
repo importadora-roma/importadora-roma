@@ -20,6 +20,7 @@ export interface TransferItem {
   transfer_id: string
   variant_id: string
   quantity: number
+  unit_price: number | null
 }
 
 export function useTransfers() {
@@ -51,7 +52,7 @@ export function useTransfers() {
   async function createTransfer(
     originBranchId: string,
     destinationBranchId: string,
-    items: { variant_id: string; quantity: number }[],
+    items: { variant_id: string; quantity: number; unit_price?: number | null }[],
     notes: string | null
   ) {
     const { data, error } = await supabase.rpc('create_transfer', {

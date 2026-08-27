@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Eye, Printer } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { formatDateTime, formatKilo } from '@/lib/format'
+import { formatCLP, formatDateTime, formatKilo } from '@/lib/format'
 import { useBranches } from '@/features/branches/useBranches'
 import { useProducts } from '@/features/products/useProducts'
 import { useTransfers, type Transfer, type TransferItem } from './useTransfers'
@@ -115,7 +115,9 @@ export function TransferHistoryPage() {
             <thead className="text-xs uppercase text-slate-400">
               <tr>
                 <th className="py-1 pr-2">Producto</th>
-                <th className="py-1">Cantidad</th>
+                <th className="py-1 pr-2">Cantidad</th>
+                <th className="py-1 pr-2">Precio unit.</th>
+                <th className="py-1">Subtotal</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -127,11 +129,25 @@ export function TransferHistoryPage() {
                     <td className="py-1.5 pr-2">
                       {productName} {variant && `— ${variant.calidad} ${formatKilo(variant.kilo)}`}
                     </td>
-                    <td className="py-1.5">{item.quantity}</td>
+                    <td className="py-1.5 pr-2">{item.quantity}</td>
+                    <td className="py-1.5 pr-2 text-slate-500">{item.unit_price ? formatCLP(item.unit_price) : '—'}</td>
+                    <td className="py-1.5">{item.unit_price ? formatCLP(item.unit_price * item.quantity) : '—'}</td>
                   </tr>
                 )
               })}
             </tbody>
+            {detailItems.some((i) => i.unit_price) && (
+              <tfoot>
+                <tr className="border-t border-slate-200">
+                  <td className="py-1.5 pr-2 text-right font-medium text-slate-700" colSpan={3}>
+                    Valor total
+                  </td>
+                  <td className="py-1.5 font-semibold text-slate-900">
+                    {formatCLP(detailItems.reduce((s, i) => s + (i.unit_price ?? 0) * i.quantity, 0))}
+                  </td>
+                </tr>
+              </tfoot>
+            )}
           </table>
 
           {detail?.notes && <p className="text-sm text-slate-500">Notas: {detail.notes}</p>}

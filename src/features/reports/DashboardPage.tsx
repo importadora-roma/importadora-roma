@@ -15,6 +15,7 @@ import { useInvoices } from '@/features/invoices/useInvoices'
 // recharts, so it's lazy-loaded on its own to keep that out of the main
 // bundle, same as ReportsPage.tsx already gets lazy-loaded as a route.
 const BranchSalesOverview = lazy(() => import('./BranchSalesOverview').then((m) => ({ default: m.BranchSalesOverview })))
+const DailyFinancialSummary = lazy(() => import('./DailyFinancialSummary').then((m) => ({ default: m.DailyFinancialSummary })))
 
 function today(): string {
   return new Date().toISOString().slice(0, 10)
@@ -146,6 +147,7 @@ export function DashboardPage() {
       {canSeeCash && (
         <Suspense fallback={<div className="mt-6 h-40 animate-pulse rounded-lg border border-slate-200 bg-slate-100" />}>
           <BranchSalesOverview />
+          <DailyFinancialSummary branchId={effectiveBranchId} />
         </Suspense>
       )}
     </div>

@@ -8,7 +8,17 @@ import { createPdfDoc, autoTable } from '@/lib/pdf'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useReports } from './useReports'
-import type { PaymentMethod } from '@/types/database'
+import { useProfitReport } from './useProfitReport'
+import { useExpenses } from '@/features/expenses/useExpenses'
+import { useTransferValue } from '@/features/transfers/useTransferValue'
+import type { PaymentMethod, ExpenseCategory } from '@/types/database'
+
+const categoryLabels: Record<ExpenseCategory, string> = {
+  sueldo: 'Sueldo',
+  arriendo: 'Arriendo',
+  servicios: 'Servicios',
+  otro: 'Otro',
+}
 
 function startOfMonth(): string {
   const d = new Date()
@@ -27,6 +37,9 @@ export function ReportsPage() {
   const [to, setTo] = useState(today())
 
   const { sales, payments, loading, error } = useReports(branchId, from, to)
+  const { cogs, grossMargin, loading: loadingMargin } = useProfitReport(branchId, from, to)
+  const { expenses, total: totalExpenses, loading: loadingExpenses } = useExpenses(branchId, from, to)
+  const { total: transferValue, transferCount, loading: loadingTransfers } = useTransferValue(branchId, from, to)
 
   const totalsByMethod = useMemo(() => {
     const totals: Record<PaymentMethod, number> = { efectivo: 0, tarjeta: 0, transferencia: 0 }
@@ -34,7 +47,14 @@ export function ReportsPage() {
     return totals
   }, [payments])
 
+  const expensesByCategory = useMemo(() => {
+    const totals: Record<ExpenseCategory, number> = { sueldo: 0, arriendo: 0, servicios: 0, otro: 0 }
+    for (const e of expenses) totals[e.category] += e.amount
+    return totals
+  }, [expenses])
+
   const grandTotal = sales.reduce((s, sale) => s + sale.total, 0)
+  const netProfit = grossMargin - totalExpenses
 
   const dailyTotals = useMemo(() => {
     const map = new Map<string, number>()
@@ -60,7 +80,17 @@ export function ReportsPage() {
         ['Efectivo', formatCLP(totalsByMethod.efectivo)],
         ['Tarjeta', formatCLP(totalsByMethod.tarjeta)],
         ['Transferencia', formatCLP(totalsByMethod.transferencia)],
+        ['Costo (COGS)', formatCLP(cogs)],
+        ['Margen bruto', formatCLP(grossMargin)],
+        ['Gastos', formatCLP(totalExpenses)],
+        ['Utilidad neta', formatCLP(netProfit)],
+        ['Traslados enviados a otras sucursales (valor)', formatCLP(transferValue)],
       ],
+    })
+    autoTable(doc, {
+      startY: (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10,
+      head: [['Gasto por categoría', 'Monto']],
+      body: (Object.keys(categoryLabels) as ExpenseCategory[]).map((c) => [categoryLabels[c], formatCLP(expensesByCategory[c])]),
     })
     autoTable(doc, {
       startY: (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10,
@@ -108,9 +138,80 @@ export function ReportsPage() {
           <p className="mt-1 text-xl font-semibold text-slate-900">{formatCLP(totalsByMethod.tarjeta)}</p>
         </div>
         <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <p className="text-xs uppercase text-slate-500">Transferencia</p>
+          <p className="text-xs uppercase text-slate-500">Transferencia (pago)</p>
           <p className="mt-1 text-xl font-semibold text-slate-900">{formatCLP(totalsByMethod.transferencia)}</p>
         </div>
+      </div>
+
+      <div className="mt-8">
+        <p className="text-sm font-medium text-slate-700">Resumen del período</p>
+        <p className="mt-1 text-xs text-slate-400">Ventas menos costo y gastos — la utilidad real, no solo lo vendido.</p>
+        <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <p className="text-xs uppercase text-slate-500">Costo (COGS)</p>
+            <p className="mt-1 text-xl font-semibold text-slate-900">{loadingMargin ? '—' : formatCLP(cogs)}</p>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <p className="text-xs uppercase text-slate-500">Margen bruto</p>
+            <p className="mt-1 text-xl font-semibold text-slate-900">{loadingMargin ? '—' : formatCLP(grossMargin)}</p>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <p className="text-xs uppercase text-slate-500">Gastos</p>
+            <p className="mt-1 text-xl font-semibold text-slate-900">{loadingExpenses ? '—' : formatCLP(totalExpenses)}</p>
+          </div>
+          <div className={`rounded-lg border p-4 ${netProfit >= 0 ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+            <p className={`text-xs uppercase ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>Utilidad neta</p>
+            <p className={`mt-1 text-xl font-semibold ${netProfit >= 0 ? 'text-green-800' : 'text-red-800'}`}>
+              {loadingMargin || loadingExpenses ? '—' : formatCLP(netProfit)}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-lg border border-slate-200 bg-white p-4">
+        <p className="text-xs uppercase text-slate-500">Traslados a otras sucursales</p>
+        <p className="mt-1 text-xl font-semibold text-slate-900">{loadingTransfers ? '—' : formatCLP(transferValue)}</p>
+        <p className="text-xs text-slate-400">
+          {loadingTransfers
+            ? ''
+            : `${transferCount} traslado${transferCount === 1 ? '' : 's'} ${transferCount === 1 ? 'enviado' : 'enviados'} — no cuenta como venta`}
+        </p>
+      </div>
+
+      <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <p className="px-4 pt-4 text-sm font-medium text-slate-700">Gastos por categoría</p>
+        <table className="mt-2 w-full text-left text-sm">
+          <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+            <tr>
+              <th className="px-4 py-2">Categoría</th>
+              <th className="px-4 py-2">Monto</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {loadingExpenses ? (
+              <tr>
+                <td colSpan={2} className="px-4 py-4 text-center text-slate-400">
+                  Cargando...
+                </td>
+              </tr>
+            ) : totalExpenses === 0 ? (
+              <tr>
+                <td colSpan={2} className="px-4 py-4 text-center text-slate-400">
+                  Sin gastos registrados en este período.
+                </td>
+              </tr>
+            ) : (
+              (Object.keys(categoryLabels) as ExpenseCategory[])
+                .filter((c) => expensesByCategory[c] > 0)
+                .map((c) => (
+                  <tr key={c}>
+                    <td className="px-4 py-2 text-slate-600">{categoryLabels[c]}</td>
+                    <td className="px-4 py-2 font-medium text-slate-900">{formatCLP(expensesByCategory[c])}</td>
+                  </tr>
+                ))
+            )}
+          </tbody>
+        </table>
       </div>
 
       <div className="mt-6 rounded-lg border border-slate-200 bg-white p-4">

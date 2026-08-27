@@ -8,6 +8,7 @@ export function ProductSearch({ catalog, onSelect }: { catalog: CatalogEntry[]; 
   const [term, setTerm] = useState('')
   const [open, setOpen] = useState(false)
   const [scannerOpen, setScannerOpen] = useState(false)
+  const [showOutOfStock, setShowOutOfStock] = useState(false)
 
   const results = useMemo(() => {
     const q = term.trim().toLowerCase()
@@ -16,8 +17,10 @@ export function ProductSearch({ catalog, onSelect }: { catalog: CatalogEntry[]; 
       .filter(
         (c) => c.productName.toLowerCase().includes(q) || c.calidad.toLowerCase().includes(q) || c.sku?.toLowerCase() === q
       )
+      .filter((c) => showOutOfStock || c.stock > 0)
+      .sort((a, b) => (b.stock > 0 ? 1 : 0) - (a.stock > 0 ? 1 : 0))
       .slice(0, 20)
-  }, [catalog, term])
+  }, [catalog, term, showOutOfStock])
 
   function selectAndClear(entry: CatalogEntry) {
     onSelect(entry)
@@ -76,8 +79,21 @@ export function ProductSearch({ catalog, onSelect }: { catalog: CatalogEntry[]; 
 
       <CameraScanModal open={scannerOpen} onClose={() => setScannerOpen(false)} onDetect={handleCameraDetect} />
 
-      {open && results.length > 0 && (
+      {open && (term.trim() || results.length > 0) && (
         <div className="absolute z-10 mt-1 max-h-80 w-full overflow-auto rounded-md border border-slate-200 bg-white shadow-lg">
+          <label className="flex items-center gap-2 border-b border-slate-100 px-4 py-2 text-xs text-slate-500">
+            <input
+              type="checkbox"
+              checked={showOutOfStock}
+              onChange={(e) => setShowOutOfStock(e.target.checked)}
+            />
+            Mostrar productos sin stock
+          </label>
+          {results.length === 0 && (
+            <p className="px-4 py-3 text-sm text-slate-400">
+              {showOutOfStock ? 'Sin resultados.' : 'Sin resultados con stock. Prueba "mostrar sin stock".'}
+            </p>
+          )}
           {results.map((r) => (
             <button
               key={r.variantId}

@@ -1,5 +1,5 @@
 import { createPdfDoc, autoTable } from '@/lib/pdf'
-import { formatDateTime } from '@/lib/format'
+import { formatCLP, formatDateTime } from '@/lib/format'
 import type { Transfer, TransferItem } from './useTransfers'
 
 export function generateTransferPdf(
@@ -12,10 +12,23 @@ export function generateTransferPdf(
     `${context.originName} → ${context.destinationName} · ${formatDateTime(transfer.sent_at)}`
   )
 
+  const hasPrices = items.some((i) => i.unit_price)
+  const totalValue = items.reduce((s, i) => s + (i.unit_price ?? 0) * i.quantity, 0)
+
   autoTable(doc, {
     startY: 38,
-    head: [['Producto', 'Cantidad']],
-    body: items.map((i) => [context.variantLabel(i.variant_id), String(i.quantity)]),
+    head: hasPrices ? [['Producto', 'Cantidad', 'Precio unit.', 'Subtotal']] : [['Producto', 'Cantidad']],
+    body: items.map((i) =>
+      hasPrices
+        ? [
+            context.variantLabel(i.variant_id),
+            String(i.quantity),
+            i.unit_price ? formatCLP(i.unit_price) : '—',
+            i.unit_price ? formatCLP(i.unit_price * i.quantity) : '—',
+          ]
+        : [context.variantLabel(i.variant_id), String(i.quantity)]
+    ),
+    foot: hasPrices ? [['', '', 'Valor total', formatCLP(totalValue)]] : undefined,
   })
 
   const y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10

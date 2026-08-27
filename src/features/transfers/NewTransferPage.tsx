@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Trash2, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Select, Textarea } from '@/components/ui/Input'
-import { formatKilo } from '@/lib/format'
+import { formatCLP, formatKilo } from '@/lib/format'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useSaleCatalog, type CatalogEntry } from '@/features/sales/useSaleCatalog'
 import { ProductSearch } from '@/features/sales/ProductSearch'
@@ -15,6 +15,7 @@ interface TransferCartItem {
   kilo: number
   quantity: number
   availableStock: number
+  unitPrice: string
 }
 
 export function NewTransferPage() {
@@ -37,7 +38,15 @@ export function NewTransferPage() {
       }
       return [
         ...prev,
-        { variantId: entry.variantId, productName: entry.productName, calidad: entry.calidad, kilo: entry.kilo, quantity: 1, availableStock: entry.stock },
+        {
+          variantId: entry.variantId,
+          productName: entry.productName,
+          calidad: entry.calidad,
+          kilo: entry.kilo,
+          quantity: 1,
+          availableStock: entry.stock,
+          unitPrice: entry.cost ? String(entry.cost) : '',
+        },
       ]
     })
   }
@@ -46,9 +55,18 @@ export function NewTransferPage() {
     setItems((prev) => prev.map((i) => (i.variantId === variantId ? { ...i, quantity: Math.max(1, quantity) } : i)))
   }
 
+  function updateUnitPrice(variantId: string, unitPrice: string) {
+    setItems((prev) => prev.map((i) => (i.variantId === variantId ? { ...i, unitPrice } : i)))
+  }
+
   function removeItem(variantId: string) {
     setItems((prev) => prev.filter((i) => i.variantId !== variantId))
   }
+
+  const totalValue = useMemo(
+    () => items.reduce((s, i) => s + (Number(i.unitPrice) || 0) * i.quantity, 0),
+    [items]
+  )
 
   async function handleSubmit() {
     setError(null)
@@ -68,7 +86,7 @@ export function NewTransferPage() {
     const result = await createTransfer(
       effectiveOrigin,
       destinationBranchId,
-      items.map((i) => ({ variant_id: i.variantId, quantity: i.quantity })),
+      items.map((i) => ({ variant_id: i.variantId, quantity: i.quantity, unit_price: i.unitPrice ? Number(i.unitPrice) : null })),
       notes.trim() || null
     )
     setSubmitting(false)
@@ -112,19 +130,26 @@ export function NewTransferPage() {
         <ProductSearch catalog={catalog} onSelect={addItem} />
       </div>
 
-      <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <p className="mt-3 text-xs text-slate-400">
+        El precio unitario se prellena con el costo del producto y queda registrado como el valor del traslado — no
+        afecta el precio de venta ni el costo del producto. Puedes editarlo o dejarlo en 0.
+      </p>
+
+      <div className="mt-2 overflow-x-auto rounded-lg border border-slate-200 bg-white">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>
               <th className="px-4 py-2">Producto</th>
               <th className="px-4 py-2">Cantidad</th>
+              <th className="px-4 py-2">Precio unitario</th>
+              <th className="px-4 py-2">Subtotal</th>
               <th className="px-4 py-2" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {items.length === 0 && (
               <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
                   Busca productos para agregarlos al traslado.
                 </td>
               </tr>
@@ -147,6 +172,17 @@ export function NewTransferPage() {
                     className="w-20 rounded-md border border-slate-300 px-2 py-1 text-sm"
                   />
                 </td>
+                <td className="px-4 py-2">
+                  <input
+                    type="number"
+                    min={0}
+                    value={item.unitPrice}
+                    onChange={(e) => updateUnitPrice(item.variantId, e.target.value)}
+                    placeholder="0"
+                    className="w-28 rounded-md border border-slate-300 px-2 py-1 text-sm"
+                  />
+                </td>
+                <td className="px-4 py-2 text-slate-600">{formatCLP((Number(item.unitPrice) || 0) * item.quantity)}</td>
                 <td className="px-4 py-2 text-right">
                   <button onClick={() => removeItem(item.variantId)} className="text-slate-400 hover:text-red-600">
                     <Trash2 size={16} />
@@ -155,6 +191,17 @@ export function NewTransferPage() {
               </tr>
             ))}
           </tbody>
+          {items.length > 0 && (
+            <tfoot>
+              <tr className="border-t border-slate-200 bg-slate-50">
+                <td className="px-4 py-2 text-right font-medium text-slate-700" colSpan={3}>
+                  Valor total del traslado
+                </td>
+                <td className="px-4 py-2 font-semibold text-slate-900">{formatCLP(totalValue)}</td>
+                <td />
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
 

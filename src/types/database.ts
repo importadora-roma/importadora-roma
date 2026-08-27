@@ -433,12 +433,14 @@ export interface Database {
           transfer_id: string
           variant_id: string
           quantity: number
+          unit_price: number | null
         }
         Insert: {
           id?: string
           transfer_id: string
           variant_id: string
           quantity: number
+          unit_price?: number | null
         }
         Update: Partial<Database['public']['Tables']['transfer_items']['Insert']>
         Relationships: []
@@ -989,7 +991,7 @@ export interface Database {
         Args: {
           p_origin_branch_id: string
           p_destination_branch_id: string
-          p_items: { variant_id: string; quantity: number }[]
+          p_items: { variant_id: string; quantity: number; unit_price?: number | null }[]
           p_notes?: string | null
         }
         Returns: string
