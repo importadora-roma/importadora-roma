@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { supabase } from '@/lib/supabase'
 import { formatDateTime } from '@/lib/format'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { useBranches } from '@/features/branches/useBranches'
 import { useContainerDetail } from './useContainerDetail'
 import { ContainerSummaryHeader } from './ContainerSummaryHeader'
 import { ItemComparisonTable } from './ItemComparisonTable'
@@ -31,6 +32,7 @@ export function ContainerDetailPage() {
 
   const { container, items, itemsWithProgress, events, unknownCodes, totals, loading, error, reload, setContainerStatusLocal } =
     useContainerDetail(containerId ?? null)
+  const { branches } = useBranches()
   const [tab, setTab] = useState<Tab>('resumen')
   const [mappingOpen, setMappingOpen] = useState(false)
   const [pushResult, setPushResult] = useState<{ itemsPushed: number; itemsSkippedUnmapped: number } | null>(null)
@@ -65,7 +67,18 @@ export function ContainerDetailPage() {
           <Button variant="secondary" onClick={() => exportContainerExcel(container, itemsWithProgress, events, unknownCodes)}>
             <Download size={16} /> {t('containerDetail.excel')}
           </Button>
-          <Button variant="secondary" onClick={() => generateContainerPdf(container, itemsWithProgress, unknownCodes.length)}>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              const branch = branches.find((b) => b.id === container.branch_id)
+              generateContainerPdf(
+                container,
+                itemsWithProgress,
+                unknownCodes.length,
+                branch ? { name: branch.name, address: branch.address } : undefined
+              )
+            }}
+          >
             <FileText size={16} /> {t('containerDetail.pdf')}
           </Button>
           {canManage && container.status === 'completed' && (

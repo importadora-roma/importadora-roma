@@ -5,16 +5,21 @@ import type { Quotation, QuotationItem } from './useQuotations'
 export async function generateQuotationPdf(
   quotation: Quotation,
   items: QuotationItem[],
-  context: { branchName: string; customerName: string | null; variantLabel: (variantId: string) => string }
+  context: {
+    branchName: string
+    branchAddress: string | null
+    customerName: string | null
+    variantLabel: (variantId: string) => string
+  }
 ) {
   const logoDataUrl = await getLogoDataUrl()
-  const doc = createPdfDoc(
+  const { doc, contentY } = createPdfDoc(
     `Cotización ${quotation.quotation_number ?? ''}`,
-    `${context.branchName} · ${formatDateTime(quotation.created_at)}`,
-    { logoDataUrl }
+    formatDateTime(quotation.created_at),
+    { logoDataUrl, branchName: context.branchName, branchAddress: context.branchAddress }
   )
 
-  let y = 38
+  let y = contentY
   doc.setFontSize(9)
   doc.setTextColor(80)
   if (context.customerName) {

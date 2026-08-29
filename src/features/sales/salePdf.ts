@@ -1,29 +1,37 @@
-import { createPdfDoc, autoTable } from '@/lib/pdf'
+import { createPdfDoc, autoTable, getLogoDataUrl } from '@/lib/pdf'
 import { formatCLP, formatDateTime } from '@/lib/format'
 import type { Sale, SaleItem, SalePayment } from './useSales'
 import type { PaymentMethod } from '@/types/database'
 
 const paymentLabels: Record<PaymentMethod, string> = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia' }
 
-export function generateSalePdf(
+export async function generateSalePdf(
   sale: Sale,
   items: SaleItem[],
   payments: SalePayment[],
   context: {
     branchName: string
+    branchAddress: string | null
     customerName: string | null
     variantLabel: (variantId: string) => string
   }
 ) {
-  const doc = createPdfDoc(`Comprobante de venta ${sale.sale_number ?? ''}`, `${context.branchName} · ${formatDateTime(sale.created_at)}`)
+  const logoDataUrl = await getLogoDataUrl()
+  const { doc, contentY } = createPdfDoc(`Comprobante de venta ${sale.sale_number ?? ''}`, formatDateTime(sale.created_at), {
+    logoDataUrl,
+    branchName: context.branchName,
+    branchAddress: context.branchAddress,
+  })
 
+  let y = contentY
   if (context.customerName) {
     doc.setFontSize(9)
-    doc.text(`Cliente: ${context.customerName}`, 14, 38)
+    doc.text(`Cliente: ${context.customerName}`, 14, y)
+    y += 6
   }
 
   autoTable(doc, {
-    startY: context.customerName ? 44 : 38,
+    startY: y,
     head: [['Producto', 'Cant.', 'Precio', 'Subtotal']],
     body: items
       .filter((i) => i.status !== 'cancelled')

@@ -1,22 +1,29 @@
-import { createPdfDoc, autoTable } from '@/lib/pdf'
+import { createPdfDoc, autoTable, getLogoDataUrl } from '@/lib/pdf'
 import { formatCLP, formatDateTime } from '@/lib/format'
 import type { Transfer, TransferItem } from './useTransfers'
 
-export function generateTransferPdf(
+export async function generateTransferPdf(
   transfer: Transfer,
   items: TransferItem[],
-  context: { originName: string; destinationName: string; variantLabel: (variantId: string) => string }
+  context: {
+    originName: string
+    originAddress: string | null
+    destinationName: string
+    variantLabel: (variantId: string) => string
+  }
 ) {
-  const doc = createPdfDoc(
+  const logoDataUrl = await getLogoDataUrl()
+  const { doc, contentY } = createPdfDoc(
     `Guía de traslado ${transfer.transfer_number ?? ''}`,
-    `${context.originName} → ${context.destinationName} · ${formatDateTime(transfer.sent_at)}`
+    `${context.originName} → ${context.destinationName} · ${formatDateTime(transfer.sent_at)}`,
+    { logoDataUrl, branchName: context.originName, branchAddress: context.originAddress }
   )
 
   const hasPrices = items.some((i) => i.unit_price)
   const totalValue = items.reduce((s, i) => s + (i.unit_price ?? 0) * i.quantity, 0)
 
   autoTable(doc, {
-    startY: 38,
+    startY: contentY,
     head: hasPrices ? [['Producto', 'Cantidad', 'Precio unit.', 'Subtotal']] : [['Producto', 'Cantidad']],
     body: items.map((i) =>
       hasPrices

@@ -34,6 +34,7 @@ export function SalesHistoryPage() {
   const customerNameById = useMemo(() => new Map(customers.map((c) => [c.id, c.name])), [customers])
   const customerById = useMemo(() => new Map(customers.map((c) => [c.id, c])), [customers])
   const branchNameById = useMemo(() => new Map(branches.map((b) => [b.id, b.name])), [branches])
+  const branchAddressById = useMemo(() => new Map(branches.map((b) => [b.id, b.address])), [branches])
 
   function variantLabel(variantId: string): string {
     const variant = variantById.get(variantId)
@@ -250,6 +251,7 @@ export function SalesHistoryPage() {
                 detailSale &&
                 generateSalePdf(detailSale, detailItems, detailPayments, {
                   branchName: branchNameById.get(detailSale.branch_id) ?? '',
+                  branchAddress: branchAddressById.get(detailSale.branch_id) ?? null,
                   customerName: detailSale.customer_id ? customerNameById.get(detailSale.customer_id) ?? null : null,
                   variantLabel,
                 })

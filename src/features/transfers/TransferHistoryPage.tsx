@@ -21,6 +21,7 @@ export function TransferHistoryPage() {
   const { transfers, loading, error, loadTransferItems, receiveTransfer } = useTransfers()
 
   const branchNameById = useMemo(() => new Map(branches.map((b) => [b.id, b.name])), [branches])
+  const branchAddressById = useMemo(() => new Map(branches.map((b) => [b.id, b.address])), [branches])
   const productNameById = useMemo(() => new Map(products.map((p) => [p.id, p.name])), [products])
   const variantById = useMemo(() => new Map(variants.map((v) => [v.id, v])), [variants])
 
@@ -160,6 +161,7 @@ export function TransferHistoryPage() {
                 detail &&
                 generateTransferPdf(detail, detailItems, {
                   originName: branchNameById.get(detail.origin_branch_id) ?? '',
+                  originAddress: branchAddressById.get(detail.origin_branch_id) ?? null,
                   destinationName: branchNameById.get(detail.destination_branch_id) ?? '',
                   variantLabel,
                 })

@@ -35,6 +35,7 @@ export function QuotationsHistoryPage() {
   const customerNameById = useMemo(() => new Map(customers.map((c) => [c.id, c.name])), [customers])
   const customerById = useMemo(() => new Map(customers.map((c) => [c.id, c])), [customers])
   const branchNameById = useMemo(() => new Map(branches.map((b) => [b.id, b.name])), [branches])
+  const branchAddressById = useMemo(() => new Map(branches.map((b) => [b.id, b.address])), [branches])
 
   function variantLabel(variantId: string): string {
     const variant = variantById.get(variantId)
@@ -207,6 +208,7 @@ export function QuotationsHistoryPage() {
                 detail &&
                 generateQuotationPdf(detail, detailItems, {
                   branchName: branchNameById.get(detail.branch_id) ?? '',
+                  branchAddress: branchAddressById.get(detail.branch_id) ?? null,
                   customerName: detail.customer_id ? customerNameById.get(detail.customer_id) ?? null : null,
                   variantLabel,
                 })

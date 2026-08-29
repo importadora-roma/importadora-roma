@@ -34,7 +34,18 @@ export function getLogoDataUrl(): Promise<string | null> {
   return logoDataUrlPromise
 }
 
-export function createPdfDoc(title: string, subtitle?: string, options?: { logoDataUrl?: string | null }) {
+export interface PdfDocOptions {
+  logoDataUrl?: string | null
+  // Every report is generated from one specific branch's screen, so the
+  // printed page should always say which one — including its address, since
+  // these are handed to customers/couriers as physical documents.
+  branchName?: string
+  branchAddress?: string | null
+}
+
+// Returns the doc plus contentY: the header's height varies (branch/address
+// lines are optional), so callers use this instead of a hardcoded startY.
+export function createPdfDoc(title: string, subtitle?: string, options?: PdfDocOptions): { doc: jsPDF; contentY: number } {
   const doc = new jsPDF()
   const hasLogo = !!options?.logoDataUrl
   const textX = hasLogo ? 34 : 14
@@ -53,20 +64,37 @@ export function createPdfDoc(title: string, subtitle?: string, options?: { logoD
   doc.setTextColor(30)
   doc.text(title, textX, 23)
 
+  let y = 29
+  if (options?.branchName) {
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    doc.setTextColor(60)
+    doc.text(options.branchName, textX, y)
+    doc.setFont('helvetica', 'normal')
+    y += 5
+  }
+  if (options?.branchAddress) {
+    doc.setFontSize(8.5)
+    doc.setTextColor(120)
+    doc.text(options.branchAddress, textX, y)
+    y += 4.5
+  }
   if (subtitle) {
     doc.setFontSize(9)
     doc.setTextColor(120)
-    doc.text(subtitle, textX, 29)
+    doc.text(subtitle, textX, y)
+    y += 5
   }
 
+  const ruleY = Math.max(y + 1, 33)
   doc.setDrawColor(...BRAND_GOLD)
   doc.setLineWidth(0.6)
-  doc.line(14, 33, 196, 33)
+  doc.line(14, ruleY, 196, ruleY)
   doc.setTextColor(0)
   doc.setDrawColor(0)
   doc.setLineWidth(0.2)
 
-  return doc
+  return { doc, contentY: ruleY + 5 }
 }
 
 interface PieSlice {

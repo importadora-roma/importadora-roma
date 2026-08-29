@@ -1,4 +1,4 @@
-import { createPdfDoc, autoTable } from '@/lib/pdf'
+import { createPdfDoc, autoTable, getLogoDataUrl } from '@/lib/pdf'
 import { formatDate } from '@/lib/format'
 import type { Container, ItemWithProgress } from './types'
 
@@ -9,13 +9,20 @@ const statusLabels: Record<ItemWithProgress['itemStatus'], string> = {
   over: 'Exceso',
 }
 
-export function generateContainerPdf(container: Container, itemsWithProgress: ItemWithProgress[], unknownCount: number) {
+export async function generateContainerPdf(
+  container: Container,
+  itemsWithProgress: ItemWithProgress[],
+  unknownCount: number,
+  branch?: { name: string; address: string | null }
+) {
   const expected = itemsWithProgress.reduce((s, i) => s + i.expected_qty, 0)
   const scanned = itemsWithProgress.reduce((s, i) => s + i.scannedQty, 0)
 
-  const doc = createPdfDoc(
+  const logoDataUrl = await getLogoDataUrl()
+  const { doc, contentY } = createPdfDoc(
     `Recepción de contenedor ${container.internal_number ?? ''}`,
-    `${container.code}${container.supplier ? ` · ${container.supplier}` : ''}${container.arrival_date ? ` · ${formatDate(container.arrival_date)}` : ''}`
+    `${container.code}${container.supplier ? ` · ${container.supplier}` : ''}${container.arrival_date ? ` · ${formatDate(container.arrival_date)}` : ''}`,
+    { logoDataUrl, branchName: branch?.name, branchAddress: branch?.address }
   )
 
   doc.setFontSize(9)
@@ -25,11 +32,11 @@ export function generateContainerPdf(container: Container, itemsWithProgress: It
       `Productos completos: ${itemsWithProgress.filter((i) => i.itemStatus === 'complete').length} / ${itemsWithProgress.length}    Códigos desconocidos: ${unknownCount}`,
     ],
     14,
-    40
+    contentY
   )
 
   autoTable(doc, {
-    startY: 50,
+    startY: contentY + 10,
     head: [['Producto', 'Calidad', 'Código', 'Esperado', 'Escaneado', 'Restante', 'Estado']],
     body: itemsWithProgress.map((i) => [
       i.product_name,

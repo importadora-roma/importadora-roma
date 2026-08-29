@@ -86,21 +86,22 @@ export function ReportsPage() {
       .map(([date, total]) => ({ date: formatDate(`${date}T00:00:00`), total }))
   }, [sales])
 
-  const branchName = branchId ? branches.find((b) => b.id === branchId)?.name ?? '' : 'Todas las sucursales'
+  const selectedBranch = branchId ? branches.find((b) => b.id === branchId) : null
+  const branchName = selectedBranch?.name ?? 'Todas las sucursales'
 
   async function exportPdf() {
     const logoDataUrl = await getLogoDataUrl()
-    const doc = createPdfDoc(
+    const { doc, contentY } = createPdfDoc(
       'Reporte mensual',
-      `${branchName} · ${formatDate(`${from}T00:00:00`)} - ${formatDate(`${to}T00:00:00`)}`,
-      { logoDataUrl }
+      `${formatDate(`${from}T00:00:00`)} - ${formatDate(`${to}T00:00:00`)}`,
+      { logoDataUrl, branchName, branchAddress: selectedBranch?.address }
     )
     const finalY = () => (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY
 
     const marginPct = grandTotal > 0 ? (grossMargin / grandTotal) * 100 : 0
 
     autoTable(doc, {
-      startY: 40,
+      startY: contentY,
       head: [['Resumen general', '']],
       headStyles: { fillColor: [16, 29, 58] },
       body: [
