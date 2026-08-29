@@ -87,7 +87,7 @@ export function AppLayout() {
           menuOpen ? 'translate-x-0 shadow-xl' : ''
         }`}
       >
-        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4">
+        <div className="flex items-center justify-between border-b border-slate-200 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))]">
           <div className="flex items-center gap-2.5">
             <img src="/pwa-192.png" alt="" className="h-8 w-8 rounded-lg" />
             <div>
@@ -129,7 +129,7 @@ export function AppLayout() {
       </aside>
 
       <main className="flex min-w-0 flex-1 flex-col md:h-full md:overflow-y-auto">
-        <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-white/80 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-white/80 md:justify-end md:px-6">
+        <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-white/80 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur supports-[backdrop-filter]:bg-white/80 md:justify-end md:px-6 md:pt-3">
           <button
             onClick={() => setMenuOpen(true)}
             className="rounded-md p-1.5 text-slate-600 hover:bg-slate-100 md:hidden"
