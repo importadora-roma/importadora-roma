@@ -209,7 +209,7 @@ export function QuotationsHistoryPage() {
                 generateQuotationPdf(detail, detailItems, {
                   branchName: branchNameById.get(detail.branch_id) ?? '',
                   branchAddress: branchAddressById.get(detail.branch_id) ?? null,
-                  customerName: detail.customer_id ? customerNameById.get(detail.customer_id) ?? null : null,
+                  customer: detail.customer_id ? customerById.get(detail.customer_id) ?? null : null,
                   variantLabel,
                 })
               }

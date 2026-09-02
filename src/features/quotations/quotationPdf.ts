@@ -2,13 +2,20 @@ import { createPdfDoc, autoTable, getLogoDataUrl, BRAND_NAVY } from '@/lib/pdf'
 import { formatCLP, formatDate, formatDateTime } from '@/lib/format'
 import type { Quotation, QuotationItem } from './useQuotations'
 
+interface QuotationCustomer {
+  name: string
+  rut: string | null
+  address: string | null
+  phone: string | null
+}
+
 export async function generateQuotationPdf(
   quotation: Quotation,
   items: QuotationItem[],
   context: {
     branchName: string
     branchAddress: string | null
-    customerName: string | null
+    customer: QuotationCustomer | null
     variantLabel: (variantId: string) => string
   }
 ) {
@@ -22,9 +29,22 @@ export async function generateQuotationPdf(
   let y = contentY
   doc.setFontSize(9)
   doc.setTextColor(80)
-  if (context.customerName) {
-    doc.text(`Cliente: ${context.customerName}`, 14, y)
-    y += 6
+  if (context.customer) {
+    doc.text(`Cliente: ${context.customer.name}`, 14, y)
+    y += 5
+    if (context.customer.rut) {
+      doc.text(`RUT: ${context.customer.rut}`, 14, y)
+      y += 5
+    }
+    if (context.customer.address) {
+      doc.text(`Dirección: ${context.customer.address}`, 14, y)
+      y += 5
+    }
+    if (context.customer.phone) {
+      doc.text(`Teléfono: ${context.customer.phone}`, 14, y)
+      y += 5
+    }
+    y += 1
   }
   if (quotation.valid_until) {
     doc.text(`Válida hasta: ${formatDate(quotation.valid_until)}`, 14, y)
