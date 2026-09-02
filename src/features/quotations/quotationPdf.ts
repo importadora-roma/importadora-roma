@@ -62,5 +62,14 @@ export async function generateQuotationPdf(
     columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' } },
   })
 
+  if (quotation.notes) {
+    const notesY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8
+    doc.setFontSize(9)
+    doc.setTextColor(80)
+    doc.text('Notas:', 14, notesY)
+    doc.text(doc.splitTextToSize(quotation.notes, 180), 14, notesY + 5)
+    doc.setTextColor(0)
+  }
+
   doc.save(`cotizacion-${quotation.quotation_number ?? quotation.id}.pdf`)
 }
