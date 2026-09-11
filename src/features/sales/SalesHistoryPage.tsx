@@ -14,10 +14,15 @@ import { useSales, type Sale, type SaleItem, type SalePayment } from './useSales
 import { useSaleCatalog, type CatalogEntry } from './useSaleCatalog'
 import { ProductSearch } from './ProductSearch'
 import { generateSalePdf } from './salePdf'
-import type { PaymentMethod } from '@/types/database'
+import type { PaymentMethod, SalePaymentMethod } from '@/types/database'
 
 const statusLabels: Record<string, string> = { completed: 'Completada', cancelled: 'Anulada' }
-const paymentLabels: Record<PaymentMethod, string> = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia' }
+const paymentLabels: Record<SalePaymentMethod, string> = {
+  efectivo: 'Efectivo',
+  tarjeta: 'Tarjeta',
+  transferencia: 'Transferencia',
+  credito: 'Crédito',
+}
 
 export function SalesHistoryPage() {
   const profile = useAuthStore((s) => s.profile)

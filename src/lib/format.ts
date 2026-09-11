@@ -26,6 +26,22 @@ export function formatDateTime(isoString: string): string {
   return `${day}/${month}/${year} ${hours}:${minutes}`
 }
 
+// "Today" per the business's own clock (Chile), not the visiting device's
+// timezone or UTC — a browser's toISOString().slice(0,10) drifts a day off
+// for hours every evening once UTC has rolled over but Santiago hasn't (or
+// vice versa for a device set to a timezone ahead of UTC), which matters
+// wherever this needs to agree with sale_date's same-day logic on the server.
+const santiagoDateFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Santiago',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+
+export function todayCL(): string {
+  return santiagoDateFormatter.format(new Date())
+}
+
 export function formatKilo(kilo: number): string {
   return `${kilo % 1 === 0 ? kilo : kilo.toFixed(2)}KG`
 }

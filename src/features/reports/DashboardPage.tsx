@@ -1,7 +1,7 @@
 import { lazy, Suspense, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { ShoppingCart, Wallet, AlertTriangle, FileText, Boxes, Receipt } from 'lucide-react'
-import { formatCLP } from '@/lib/format'
+import { formatCLP, todayCL } from '@/lib/format'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useReports } from '@/features/reports/useReports'
@@ -17,16 +17,12 @@ import { useInvoices } from '@/features/invoices/useInvoices'
 const BranchSalesOverview = lazy(() => import('./BranchSalesOverview').then((m) => ({ default: m.BranchSalesOverview })))
 const DailyFinancialSummary = lazy(() => import('./DailyFinancialSummary').then((m) => ({ default: m.DailyFinancialSummary })))
 
-function today(): string {
-  return new Date().toISOString().slice(0, 10)
-}
-
 export function DashboardPage() {
   const profile = useAuthStore((s) => s.profile)
   const { branchId: effectiveBranchId, branch } = useEffectiveBranch()
   const isTienda = branch?.branch_type === 'tienda'
 
-  const day = today()
+  const day = todayCL()
   const { sales, loading: loadingSales } = useReports(effectiveBranchId, day, day)
   const { register, expectedNow } = useCash(effectiveBranchId)
   const { inventory } = useInventory()

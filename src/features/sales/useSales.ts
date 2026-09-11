@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import type { SaleItemStatus, SaleStatus, PaymentMethod } from '@/types/database'
+import type { SaleItemStatus, SaleStatus, PaymentMethod, SalePaymentMethod } from '@/types/database'
 
 export interface Sale {
   id: string
@@ -34,7 +34,7 @@ export interface SaleItem {
 export interface SalePayment {
   id: string
   sale_id: string
-  payment_method: PaymentMethod
+  payment_method: SalePaymentMethod
   amount: number
 }
 

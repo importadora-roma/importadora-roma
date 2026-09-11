@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Input, Select, Textarea } from '@/components/ui/Input'
-import { formatCLP } from '@/lib/format'
+import { formatCLP, todayCL } from '@/lib/format'
 import { useProfitReport } from './useProfitReport'
 import { useExpenses } from '@/features/expenses/useExpenses'
 import { useTransferValue } from '@/features/transfers/useTransferValue'
@@ -16,12 +16,8 @@ const categoryLabels: Record<ExpenseCategory, string> = {
   otro: 'Otro',
 }
 
-function today(): string {
-  return new Date().toISOString().slice(0, 10)
-}
-
 export function DailyFinancialSummary({ branchId }: { branchId: string }) {
-  const day = today()
+  const day = todayCL()
   const { cogs, grossMargin, loading: loadingMargin } = useProfitReport(branchId, day, day)
   const { expenses, total: totalExpenses, loading: loadingExpenses, createExpense } = useExpenses(branchId, day, day)
   const { total: transferValue, transferCount, loading: loadingTransfers } = useTransferValue(branchId, day, day)

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { ReasonModal } from '@/components/ui/ReasonModal'
-import { formatCLP, formatDate, formatKilo } from '@/lib/format'
+import { formatCLP, formatDate, formatKilo, todayCL } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
@@ -15,12 +15,8 @@ import { useExpenses } from '@/features/expenses/useExpenses'
 import type { ExpenseCategory } from '@/types/database'
 
 function startOfMonth(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
-}
-
-function today(): string {
-  return new Date().toISOString().slice(0, 10)
+  const [y, m] = todayCL().split('-')
+  return `${y}-${m}-01`
 }
 
 const categoryLabels: Record<ExpenseCategory, string> = {
@@ -35,7 +31,7 @@ export function RentabilidadPage() {
   const { branchId: activeBranchId, branches } = useEffectiveBranch()
   const [branchId, setBranchId] = useState(activeBranchId)
   const [from, setFrom] = useState(startOfMonth())
-  const [to, setTo] = useState(today())
+  const [to, setTo] = useState(todayCL())
 
   const { revenue, cogs, grossMargin, loading: loadingMargin, reload: reloadProfit } = useProfitReport(branchId, from, to)
   const { expenses, total: totalExpenses, loading: loadingExpenses, createExpense, deleteExpense } = useExpenses(branchId, from, to)
@@ -75,7 +71,7 @@ export function RentabilidadPage() {
   const [category, setCategory] = useState<ExpenseCategory>('sueldo')
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
-  const [expenseDate, setExpenseDate] = useState(today())
+  const [expenseDate, setExpenseDate] = useState(todayCL())
   const [notes, setNotes] = useState('')
   const [paidFromCash, setPaidFromCash] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -87,7 +83,7 @@ export function RentabilidadPage() {
     setCategory('sueldo')
     setDescription('')
     setAmount('')
-    setExpenseDate(today())
+    setExpenseDate(todayCL())
     setNotes('')
     setPaidFromCash(false)
     setFormError(null)
@@ -104,7 +100,7 @@ export function RentabilidadPage() {
       setFormError('Ingresa un monto válido')
       return
     }
-    const deductFromCash = paidFromCash && expenseDate === today()
+    const deductFromCash = paidFromCash && expenseDate === todayCL()
     setSaving(true)
     const { error, registerAdjusted } = await createExpense({
       category,
@@ -344,7 +340,7 @@ export function RentabilidadPage() {
             <Input label="Monto" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
             <Input label="Fecha" type="date" value={expenseDate} onChange={(e) => setExpenseDate(e.target.value)} />
           </div>
-          {expenseDate === today() && (
+          {expenseDate === todayCL() && (
             <label className="flex items-center gap-2 text-sm text-slate-700">
               <input type="checkbox" checked={paidFromCash} onChange={(e) => setPaidFromCash(e.target.checked)} />
               Pagado en efectivo desde la caja (descuenta del efectivo esperado)

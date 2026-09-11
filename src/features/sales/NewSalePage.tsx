@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Trash2, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Input'
-import { formatCLP, formatKilo } from '@/lib/format'
+import { formatCLP, formatKilo, todayCL } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useAuthStore } from '@/stores/authStore'
@@ -16,10 +16,6 @@ function addDays(days: number): string {
   const d = new Date()
   d.setDate(d.getDate() + days)
   return d.toISOString().slice(0, 10)
-}
-
-function today(): string {
-  return new Date().toISOString().slice(0, 10)
 }
 
 interface CartItem {
@@ -44,7 +40,7 @@ export function NewSalePage() {
   const [cart, setCart] = useState<CartItem[]>([])
   const [customerId, setCustomerId] = useState<string | null>(null)
   const [payments, setPayments] = useState<PaymentLine[]>([{ method: 'efectivo', amount: '' }])
-  const [saleDate, setSaleDate] = useState(today())
+  const [saleDate, setSaleDate] = useState(todayCL())
   const [dueDate, setDueDate] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -54,7 +50,7 @@ export function NewSalePage() {
   const total = cart.reduce((sum, item) => sum + (Number(item.soldPrice) || 0) * item.quantity, 0)
   const hasCredit = payments.some((p) => p.method === 'credito')
   const hasCash = payments.some((p) => p.method === 'efectivo' && Number(p.amount) > 0)
-  const isBackdated = saleDate !== today()
+  const isBackdated = saleDate !== todayCL()
 
   useEffect(() => {
     if (hasCredit && !dueDate) setDueDate(addDays(alertSettings.credit_default_term_days))
@@ -100,7 +96,7 @@ export function NewSalePage() {
     setCart([])
     setCustomerId(null)
     setPayments([{ method: 'efectivo', amount: '' }])
-    setSaleDate(today())
+    setSaleDate(todayCL())
     setDueDate('')
     setNotes('')
     setError(null)
@@ -248,7 +244,7 @@ export function NewSalePage() {
           <CustomerSelect customerId={customerId} onChange={setCustomerId} />
 
           {canSeeCost && (
-            <Input label="Fecha de la venta" type="date" max={today()} value={saleDate} onChange={(e) => setSaleDate(e.target.value)} />
+            <Input label="Fecha de la venta" type="date" max={todayCL()} value={saleDate} onChange={(e) => setSaleDate(e.target.value)} />
           )}
           {isBackdated && hasCash && (
             <p className="text-xs text-amber-600">

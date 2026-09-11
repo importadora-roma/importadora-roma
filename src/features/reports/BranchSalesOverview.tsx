@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
-import { formatCLP } from '@/lib/format'
+import { formatCLP, todayCL } from '@/lib/format'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useReports } from './useReports'
 import { useTransferValue } from '@/features/transfers/useTransferValue'
@@ -9,15 +9,14 @@ import type { SalePaymentMethod } from '@/types/database'
 type Period = 'today' | 'week' | 'month'
 
 function rangeFor(period: Period): { from: string; to: string } {
-  const now = new Date()
-  const to = now.toISOString().slice(0, 10)
+  const to = todayCL()
   if (period === 'today') return { from: to, to }
+  const [y, m, d] = to.split('-').map(Number)
   if (period === 'week') {
-    const d = new Date(now)
-    d.setDate(d.getDate() - 6)
-    return { from: d.toISOString().slice(0, 10), to }
+    const from = new Date(Date.UTC(y, m - 1, d - 6)).toISOString().slice(0, 10)
+    return { from, to }
   }
-  const from = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+  const from = `${y}-${String(m).padStart(2, '0')}-01`
   return { from, to }
 }
 

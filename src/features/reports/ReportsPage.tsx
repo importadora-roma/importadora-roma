@@ -3,7 +3,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { Download, Package } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input, Select } from '@/components/ui/Input'
-import { formatCLP, formatDate } from '@/lib/format'
+import { formatCLP, formatDate, todayCL } from '@/lib/format'
 import { createPdfDoc, autoTable, getLogoDataUrl, addPieChartWithLegend } from '@/lib/pdf'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
@@ -36,12 +36,8 @@ const EXPENSE_COLORS: Record<ExpenseCategory, [number, number, number]> = {
 }
 
 function startOfMonth(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
-}
-
-function today(): string {
-  return new Date().toISOString().slice(0, 10)
+  const [y, m] = todayCL().split('-')
+  return `${y}-${m}-01`
 }
 
 export function ReportsPage() {
@@ -49,7 +45,7 @@ export function ReportsPage() {
   const { branchId: activeBranchId, branches } = useEffectiveBranch()
   const [branchId, setBranchId] = useState(activeBranchId)
   const [from, setFrom] = useState(startOfMonth())
-  const [to, setTo] = useState(today())
+  const [to, setTo] = useState(todayCL())
 
   const { sales, payments, loading, error } = useReports(branchId, from, to)
   const { cogs, grossMargin, loading: loadingMargin } = useProfitReport(branchId, from, to)

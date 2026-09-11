@@ -1,9 +1,14 @@
 import { createPdfDoc, autoTable, getLogoDataUrl } from '@/lib/pdf'
 import { formatCLP, formatDate } from '@/lib/format'
 import type { Sale, SaleItem, SalePayment } from './useSales'
-import type { PaymentMethod } from '@/types/database'
+import type { SalePaymentMethod } from '@/types/database'
 
-const paymentLabels: Record<PaymentMethod, string> = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia' }
+const paymentLabels: Record<SalePaymentMethod, string> = {
+  efectivo: 'Efectivo',
+  tarjeta: 'Tarjeta',
+  transferencia: 'Transferencia',
+  credito: 'Crédito',
+}
 
 export async function generateSalePdf(
   sale: Sale,
