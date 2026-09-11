@@ -20,6 +20,7 @@ import {
   Menu,
   X,
   KeyRound,
+  BookOpen,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
@@ -72,6 +73,7 @@ export function AppLayout() {
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [passwordSaving, setPasswordSaving] = useState(false)
   const [passwordOk, setPasswordOk] = useState(false)
+  const [guideLoading, setGuideLoading] = useState(false)
 
   // Close the mobile drawer automatically whenever the route changes (e.g.
   // after tapping a nav link), instead of leaving it open over the new page.
@@ -105,6 +107,14 @@ export function AppLayout() {
       return
     }
     setPasswordOk(true)
+  }
+
+  async function handleDownloadGuide() {
+    if (!profile) return
+    setGuideLoading(true)
+    const { generateUserGuidePdf } = await import('@/features/settings/userGuidePdf')
+    await generateUserGuidePdf(profile.role, isTienda, branch?.name ?? 'Importadora Roma')
+    setGuideLoading(false)
   }
 
   const visibleItems = navItems.filter(
@@ -156,6 +166,14 @@ export function AppLayout() {
           ))}
         </nav>
         <div className="border-t border-slate-200 p-2">
+          <button
+            onClick={handleDownloadGuide}
+            disabled={guideLoading}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+          >
+            <BookOpen size={18} />
+            {guideLoading ? 'Generando...' : 'Manual de usuario'}
+          </button>
           <button
             onClick={openPasswordModal}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
