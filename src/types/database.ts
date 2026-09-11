@@ -1153,6 +1153,21 @@ export interface Database {
         Args: { p_invoice_id: string; p_reason: string }
         Returns: undefined
       }
+      admin_create_user: {
+        Args: {
+          p_email: string
+          p_password: string
+          p_full_name: string
+          p_role: string
+          p_branch_id: string | null
+          p_commission_pct?: number
+        }
+        Returns: string
+      }
+      admin_set_user_password: {
+        Args: { p_user_id: string; p_new_password: string }
+        Returns: undefined
+      }
     }
   }
 }

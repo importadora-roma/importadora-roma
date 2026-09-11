@@ -19,11 +19,16 @@ import {
   TrendingUp,
   Menu,
   X,
+  KeyRound,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
+import { supabase } from '@/lib/supabase'
 import { AlertsBell } from '@/features/alerts/AlertsBell'
 import { GlobalSearch } from '@/features/search/GlobalSearch'
+import { Modal } from '@/components/ui/Modal'
+import { Input } from '@/components/ui/Input'
+import { Button } from '@/components/ui/Button'
 import { BranchSwitcher } from './BranchSwitcher'
 import type { UserRole } from '@/types/models'
 
@@ -61,12 +66,46 @@ export function AppLayout() {
   const showFinancialAlerts = (profile?.role === 'admin' || profile?.role === 'supervisor') && !isTienda
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [passwordOpen, setPasswordOpen] = useState(false)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [passwordSaving, setPasswordSaving] = useState(false)
+  const [passwordOk, setPasswordOk] = useState(false)
 
   // Close the mobile drawer automatically whenever the route changes (e.g.
   // after tapping a nav link), instead of leaving it open over the new page.
   useEffect(() => {
     setMenuOpen(false)
   }, [location.pathname])
+
+  function openPasswordModal() {
+    setNewPassword('')
+    setConfirmPassword('')
+    setPasswordError(null)
+    setPasswordOk(false)
+    setPasswordOpen(true)
+  }
+
+  async function handleChangeOwnPassword() {
+    setPasswordError(null)
+    if (newPassword.length < 6) {
+      setPasswordError('La contraseña debe tener al menos 6 caracteres')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Las contraseñas no coinciden')
+      return
+    }
+    setPasswordSaving(true)
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    setPasswordSaving(false)
+    if (error) {
+      setPasswordError(error.message)
+      return
+    }
+    setPasswordOk(true)
+  }
 
   const visibleItems = navItems.filter(
     (item) => (!item.roles || (profile && item.roles.includes(profile.role))) && (!item.importadoraOnly || !isTienda)
@@ -118,6 +157,13 @@ export function AppLayout() {
         </nav>
         <div className="border-t border-slate-200 p-2">
           <button
+            onClick={openPasswordModal}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+          >
+            <KeyRound size={18} />
+            Cambiar contraseña
+          </button>
+          <button
             onClick={() => signOut()}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
           >
@@ -127,6 +173,30 @@ export function AppLayout() {
           <p className="mt-1 select-none px-3 text-[10px] text-slate-300">Hecho por Deniz Semiz</p>
         </div>
       </aside>
+
+      <Modal open={passwordOpen} onClose={() => setPasswordOpen(false)} title="Cambiar mi contraseña">
+        <div className="space-y-4">
+          {passwordOk ? (
+            <p className="text-sm text-green-700">Contraseña actualizada correctamente.</p>
+          ) : (
+            <>
+              <Input label="Nueva contraseña" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+              <Input label="Confirmar contraseña" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+              {passwordError && <p className="text-sm text-red-600">{passwordError}</p>}
+            </>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setPasswordOpen(false)}>
+              {passwordOk ? 'Cerrar' : 'Cancelar'}
+            </Button>
+            {!passwordOk && (
+              <Button onClick={handleChangeOwnPassword} disabled={passwordSaving}>
+                {passwordSaving ? 'Guardando...' : 'Guardar'}
+              </Button>
+            )}
+          </div>
+        </div>
+      </Modal>
 
       <main className="flex min-w-0 flex-1 flex-col md:h-full md:overflow-y-auto">
         <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-white/80 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur supports-[backdrop-filter]:bg-white/80 md:justify-end md:px-6 md:pt-3">

@@ -30,5 +30,32 @@ export function useUsers() {
     return { error: null }
   }
 
-  return { users, loading, error, reload, updateUser }
+  async function createUser(input: {
+    email: string
+    password: string
+    full_name: string
+    role: UserRole
+    branch_id: string | null
+    commission_pct?: number
+  }) {
+    const { error } = await supabase.rpc('admin_create_user', {
+      p_email: input.email,
+      p_password: input.password,
+      p_full_name: input.full_name,
+      p_role: input.role,
+      p_branch_id: input.branch_id,
+      p_commission_pct: input.commission_pct ?? 0,
+    })
+    if (error) return { error: error.message }
+    await reload()
+    return { error: null }
+  }
+
+  async function setUserPassword(userId: string, newPassword: string) {
+    const { error } = await supabase.rpc('admin_set_user_password', { p_user_id: userId, p_new_password: newPassword })
+    if (error) return { error: error.message }
+    return { error: null }
+  }
+
+  return { users, loading, error, reload, updateUser, createUser, setUserPassword }
 }
