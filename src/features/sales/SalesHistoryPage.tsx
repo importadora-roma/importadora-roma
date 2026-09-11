@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Select, Input } from '@/components/ui/Input'
 import { ReasonModal } from '@/components/ui/ReasonModal'
-import { formatCLP, formatDateTime, formatKilo } from '@/lib/format'
+import { formatCLP, formatDate, formatDateTime, formatKilo } from '@/lib/format'
 import { whatsappUrl, mailtoUrl } from '@/lib/share'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
@@ -138,7 +138,17 @@ export function SalesHistoryPage() {
             {sales.map((sale) => (
               <tr key={sale.id}>
                 <td className="px-4 py-3 font-medium text-slate-900">{sale.sale_number}</td>
-                <td className="px-4 py-3 text-slate-500">{formatDateTime(sale.created_at)}</td>
+                <td className="px-4 py-3 text-slate-500">
+                  {formatDate(`${sale.sale_date}T00:00:00`)}
+                  {sale.sale_date !== sale.created_at.slice(0, 10) && (
+                    <span
+                      className="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
+                      title={`Ingresada el ${formatDateTime(sale.created_at)}`}
+                    >
+                      Retroactiva
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-slate-600">{sale.customer_id ? customerNameById.get(sale.customer_id) ?? '—' : '—'}</td>
                 <td className="px-4 py-3 font-medium text-slate-900">{formatCLP(sale.total)}</td>
                 <td className="px-4 py-3">

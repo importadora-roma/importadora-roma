@@ -255,6 +255,7 @@ export interface Database {
           notes: string | null
           requires_invoice: boolean
           due_date: string | null
+          sale_date: string
           created_at: string
           updated_at: string
         }
@@ -273,6 +274,7 @@ export interface Database {
           notes?: string | null
           requires_invoice?: boolean
           due_date?: string | null
+          sale_date?: string
           created_at?: string
           updated_at?: string
         }
@@ -954,6 +956,7 @@ export interface Database {
           p_items: { variant_id: string; quantity: number; sold_price: number }[]
           p_payments: { payment_method: SalePaymentMethod; amount: number }[]
           p_notes?: string | null
+          p_sale_date?: string | null
         }
         Returns: string
       }

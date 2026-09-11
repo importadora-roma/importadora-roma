@@ -14,6 +14,7 @@ export interface Sale {
   cancel_reason: string | null
   notes: string | null
   requires_invoice: boolean
+  sale_date: string
   created_at: string
 }
 

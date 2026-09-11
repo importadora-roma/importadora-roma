@@ -18,6 +18,10 @@ function addDays(days: number): string {
   return d.toISOString().slice(0, 10)
 }
 
+function today(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
 interface CartItem {
   variantId: string
   productName: string
@@ -40,6 +44,7 @@ export function NewSalePage() {
   const [cart, setCart] = useState<CartItem[]>([])
   const [customerId, setCustomerId] = useState<string | null>(null)
   const [payments, setPayments] = useState<PaymentLine[]>([{ method: 'efectivo', amount: '' }])
+  const [saleDate, setSaleDate] = useState(today())
   const [dueDate, setDueDate] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -48,6 +53,8 @@ export function NewSalePage() {
 
   const total = cart.reduce((sum, item) => sum + (Number(item.soldPrice) || 0) * item.quantity, 0)
   const hasCredit = payments.some((p) => p.method === 'credito')
+  const hasCash = payments.some((p) => p.method === 'efectivo' && Number(p.amount) > 0)
+  const isBackdated = saleDate !== today()
 
   useEffect(() => {
     if (hasCredit && !dueDate) setDueDate(addDays(alertSettings.credit_default_term_days))
@@ -93,6 +100,7 @@ export function NewSalePage() {
     setCart([])
     setCustomerId(null)
     setPayments([{ method: 'efectivo', amount: '' }])
+    setSaleDate(today())
     setDueDate('')
     setNotes('')
     setError(null)
@@ -129,6 +137,7 @@ export function NewSalePage() {
       p_items: cart.map((i) => ({ variant_id: i.variantId, quantity: i.quantity, sold_price: Number(i.soldPrice) })),
       p_payments: paymentsPayload,
       p_notes: notes.trim() || null,
+      p_sale_date: saleDate,
     })
 
     if (error) {
@@ -237,6 +246,15 @@ export function NewSalePage() {
 
         <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
           <CustomerSelect customerId={customerId} onChange={setCustomerId} />
+
+          {canSeeCost && (
+            <Input label="Fecha de la venta" type="date" max={today()} value={saleDate} onChange={(e) => setSaleDate(e.target.value)} />
+          )}
+          {isBackdated && hasCash && (
+            <p className="text-xs text-amber-600">
+              Venta retroactiva: los pagos en efectivo no se sumarán a la caja de hoy.
+            </p>
+          )}
 
           <div className="flex justify-between border-t border-slate-200 pt-3 text-base font-semibold text-slate-900">
             <span>Total</span>

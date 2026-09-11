@@ -1,5 +1,5 @@
 import { createPdfDoc, autoTable, getLogoDataUrl } from '@/lib/pdf'
-import { formatCLP, formatDateTime } from '@/lib/format'
+import { formatCLP, formatDate } from '@/lib/format'
 import type { Sale, SaleItem, SalePayment } from './useSales'
 import type { PaymentMethod } from '@/types/database'
 
@@ -17,7 +17,7 @@ export async function generateSalePdf(
   }
 ) {
   const logoDataUrl = await getLogoDataUrl()
-  const { doc, contentY } = createPdfDoc(`Comprobante de venta ${sale.sale_number ?? ''}`, formatDateTime(sale.created_at), {
+  const { doc, contentY } = createPdfDoc(`Comprobante de venta ${sale.sale_number ?? ''}`, formatDate(`${sale.sale_date}T00:00:00`), {
     logoDataUrl,
     branchName: context.branchName,
     branchAddress: context.branchAddress,

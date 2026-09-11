@@ -78,7 +78,7 @@ export function ReportsPage() {
   const dailyTotals = useMemo(() => {
     const map = new Map<string, number>()
     for (const sale of sales) {
-      const day = sale.created_at.slice(0, 10)
+      const day = sale.sale_date
       map.set(day, (map.get(day) ?? 0) + sale.total)
     }
     return Array.from(map.entries())
