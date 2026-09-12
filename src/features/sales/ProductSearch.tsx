@@ -9,6 +9,7 @@ export function ProductSearch({ catalog, onSelect }: { catalog: CatalogEntry[]; 
   const [open, setOpen] = useState(false)
   const [scannerOpen, setScannerOpen] = useState(false)
   const [showOutOfStock, setShowOutOfStock] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
 
   const results = useMemo(() => {
     const q = term.trim().toLowerCase()
@@ -26,6 +27,28 @@ export function ProductSearch({ catalog, onSelect }: { catalog: CatalogEntry[]; 
     onSelect(entry)
     setTerm('')
     setOpen(false)
+    setSelected(new Set())
+  }
+
+  function toggleSelected(variantId: string) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(variantId)) next.delete(variantId)
+      else next.add(variantId)
+      return next
+    })
+  }
+
+  function addSelected() {
+    // Iterate the full catalog, not just the current results — the
+    // selection can span several different searches (e.g. picking 5-6
+    // different fardos one search term at a time) before adding them all.
+    for (const entry of catalog) {
+      if (selected.has(entry.variantId)) onSelect(entry)
+    }
+    setTerm('')
+    setOpen(false)
+    setSelected(new Set())
   }
 
   // A USB barcode scanner types the code into whatever input is focused and
@@ -95,20 +118,40 @@ export function ProductSearch({ catalog, onSelect }: { catalog: CatalogEntry[]; 
             </p>
           )}
           {results.map((r) => (
-            <button
-              key={r.variantId}
-              onClick={() => selectAndClear(r)}
-              className="flex w-full items-center justify-between px-4 py-2 text-left text-sm hover:bg-slate-50"
-            >
-              <span>
-                <span className="font-medium text-slate-900">{r.productName}</span>
-                <span className="text-slate-500"> — {r.calidad} {formatKilo(r.kilo)}</span>
-              </span>
-              <span className={`ml-4 shrink-0 ${r.stock <= 0 ? 'text-red-600' : 'text-slate-600'}`}>
-                {formatCLP(r.price)} · stock {r.stock}
-              </span>
-            </button>
+            <div key={r.variantId} className="flex w-full items-center gap-2 px-2 py-1 hover:bg-slate-50">
+              <input
+                type="checkbox"
+                checked={selected.has(r.variantId)}
+                onChange={() => toggleSelected(r.variantId)}
+                onClick={(e) => e.stopPropagation()}
+                className="shrink-0"
+                aria-label={`Seleccionar ${r.productName}`}
+              />
+              <button
+                onClick={() => selectAndClear(r)}
+                className="flex flex-1 items-center justify-between py-1 pl-1 text-left text-sm"
+              >
+                <span>
+                  <span className="font-medium text-slate-900">{r.productName}</span>
+                  <span className="text-slate-500"> — {r.calidad} {formatKilo(r.kilo)}</span>
+                </span>
+                <span className={`ml-4 shrink-0 ${r.stock <= 0 ? 'text-red-600' : 'text-slate-600'}`}>
+                  {formatCLP(r.price)} · stock {r.stock}
+                </span>
+              </button>
+            </div>
           ))}
+          {selected.size > 0 && (
+            <div className="sticky bottom-0 flex items-center justify-between gap-2 border-t border-slate-200 bg-white px-3 py-2">
+              <span className="text-xs text-slate-500">{selected.size} seleccionado{selected.size === 1 ? '' : 's'}</span>
+              <button
+                onClick={addSelected}
+                className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
+              >
+                Agregar {selected.size} producto{selected.size === 1 ? '' : 's'}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
