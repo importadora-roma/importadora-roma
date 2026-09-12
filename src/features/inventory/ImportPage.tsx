@@ -10,6 +10,18 @@ import { useProducts } from '@/features/products/useProducts'
 import { useInventory } from './useInventory'
 import type { Product, ProductVariant } from '@/types/models'
 
+// Packing lists label quality as E/A/B; the business's own catalog uses
+// Primera/Segunda/Tercera for the same tiers. Normalizing at import time
+// (rather than leaving it as a display-only translation) keeps a single
+// canonical name per product+kilo instead of re-creating the E/A/B vs.
+// Primera/Segunda/Tercera duplicate-variant problem on every future upload.
+const CALIDAD_ALIASES: Record<string, string> = { E: 'Primera', A: 'Segunda', B: 'Tercera' }
+
+function normalizeCalidad(raw: string): string {
+  const trimmed = raw.trim()
+  return CALIDAD_ALIASES[trimmed.toUpperCase()] ?? trimmed
+}
+
 type FieldTarget =
   | 'producto'
   | 'categoria'
@@ -145,7 +157,7 @@ export function ImportPage() {
     if (calidadCol === -1) return []
     const set = new Set<string>()
     for (const row of rawRows) {
-      const v = (row[calidadCol] ?? '').trim()
+      const v = normalizeCalidad(row[calidadCol] ?? '')
       if (v) set.add(v)
     }
     return Array.from(set).sort()
@@ -169,7 +181,7 @@ export function ImportPage() {
       }
       const producto = get('producto')
       const categoria = get('categoria')
-      const calidad = get('calidad')
+      const calidad = normalizeCalidad(get('calidad'))
       const sku = get('sku')
       const proveedor = get('proveedor')
       const kilo = resolveKilo(producto, calidad, parseCLNumber(get('kilo')))
