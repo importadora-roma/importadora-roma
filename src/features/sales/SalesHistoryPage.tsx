@@ -427,7 +427,7 @@ function ExchangeModal({
     <Modal open onClose={onClose} title="Cambiar producto">
       <div className="space-y-4">
         <p className="text-sm text-slate-500">Valor original: {formatCLP(item.line_total)}</p>
-        <ProductSearch catalog={catalog} onSelect={setSelected} />
+        <ProductSearch catalog={catalog} onSelect={setSelected} branchId={branchId} />
         {selected && (
           <p className="text-sm text-slate-700">
             Seleccionado: {selected.productName} — {selected.calidad} {formatKilo(selected.kilo)} ({formatCLP(selected.price)})

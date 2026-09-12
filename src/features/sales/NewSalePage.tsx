@@ -167,7 +167,7 @@ export function NewSalePage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <ProductSearch catalog={catalog} onSelect={addToCart} />
+          <ProductSearch catalog={catalog} onSelect={addToCart} branchId={effectiveBranchId} />
 
           <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white">
             <table className="w-full text-left text-sm">

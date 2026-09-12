@@ -3,24 +3,52 @@ import { Camera, Search } from 'lucide-react'
 import { formatCLP, formatKilo } from '@/lib/format'
 import { CameraScanModal } from './CameraScanModal'
 import type { CatalogEntry } from './useSaleCatalog'
+import { useTopSellingVariantIds } from './useTopSellingVariants'
 
-export function ProductSearch({ catalog, onSelect }: { catalog: CatalogEntry[]; onSelect: (entry: CatalogEntry) => void }) {
+const SEARCH_RESULTS_LIMIT = 50
+const DEFAULT_RESULTS_LIMIT = 20
+
+export function ProductSearch({
+  catalog,
+  onSelect,
+  branchId,
+}: {
+  catalog: CatalogEntry[]
+  onSelect: (entry: CatalogEntry) => void
+  branchId: string
+}) {
   const [term, setTerm] = useState('')
   const [open, setOpen] = useState(false)
   const [scannerOpen, setScannerOpen] = useState(false)
   const [showOutOfStock, setShowOutOfStock] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const { topVariantIds } = useTopSellingVariantIds(branchId)
 
   const results = useMemo(() => {
     const q = term.trim().toLowerCase()
-    let matches = catalog.filter((c) => showOutOfStock || c.stock > 0)
-    if (q) {
-      matches = matches.filter(
+
+    if (!q) {
+      // Nothing typed yet — lead with what actually sells in this branch,
+      // instead of an arbitrary slice of the catalog, so staff can start
+      // checking off fardos right away.
+      const catalogById = new Map(catalog.map((c) => [c.variantId, c]))
+      const bestSellers = topVariantIds
+        .map((id) => catalogById.get(id))
+        .filter((c): c is CatalogEntry => !!c && (showOutOfStock || c.stock > 0))
+      if (bestSellers.length > 0) return bestSellers.slice(0, DEFAULT_RESULTS_LIMIT)
+      // No sales history yet for this branch/period — fall back to the catalog.
+      return catalog.filter((c) => showOutOfStock || c.stock > 0).slice(0, DEFAULT_RESULTS_LIMIT)
+    }
+
+    const matches = catalog
+      .filter((c) => showOutOfStock || c.stock > 0)
+      .filter(
         (c) => c.productName.toLowerCase().includes(q) || c.calidad.toLowerCase().includes(q) || c.sku?.toLowerCase() === q
       )
-    }
-    return matches.sort((a, b) => (b.stock > 0 ? 1 : 0) - (a.stock > 0 ? 1 : 0)).slice(0, 20)
-  }, [catalog, term, showOutOfStock])
+    return matches.sort((a, b) => (b.stock > 0 ? 1 : 0) - (a.stock > 0 ? 1 : 0)).slice(0, SEARCH_RESULTS_LIMIT)
+  }, [catalog, term, showOutOfStock, topVariantIds])
+
+  const isDefaultView = !term.trim()
 
   function selectAndClear(entry: CatalogEntry) {
     onSelect(entry)
@@ -105,6 +133,11 @@ export function ProductSearch({ catalog, onSelect }: { catalog: CatalogEntry[]; 
         <>
           <button aria-label="Cerrar búsqueda" onClick={() => setOpen(false)} className="fixed inset-0 z-0 cursor-default" />
           <div className="absolute z-10 mt-1 max-h-80 w-full overflow-auto rounded-md border border-slate-200 bg-white shadow-lg">
+          {isDefaultView && (
+            <p className="border-b border-slate-100 bg-slate-50 px-4 py-1.5 text-[11px] font-medium uppercase tracking-wide text-slate-400">
+              Más vendidos
+            </p>
+          )}
           <label className="flex items-center gap-2 border-b border-slate-100 px-4 py-2 text-xs text-slate-500">
             <input
               type="checkbox"

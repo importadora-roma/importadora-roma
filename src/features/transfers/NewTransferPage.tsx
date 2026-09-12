@@ -127,7 +127,7 @@ export function NewTransferPage() {
       </div>
 
       <div className="mt-4">
-        <ProductSearch catalog={catalog} onSelect={addItem} />
+        <ProductSearch catalog={catalog} onSelect={addItem} branchId={effectiveOrigin} />
       </div>
 
       <p className="mt-3 text-xs text-slate-400">
