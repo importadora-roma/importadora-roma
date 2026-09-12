@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
-import { Pencil, Download, Trash2, AlertTriangle, Plus, Minus, PackagePlus } from 'lucide-react'
+import { Pencil, Download, FileText, Trash2, AlertTriangle, Plus, Minus, PackagePlus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { formatKilo } from '@/lib/format'
-import { exportToExcel } from '@/lib/excel'
+import { exportStyledExcel } from '@/lib/excel'
 import { useAuthStore } from '@/stores/authStore'
+import { generateInventoryPdf } from './inventoryPdf'
 import { useInventory } from './useInventory'
 import { useProducts } from '@/features/products/useProducts'
 import { useCalidadCostDefaults } from '@/features/products/useCalidadCostDefaults'
@@ -45,7 +46,7 @@ export function InventoryPage() {
   const profile = useAuthStore((s) => s.profile)
   const isAdmin = profile?.role === 'admin'
   const canSeeCost = profile?.role === 'admin' || profile?.role === 'supervisor'
-  const { branchId: effectiveBranchId, branches } = useEffectiveBranch()
+  const { branchId: effectiveBranchId, branch: effectiveBranch, branches } = useEffectiveBranch()
   const { products, variants, loading: loadingProducts, updateVariant, createProduct, createVariant } = useProducts()
   const { inventory, loading: loadingInventory, adjustInventory, clearBranchInventory } = useInventory()
   const { defaults: calidadDefaults } = useCalidadCostDefaults()
@@ -279,17 +280,61 @@ export function InventoryPage() {
   }
 
   function handleExport() {
-    exportToExcel(`inventario-${branchName || 'sucursal'}.xlsx`, 'Inventario', [
-      ...rows.map((row) => ({
-        Producto: row.productName,
-        Calidad: row.variant.calidad,
-        Kilo: row.variant.kilo,
-        SKU: row.variant.sku ?? '',
-        Costo: row.variant.cost,
-        Precio: row.variant.price,
-        Stock: row.stock,
+    const columns = [
+      { header: 'Producto', key: 'producto', width: 32 },
+      { header: 'Calidad', key: 'calidad', width: 12 },
+      { header: 'Kilo', key: 'kilo', width: 10, numFmt: '#,##0.##' },
+      { header: 'Código', key: 'sku', width: 16 },
+      ...(canSeeCost ? [{ header: 'Costo', key: 'costo', width: 12, numFmt: '#,##0' }] : []),
+      { header: 'Precio', key: 'precio', width: 12, numFmt: '#,##0' },
+      { header: 'Stock', key: 'stock', width: 10, numFmt: '#,##0' },
+      ...(canSeeCost ? [{ header: 'Valor stock (costo)', key: 'valorCosto', width: 18, numFmt: '#,##0' }] : []),
+      { header: 'Valor stock (precio)', key: 'valorPrecio', width: 18, numFmt: '#,##0' },
+    ]
+
+    const dataRows = rows.map((row) => ({
+      producto: row.productName,
+      calidad: row.variant.calidad,
+      kilo: row.variant.kilo,
+      sku: row.variant.sku ?? '',
+      costo: row.variant.cost,
+      precio: row.variant.price,
+      stock: row.stock,
+      valorCosto: row.variant.cost * row.stock,
+      valorPrecio: row.variant.price * row.stock,
+    }))
+
+    exportStyledExcel({
+      filename: `inventario-${branchName || 'sucursal'}.xlsx`,
+      sheetName: 'Inventario',
+      title: 'IMPORTADORA ROMA — Inventario',
+      subtitle: [branchName, effectiveBranch?.address, `Generado: ${new Date().toLocaleString('es-CL')}`].filter(
+        (line): line is string => !!line
+      ),
+      columns,
+      rows: dataRows,
+      totals: {
+        producto: 'TOTAL',
+        stock: totalUnitsInBranch,
+        valorCosto: dataRows.reduce((s, r) => s + r.valorCosto, 0),
+        valorPrecio: dataRows.reduce((s, r) => s + r.valorPrecio, 0),
+      },
+    })
+  }
+
+  function handleExportPdf() {
+    generateInventoryPdf(
+      rows.map((row) => ({
+        productName: row.productName,
+        calidad: row.variant.calidad,
+        kilo: row.variant.kilo,
+        sku: row.variant.sku,
+        cost: row.variant.cost,
+        price: row.variant.price,
+        stock: row.stock,
       })),
-    ])
+      { branchName, branchAddress: effectiveBranch?.address ?? null, canSeeCost }
+    )
   }
 
   return (
@@ -305,6 +350,10 @@ export function InventoryPage() {
         <Button variant="secondary" onClick={handleExport} disabled={rows.length === 0}>
           <Download size={16} />
           Exportar Excel
+        </Button>
+        <Button variant="secondary" onClick={handleExportPdf} disabled={rows.length === 0}>
+          <FileText size={16} />
+          Exportar PDF
         </Button>
         {canSeeCost && (
           <Button variant="secondary" onClick={openAddProduct} disabled={!effectiveBranchId}>
