@@ -13,14 +13,13 @@ export function ProductSearch({ catalog, onSelect }: { catalog: CatalogEntry[]; 
 
   const results = useMemo(() => {
     const q = term.trim().toLowerCase()
-    if (!q) return []
-    return catalog
-      .filter(
+    let matches = catalog.filter((c) => showOutOfStock || c.stock > 0)
+    if (q) {
+      matches = matches.filter(
         (c) => c.productName.toLowerCase().includes(q) || c.calidad.toLowerCase().includes(q) || c.sku?.toLowerCase() === q
       )
-      .filter((c) => showOutOfStock || c.stock > 0)
-      .sort((a, b) => (b.stock > 0 ? 1 : 0) - (a.stock > 0 ? 1 : 0))
-      .slice(0, 20)
+    }
+    return matches.sort((a, b) => (b.stock > 0 ? 1 : 0) - (a.stock > 0 ? 1 : 0)).slice(0, 20)
   }, [catalog, term, showOutOfStock])
 
   function selectAndClear(entry: CatalogEntry) {
@@ -102,8 +101,10 @@ export function ProductSearch({ catalog, onSelect }: { catalog: CatalogEntry[]; 
 
       <CameraScanModal open={scannerOpen} onClose={() => setScannerOpen(false)} onDetect={handleCameraDetect} />
 
-      {open && (term.trim() || results.length > 0) && (
-        <div className="absolute z-10 mt-1 max-h-80 w-full overflow-auto rounded-md border border-slate-200 bg-white shadow-lg">
+      {open && (
+        <>
+          <button aria-label="Cerrar búsqueda" onClick={() => setOpen(false)} className="fixed inset-0 z-0 cursor-default" />
+          <div className="absolute z-10 mt-1 max-h-80 w-full overflow-auto rounded-md border border-slate-200 bg-white shadow-lg">
           <label className="flex items-center gap-2 border-b border-slate-100 px-4 py-2 text-xs text-slate-500">
             <input
               type="checkbox"
@@ -152,7 +153,8 @@ export function ProductSearch({ catalog, onSelect }: { catalog: CatalogEntry[]; 
               </button>
             </div>
           )}
-        </div>
+          </div>
+        </>
       )}
     </div>
   )
