@@ -26,6 +26,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { supabase } from '@/lib/supabase'
 import { AlertsBell } from '@/features/alerts/AlertsBell'
+import { UpdatesBell } from '@/features/updates/UpdatesBell'
 import { GlobalSearch } from '@/features/search/GlobalSearch'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
@@ -229,6 +230,7 @@ export function AppLayout() {
           <div className="hidden md:block md:flex-1">
             <GlobalSearch />
           </div>
+          <UpdatesBell />
           <AlertsBell branchId={effectiveBranchId} includeFinancial={showFinancialAlerts} />
           <BranchSwitcher />
         </div>

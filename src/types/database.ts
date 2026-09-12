@@ -911,6 +911,38 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['expenses']['Insert']>
         Relationships: []
       }
+      app_updates: {
+        Row: {
+          id: string
+          title: string
+          description: string
+          released_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          description: string
+          released_at?: string
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['app_updates']['Insert']>
+        Relationships: []
+      }
+      user_update_dismissals: {
+        Row: {
+          user_id: string
+          update_id: string
+          dismissed_at: string
+        }
+        Insert: {
+          user_id: string
+          update_id: string
+          dismissed_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['user_update_dismissals']['Insert']>
+        Relationships: []
+      }
     }
     Views: {
       container_summary: {
