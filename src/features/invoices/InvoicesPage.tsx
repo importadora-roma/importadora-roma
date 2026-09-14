@@ -301,8 +301,8 @@ function buildLines(
   variantById: Map<string, { product_id: string; calidad: string; kilo: number }>
 ): InvoiceLine[] {
   return items.map((item) => {
-    const variant = variantById.get(item.variant_id)
-    const productName = variant ? productNameById.get(variant.product_id) ?? '—' : '—'
+    const variant = item.variant_id ? variantById.get(item.variant_id) : undefined
+    const productName = item.custom_name ?? (variant ? productNameById.get(variant.product_id) ?? '—' : '—')
     const variantLabel = variant ? `${variant.calidad} ${formatKilo(variant.kilo)}` : '—'
     const grossUnit = item.sold_price
     const netUnit = Math.round(grossUnit / (1 + IVA_RATE))

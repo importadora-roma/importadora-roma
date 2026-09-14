@@ -21,7 +21,8 @@ export interface Sale {
 export interface SaleItem {
   id: string
   sale_id: string
-  variant_id: string
+  variant_id: string | null
+  custom_name: string | null
   quantity: number
   original_price: number
   sold_price: number
@@ -38,15 +39,18 @@ export interface SalePayment {
   amount: number
 }
 
-export function useSales(branchId: string) {
+export function useSales(branchId: string, filters?: { from?: string; to?: string }) {
   const [sales, setSales] = useState<Sale[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const reload = useCallback(async () => {
     setLoading(true)
-    let query = supabase.from('sales').select('*').order('created_at', { ascending: false }).limit(200)
+    let query = supabase.from('sales').select('*').order('sale_date', { ascending: false }).order('created_at', { ascending: false })
     if (branchId) query = query.eq('branch_id', branchId)
+    if (filters?.from) query = query.gte('sale_date', filters.from)
+    if (filters?.to) query = query.lte('sale_date', filters.to)
+    if (!filters?.from && !filters?.to) query = query.limit(200)
     const { data, error } = await query
     if (error) {
       setError(error.message)
@@ -55,7 +59,7 @@ export function useSales(branchId: string) {
       setError(null)
     }
     setLoading(false)
-  }, [branchId])
+  }, [branchId, filters?.from, filters?.to])
 
   useEffect(() => {
     reload()

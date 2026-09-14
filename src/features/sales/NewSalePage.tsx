@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Trash2, CheckCircle2 } from 'lucide-react'
+import { Trash2, CheckCircle2, PackagePlus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Input'
 import { formatCLP, formatKilo, todayCL } from '@/lib/format'
@@ -19,7 +19,9 @@ function addDays(days: number): string {
 }
 
 interface CartItem {
-  variantId: string
+  id: string
+  variantId: string | null
+  isCustom: boolean
   productName: string
   calidad: string
   kilo: number
@@ -66,7 +68,9 @@ export function NewSalePage() {
       return [
         ...prev,
         {
+          id: entry.variantId,
           variantId: entry.variantId,
+          isCustom: false,
           productName: entry.productName,
           calidad: entry.calidad,
           kilo: entry.kilo,
@@ -80,16 +84,39 @@ export function NewSalePage() {
     })
   }
 
-  function updateQuantity(variantId: string, quantity: number) {
-    setCart((prev) => prev.map((i) => (i.variantId === variantId ? { ...i, quantity: Math.max(1, quantity) } : i)))
+  function addCustomItem() {
+    setCart((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        variantId: null,
+        isCustom: true,
+        productName: '',
+        calidad: '',
+        kilo: 0,
+        originalPrice: 0,
+        soldPrice: '',
+        quantity: 1,
+        maxStock: Infinity,
+        cost: 0,
+      },
+    ])
   }
 
-  function updatePrice(variantId: string, soldPrice: string) {
-    setCart((prev) => prev.map((i) => (i.variantId === variantId ? { ...i, soldPrice } : i)))
+  function updateQuantity(id: string, quantity: number) {
+    setCart((prev) => prev.map((i) => (i.id === id ? { ...i, quantity: Math.max(1, quantity) } : i)))
   }
 
-  function removeFromCart(variantId: string) {
-    setCart((prev) => prev.filter((i) => i.variantId !== variantId))
+  function updatePrice(id: string, soldPrice: string) {
+    setCart((prev) => prev.map((i) => (i.id === id ? { ...i, soldPrice } : i)))
+  }
+
+  function updateCustomName(id: string, productName: string) {
+    setCart((prev) => prev.map((i) => (i.id === id ? { ...i, productName } : i)))
+  }
+
+  function removeFromCart(id: string) {
+    setCart((prev) => prev.filter((i) => i.id !== id))
   }
 
   function resetSale() {
@@ -106,6 +133,10 @@ export function NewSalePage() {
     setError(null)
     if (cart.length === 0) {
       setError('Agrega al menos un producto')
+      return
+    }
+    if (cart.some((i) => i.isCustom && !i.productName.trim())) {
+      setError('Ponle un nombre a cada producto libre')
       return
     }
     const paymentsPayload = payments
@@ -130,7 +161,11 @@ export function NewSalePage() {
     const { data, error } = await supabase.rpc('create_sale', {
       p_branch_id: effectiveBranchId,
       p_customer_id: customerId,
-      p_items: cart.map((i) => ({ variant_id: i.variantId, quantity: i.quantity, sold_price: Number(i.soldPrice) })),
+      p_items: cart.map((i) =>
+        i.isCustom
+          ? { custom_name: i.productName.trim(), quantity: i.quantity, sold_price: Number(i.soldPrice) }
+          : { variant_id: i.variantId as string, quantity: i.quantity, sold_price: Number(i.soldPrice) }
+      ),
       p_payments: paymentsPayload,
       p_notes: notes.trim() || null,
       p_sale_date: saleDate,
@@ -167,7 +202,20 @@ export function NewSalePage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <ProductSearch catalog={catalog} onSelect={addToCart} branchId={effectiveBranchId} />
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <ProductSearch catalog={catalog} onSelect={addToCart} branchId={effectiveBranchId} />
+            </div>
+            <button
+              type="button"
+              onClick={addCustomItem}
+              title="Agregar un producto que no está en el catálogo"
+              className="flex shrink-0 items-center gap-1.5 rounded-md border border-slate-300 px-3 text-sm text-slate-600 hover:bg-slate-50"
+            >
+              <PackagePlus size={16} />
+              Producto libre
+            </button>
+          </div>
 
           <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white">
             <table className="w-full text-left text-sm">
@@ -197,31 +245,43 @@ export function NewSalePage() {
                   </tr>
                 )}
                 {cart.map((item) => (
-                  <tr key={item.variantId}>
+                  <tr key={item.id}>
                     <td className="px-4 py-2">
-                      <span className="font-medium text-slate-900">{item.productName}</span>
-                      <span className="text-slate-500"> — {item.calidad} {formatKilo(item.kilo)}</span>
-                      <div className={`text-xs ${item.maxStock - item.quantity < 0 ? 'text-red-600' : 'text-slate-400'}`}>
-                        stock disponible: {item.maxStock}
-                        {item.quantity > item.maxStock && ' (quedará negativo)'}
-                      </div>
-                      {canSeeCost && <div className="text-[11px] text-slate-300">costo: {formatCLP(item.cost)}</div>}
+                      {item.isCustom ? (
+                        <input
+                          type="text"
+                          placeholder="Nombre del producto"
+                          value={item.productName}
+                          onChange={(e) => updateCustomName(item.id, e.target.value)}
+                          className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                        />
+                      ) : (
+                        <>
+                          <span className="font-medium text-slate-900">{item.productName}</span>
+                          <span className="text-slate-500"> — {item.calidad} {formatKilo(item.kilo)}</span>
+                          <div className={`text-xs ${item.maxStock - item.quantity < 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                            stock disponible: {item.maxStock}
+                            {item.quantity > item.maxStock && ' (quedará negativo)'}
+                          </div>
+                          {canSeeCost && <div className="text-[11px] text-slate-300">costo: {formatCLP(item.cost)}</div>}
+                        </>
+                      )}
                     </td>
                     <td className="px-4 py-2">
                       <input
                         type="number"
                         min={1}
                         value={item.quantity}
-                        onChange={(e) => updateQuantity(item.variantId, Number(e.target.value))}
+                        onChange={(e) => updateQuantity(item.id, Number(e.target.value))}
                         className="w-16 rounded-md border border-slate-300 px-2 py-1 text-sm"
                       />
                     </td>
-                    <td className="px-4 py-2 text-slate-500">{formatCLP(item.originalPrice)}</td>
+                    <td className="px-4 py-2 text-slate-500">{item.isCustom ? '—' : formatCLP(item.originalPrice)}</td>
                     <td className="px-4 py-2">
                       <input
                         type="number"
                         value={item.soldPrice}
-                        onChange={(e) => updatePrice(item.variantId, e.target.value)}
+                        onChange={(e) => updatePrice(item.id, e.target.value)}
                         className="w-24 rounded-md border border-slate-300 px-2 py-1 text-sm"
                       />
                     </td>
@@ -229,7 +289,7 @@ export function NewSalePage() {
                       {formatCLP((Number(item.soldPrice) || 0) * item.quantity)}
                     </td>
                     <td className="px-4 py-2">
-                      <button onClick={() => removeFromCart(item.variantId)} className="text-slate-400 hover:text-red-600">
+                      <button onClick={() => removeFromCart(item.id)} className="text-slate-400 hover:text-red-600">
                         <Trash2 size={16} />
                       </button>
                     </td>

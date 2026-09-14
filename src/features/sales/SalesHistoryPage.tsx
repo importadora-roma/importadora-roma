@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useProducts } from '@/features/products/useProducts'
 import { useCustomers } from '@/features/customers/useCustomers'
+import { useCreditSales } from '@/features/credit/useCreditSales'
 import { useSales, type Sale, type SaleItem, type SalePayment } from './useSales'
 import { useSaleCatalog, type CatalogEntry } from './useSaleCatalog'
 import { ProductSearch } from './ProductSearch'
@@ -30,9 +31,13 @@ export function SalesHistoryPage() {
   const { products, variants } = useProducts()
   const { customers } = useCustomers()
   const [branchId, setBranchId] = useState(activeBranchId)
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [customerQuery, setCustomerQuery] = useState('')
 
-  const { sales, loading, error, loadSaleDetail, cancelSale, exchangeSaleItem, returnSaleItem, setRequiresInvoice, updateSaleItemCost } =
-    useSales(branchId)
+  const { sales: rawSales, loading, error, loadSaleDetail, cancelSale, exchangeSaleItem, returnSaleItem, setRequiresInvoice, updateSaleItemCost } =
+    useSales(branchId, { from: dateFrom || undefined, to: dateTo || undefined })
+  const { rows: creditRows } = useCreditSales(branchId)
 
   const productNameById = useMemo(() => new Map(products.map((p) => [p.id, p.name])), [products])
   const variantById = useMemo(() => new Map(variants.map((v) => [v.id, v])), [variants])
@@ -41,11 +46,21 @@ export function SalesHistoryPage() {
   const branchNameById = useMemo(() => new Map(branches.map((b) => [b.id, b.name])), [branches])
   const branchAddressById = useMemo(() => new Map(branches.map((b) => [b.id, b.address])), [branches])
 
+  const sales = useMemo(() => {
+    const q = customerQuery.trim().toLowerCase()
+    if (!q) return rawSales
+    return rawSales.filter((s) => (s.customer_id ? customerNameById.get(s.customer_id) ?? '' : '').toLowerCase().includes(q))
+  }, [rawSales, customerQuery, customerNameById])
+
   function variantLabel(variantId: string): string {
     const variant = variantById.get(variantId)
     if (!variant) return '—'
     const productName = productNameById.get(variant.product_id) ?? '—'
     return `${productName} — ${variant.calidad} ${formatKilo(variant.kilo)}`
+  }
+
+  function itemLabel(item: SaleItem): string {
+    return item.custom_name ?? variantLabel(item.variant_id!)
   }
 
   const [detailSale, setDetailSale] = useState<Sale | null>(null)
@@ -70,7 +85,7 @@ export function SalesHistoryPage() {
       `Comprobante de venta ${sale.sale_number}`,
       ...detailItems
         .filter((i) => i.status === 'active')
-        .map((item) => `- ${item.quantity} x ${variantLabel(item.variant_id)}: ${formatCLP(item.line_total)}`),
+        .map((item) => `- ${item.quantity} x ${itemLabel(item)}: ${formatCLP(item.line_total)}`),
       `Total: ${formatCLP(sale.total)}`,
       '¡Gracias por tu compra!',
     ]
@@ -100,7 +115,7 @@ export function SalesHistoryPage() {
 
   return (
     <div>
-      <div className="mb-4">
+      <div className="mb-4 flex flex-wrap items-end gap-3">
         <Select value={branchId} onChange={(e) => setBranchId(e.target.value)} className="max-w-xs">
           {profile?.role === 'admin' && <option value="">Todas las sucursales</option>}
           {branches.map((b) => (
@@ -109,6 +124,15 @@ export function SalesHistoryPage() {
             </option>
           ))}
         </Select>
+        <Input label="Desde" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="max-w-[10rem]" />
+        <Input label="Hasta" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="max-w-[10rem]" />
+        <Input
+          label="Cliente"
+          placeholder="Buscar por nombre..."
+          value={customerQuery}
+          onChange={(e) => setCustomerQuery(e.target.value)}
+          className="max-w-[14rem]"
+        />
       </div>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
@@ -193,44 +217,43 @@ export function SalesHistoryPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {detailItems.map((item) => {
-                const variant = variantById.get(item.variant_id)
-                const productName = variant ? productNameById.get(variant.product_id) ?? '—' : '—'
-                return (
-                  <tr key={item.id}>
+              {detailItems.map((item) => (
+                <tr key={item.id}>
+                  <td className="py-1.5 pr-2">
+                    {itemLabel(item)}
+                    {item.custom_name && <span className="ml-1.5 text-[10px] uppercase text-slate-400">libre</span>}
+                  </td>
+                  <td className="py-1.5 pr-2">{item.quantity}</td>
+                  <td className="py-1.5 pr-2">{formatCLP(item.sold_price)}</td>
+                  {canManage && (
                     <td className="py-1.5 pr-2">
-                      {productName} {variant && `— ${variant.calidad} ${formatKilo(variant.kilo)}`}
+                      <input
+                        type="number"
+                        min={0}
+                        defaultValue={item.cost}
+                        onBlur={(e) => handleCostBlur(item, e.target.value)}
+                        className="w-24 rounded-md border border-slate-300 px-2 py-1 text-xs"
+                      />
+                      {costError?.itemId === item.id && <p className="mt-0.5 text-xs text-red-600">{costError.message}</p>}
                     </td>
-                    <td className="py-1.5 pr-2">{item.quantity}</td>
-                    <td className="py-1.5 pr-2">{formatCLP(item.sold_price)}</td>
-                    {canManage && (
-                      <td className="py-1.5 pr-2">
-                        <input
-                          type="number"
-                          min={0}
-                          defaultValue={item.cost}
-                          onBlur={(e) => handleCostBlur(item, e.target.value)}
-                          className="w-24 rounded-md border border-slate-300 px-2 py-1 text-xs"
-                        />
-                        {costError?.itemId === item.id && <p className="mt-0.5 text-xs text-red-600">{costError.message}</p>}
-                      </td>
-                    )}
-                    <td className="py-1.5 pr-2 text-xs text-slate-500">{item.status}</td>
-                    <td className="py-1.5 space-x-2">
-                      {canManage && item.status === 'active' && detailSale?.status === 'completed' && (
-                        <>
+                  )}
+                  <td className="py-1.5 pr-2 text-xs text-slate-500">{item.status}</td>
+                  <td className="py-1.5 space-x-2">
+                    {canManage && item.status === 'active' && detailSale?.status === 'completed' && (
+                      <>
+                        {item.variant_id && (
                           <button onClick={() => setExchangeTarget(item)} className="text-xs text-slate-500 underline hover:text-slate-800">
                             Cambiar
                           </button>
-                          <button onClick={() => setReturnTarget(item)} className="text-xs text-slate-500 underline hover:text-slate-800">
-                            Devolver
-                          </button>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
+                        )}
+                        <button onClick={() => setReturnTarget(item)} className="text-xs text-slate-500 underline hover:text-slate-800">
+                          Devolver
+                        </button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
 
@@ -243,6 +266,26 @@ export function SalesHistoryPage() {
               </div>
             ))}
           </div>
+
+          {detailSale?.notes && (
+            <div className="border-t border-slate-200 pt-2 text-sm">
+              <p className="font-medium text-slate-700">Notas</p>
+              <p className="whitespace-pre-wrap text-slate-600">{detailSale.notes}</p>
+            </div>
+          )}
+
+          {detailSale &&
+            (() => {
+              const credit = creditRows.find((r) => r.saleId === detailSale.id)
+              if (!credit || credit.remaining <= 0) return null
+              return (
+                <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                  Crédito pendiente: pagado {formatCLP(credit.paidAmount)} de {formatCLP(credit.creditAmount)} · resta{' '}
+                  {formatCLP(credit.remaining)}
+                  {credit.dueDate && <> · vence {formatDate(credit.dueDate)}</>}
+                </div>
+              )
+            })()}
 
           {detailSale?.status === 'completed' && (
             <label className="flex items-center gap-2 border-t border-slate-200 pt-2 text-sm text-slate-700">
@@ -262,15 +305,18 @@ export function SalesHistoryPage() {
           <div className="flex gap-2">
             <Button
               variant="secondary"
-              onClick={() =>
-                detailSale &&
+              onClick={() => {
+                if (!detailSale) return
+                const customer = detailSale.customer_id ? customerById.get(detailSale.customer_id) ?? null : null
+                const credit = creditRows.find((r) => r.saleId === detailSale.id)
                 generateSalePdf(detailSale, detailItems, detailPayments, {
                   branchName: branchNameById.get(detailSale.branch_id) ?? '',
                   branchAddress: branchAddressById.get(detailSale.branch_id) ?? null,
-                  customerName: detailSale.customer_id ? customerNameById.get(detailSale.customer_id) ?? null : null,
+                  customer: customer ? { name: customer.name, rut: customer.rut, address: customer.address, phone: customer.phone } : null,
+                  credit: credit ? { creditAmount: credit.creditAmount, paidAmount: credit.paidAmount, remaining: credit.remaining, dueDate: credit.dueDate } : null,
                   variantLabel,
                 })
-              }
+              }}
             >
               <Printer size={16} />
               Imprimir

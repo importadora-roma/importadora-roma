@@ -5,7 +5,7 @@ const LOOKBACK_DAYS = 90
 const TOP_N = 30
 
 interface SaleItemJoinRow {
-  variant_id: string
+  variant_id: string | null
   quantity: number
 }
 
@@ -42,6 +42,7 @@ export function useTopSellingVariantIds(branchId: string) {
       }
       const totals = new Map<string, number>()
       for (const row of data as unknown as SaleItemJoinRow[]) {
+        if (!row.variant_id) continue // a free-form item isn't sold from stock
         totals.set(row.variant_id, (totals.get(row.variant_id) ?? 0) + Number(row.quantity))
       }
       const ranked = Array.from(totals.entries())

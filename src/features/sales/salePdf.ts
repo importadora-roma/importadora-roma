@@ -10,6 +10,20 @@ const paymentLabels: Record<SalePaymentMethod, string> = {
   credito: 'Crédito',
 }
 
+interface SaleCustomer {
+  name: string
+  rut: string | null
+  address: string | null
+  phone: string | null
+}
+
+interface SaleCreditInfo {
+  creditAmount: number
+  paidAmount: number
+  remaining: number
+  dueDate: string | null
+}
+
 export async function generateSalePdf(
   sale: Sale,
   items: SaleItem[],
@@ -17,7 +31,8 @@ export async function generateSalePdf(
   context: {
     branchName: string
     branchAddress: string | null
-    customerName: string | null
+    customer: SaleCustomer | null
+    credit?: SaleCreditInfo | null
     variantLabel: (variantId: string) => string
   }
 ) {
@@ -29,11 +44,26 @@ export async function generateSalePdf(
   })
 
   let y = contentY
-  if (context.customerName) {
-    doc.setFontSize(9)
-    doc.text(`Cliente: ${context.customerName}`, 14, y)
-    y += 6
+  doc.setFontSize(9)
+  doc.setTextColor(80)
+  if (context.customer) {
+    doc.text(`Cliente: ${context.customer.name}`, 14, y)
+    y += 5
+    if (context.customer.rut) {
+      doc.text(`RUT: ${context.customer.rut}`, 14, y)
+      y += 5
+    }
+    if (context.customer.address) {
+      doc.text(`Dirección: ${context.customer.address}`, 14, y)
+      y += 5
+    }
+    if (context.customer.phone) {
+      doc.text(`Teléfono: ${context.customer.phone}`, 14, y)
+      y += 5
+    }
+    y += 1
   }
+  doc.setTextColor(0)
 
   autoTable(doc, {
     startY: y,
@@ -41,7 +71,7 @@ export async function generateSalePdf(
     body: items
       .filter((i) => i.status !== 'cancelled')
       .map((i) => [
-        `${context.variantLabel(i.variant_id)}${i.status === 'returned' ? ' (cambiado)' : ''}`,
+        `${i.custom_name ?? context.variantLabel(i.variant_id!)}${i.status === 'returned' ? ' (cambiado)' : ''}`,
         String(i.quantity),
         formatCLP(i.sold_price),
         formatCLP(i.line_total),
@@ -57,11 +87,34 @@ export async function generateSalePdf(
     foot: [['Total', formatCLP(sale.total)]],
   })
 
+  let afterY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8
+
+  if (sale.notes) {
+    doc.setFontSize(9)
+    doc.setTextColor(80)
+    doc.text('Notas:', 14, afterY)
+    const noteLines = doc.splitTextToSize(sale.notes, 180)
+    doc.text(noteLines, 14, afterY + 5)
+    afterY += 5 + noteLines.length * 4.5 + 4
+    doc.setTextColor(0)
+  }
+
+  if (context.credit && context.credit.remaining > 0) {
+    doc.setFontSize(9)
+    doc.setTextColor(180, 100, 0)
+    const dueText = context.credit.dueDate ? ` · vence ${formatDate(context.credit.dueDate)}` : ''
+    doc.text(
+      `Crédito: pagado ${formatCLP(context.credit.paidAmount)} de ${formatCLP(context.credit.creditAmount)} · resta ${formatCLP(context.credit.remaining)}${dueText}`,
+      14,
+      afterY
+    )
+    doc.setTextColor(0)
+  }
+
   if (sale.status === 'cancelled') {
-    const y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10
     doc.setTextColor(200, 0, 0)
     doc.setFontSize(11)
-    doc.text(`VENTA ANULADA${sale.cancel_reason ? ` — ${sale.cancel_reason}` : ''}`, 14, y)
+    doc.text(`VENTA ANULADA${sale.cancel_reason ? ` — ${sale.cancel_reason}` : ''}`, 14, afterY + 6)
     doc.setTextColor(0)
   }
 

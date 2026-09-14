@@ -33,7 +33,7 @@ export function useProductProfitReport(branchId: string, from: string, to: strin
     setLoadingItems(true)
     const { data } = await supabase
       .from('sale_items')
-      .select('variant_id, quantity, line_total, cost')
+      .select('variant_id, custom_name, quantity, line_total, cost')
       .in(
         'sale_id',
         sales.map((s) => s.id)
@@ -43,23 +43,25 @@ export function useProductProfitReport(branchId: string, from: string, to: strin
     const productById = new Map(products.map((p) => [p.id, p]))
     const variantById = new Map(variants.map((v) => [v.id, v]))
 
-    const byVariant = new Map<string, { quantity: number; revenue: number; cost: number }>()
+    const byVariant = new Map<string, { variantId: string | null; customName: string | null; quantity: number; revenue: number; cost: number }>()
     for (const item of data ?? []) {
-      const variantId = item.variant_id as string
-      const entry = byVariant.get(variantId) ?? { quantity: 0, revenue: 0, cost: 0 }
+      const variantId = item.variant_id as string | null
+      const customName = item.custom_name as string | null
+      const key = variantId ?? `custom:${customName}`
+      const entry = byVariant.get(key) ?? { variantId, customName, quantity: 0, revenue: 0, cost: 0 }
       entry.quantity += Number(item.quantity)
       entry.revenue += Number(item.line_total)
       entry.cost += Number(item.cost) * Number(item.quantity)
-      byVariant.set(variantId, entry)
+      byVariant.set(key, entry)
     }
 
-    const built: ProductProfitRow[] = Array.from(byVariant.entries()).map(([variantId, agg]) => {
-      const variant = variantById.get(variantId)
+    const built: ProductProfitRow[] = Array.from(byVariant.entries()).map(([key, agg]) => {
+      const variant = agg.variantId ? variantById.get(agg.variantId) : undefined
       const product = variant ? productById.get(variant.product_id) : undefined
       const margin = agg.revenue - agg.cost
       return {
-        variantId,
-        productName: product?.name ?? 'Producto eliminado',
+        variantId: key,
+        productName: agg.customName ?? product?.name ?? 'Producto eliminado',
         calidad: variant?.calidad ?? '—',
         kilo: variant?.kilo ?? 0,
         quantity: agg.quantity,
