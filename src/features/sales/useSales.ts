@@ -30,6 +30,7 @@ export interface SaleItem {
   line_total: number
   status: SaleItemStatus
   return_reason: string | null
+  notes: string | null
 }
 
 export interface SalePayment {

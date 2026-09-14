@@ -222,6 +222,7 @@ export function SalesHistoryPage() {
                   <td className="py-1.5 pr-2">
                     {itemLabel(item)}
                     {item.custom_name && <span className="ml-1.5 text-[10px] uppercase text-slate-400">libre</span>}
+                    {item.notes && <div className="text-[11px] italic text-slate-400">{item.notes}</div>}
                   </td>
                   <td className="py-1.5 pr-2">{item.quantity}</td>
                   <td className="py-1.5 pr-2">{formatCLP(item.sold_price)}</td>

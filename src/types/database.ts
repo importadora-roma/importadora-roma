@@ -296,6 +296,7 @@ export interface Database {
           return_reason: string | null
           returned_by: string | null
           returned_at: string | null
+          notes: string | null
           created_at: string
         }
         Insert: {
@@ -312,6 +313,7 @@ export interface Database {
           return_reason?: string | null
           returned_by?: string | null
           returned_at?: string | null
+          notes?: string | null
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['sale_items']['Insert']>
@@ -988,8 +990,8 @@ export interface Database {
           p_branch_id: string
           p_customer_id: string | null
           p_items: (
-            | { variant_id: string; quantity: number; sold_price: number }
-            | { custom_name: string; quantity: number; sold_price: number; cost?: number }
+            | { variant_id: string; quantity: number; sold_price: number; notes?: string | null }
+            | { custom_name: string; quantity: number; sold_price: number; cost?: number; notes?: string | null }
           )[]
           p_payments: { payment_method: SalePaymentMethod; amount: number }[]
           p_notes?: string | null

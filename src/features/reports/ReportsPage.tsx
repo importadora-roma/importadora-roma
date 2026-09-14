@@ -5,8 +5,11 @@ import { Button } from '@/components/ui/Button'
 import { Input, Select } from '@/components/ui/Input'
 import { formatCLP, formatDate, todayCL } from '@/lib/format'
 import { createPdfDoc, autoTable, getLogoDataUrl, addPieChartWithLegend } from '@/lib/pdf'
+import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
+import { useCustomers } from '@/features/customers/useCustomers'
+import { useProducts } from '@/features/products/useProducts'
 import { useReports } from './useReports'
 import { useProfitReport } from './useProfitReport'
 import { useProductProfitReport } from './useProductProfitReport'
@@ -48,6 +51,8 @@ export function ReportsPage() {
   const [to, setTo] = useState(todayCL())
 
   const { sales, payments, loading, error } = useReports(branchId, from, to)
+  const { customers } = useCustomers()
+  const { products, variants } = useProducts()
   const { cogs, grossMargin, loading: loadingMargin } = useProfitReport(branchId, from, to)
   const { expenses, total: totalExpenses, loading: loadingExpenses } = useExpenses(branchId, from, to)
   const { total: transferValue, transferCount, loading: loadingTransfers } = useTransferValue(branchId, from, to)
@@ -81,6 +86,16 @@ export function ReportsPage() {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, total]) => ({ date: formatDate(`${date}T00:00:00`), total }))
   }, [sales])
+
+  const customerNameById = useMemo(() => new Map(customers.map((c) => [c.id, c.name])), [customers])
+  const productNameById = useMemo(() => new Map(products.map((p) => [p.id, p.name])), [products])
+  const variantById = useMemo(() => new Map(variants.map((v) => [v.id, v])), [variants])
+  function itemLabelFor(variantId: string | null, customName: string | null): string {
+    if (customName) return customName
+    const variant = variantId ? variantById.get(variantId) : undefined
+    if (!variant) return '—'
+    return `${productNameById.get(variant.product_id) ?? '—'} — ${variant.calidad} ${variant.kilo}kg`
+  }
 
   const selectedBranch = branchId ? branches.find((b) => b.id === branchId) : null
   const branchName = selectedBranch?.name ?? 'Todas las sucursales'
@@ -195,6 +210,59 @@ export function ReportsPage() {
       body: dailyTotals.map((d) => [d.date, formatCLP(d.total)]),
       columnStyles: { 1: { halign: 'right' } },
     })
+
+    // Every sale in the period that carries a note — either the sale's own
+    // general note, or a note on one of its individual product lines — the
+    // note itself prints as a small sub-row right under that sale's row,
+    // however far back it happened, since this table follows the same
+    // from/to range as the rest of the report.
+    const { data: itemNoteRows } = sales.length
+      ? await supabase
+          .from('sale_items')
+          .select('sale_id, variant_id, custom_name, notes')
+          .in('sale_id', sales.map((s) => s.id))
+          .not('notes', 'is', null)
+          .eq('status', 'active')
+      : { data: [] }
+
+    const itemNotesBySale = new Map<string, { label: string; note: string }[]>()
+    for (const row of itemNoteRows ?? []) {
+      if (!row.notes) continue
+      const list = itemNotesBySale.get(row.sale_id as string) ?? []
+      list.push({ label: itemLabelFor(row.variant_id as string | null, row.custom_name as string | null), note: row.notes as string })
+      itemNotesBySale.set(row.sale_id as string, list)
+    }
+
+    const salesWithAnyNote = sales.filter((s) => s.notes?.trim() || itemNotesBySale.has(s.id))
+
+    if (salesWithAnyNote.length > 0) {
+      const notesTop = finalY() + 12
+      doc.setFontSize(10)
+      doc.setTextColor(30)
+      doc.text('Ventas con notas', 14, notesTop - 4)
+      doc.setTextColor(0)
+      const noteStyles = { fontSize: 7, textColor: [130, 130, 130] as [number, number, number], fontStyle: 'italic' as const }
+      const notesBody = salesWithAnyNote.flatMap((s) => [
+        [
+          s.sale_number ?? '—',
+          formatDate(`${s.sale_date}T00:00:00`),
+          s.customer_id ? customerNameById.get(s.customer_id) ?? '—' : '—',
+          formatCLP(s.total),
+        ],
+        ...(s.notes?.trim() ? [[{ content: `Nota general: ${s.notes}`, colSpan: 4, styles: noteStyles }]] : []),
+        ...(itemNotesBySale.get(s.id) ?? []).map((item) => [
+          { content: `${item.label}: ${item.note}`, colSpan: 4, styles: noteStyles },
+        ]),
+      ])
+      autoTable(doc, {
+        startY: notesTop,
+        head: [['Folio', 'Fecha', 'Cliente', 'Total']],
+        headStyles: { fillColor: [16, 29, 58] },
+        body: notesBody,
+        styles: { fontSize: 8 },
+        columnStyles: { 3: { halign: 'right' } },
+      })
+    }
 
     doc.save(`reporte-mensual-${from}-a-${to}.pdf`)
   }

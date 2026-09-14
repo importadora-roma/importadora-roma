@@ -6,8 +6,10 @@ export interface ReportSale {
   id: string
   sale_number: string | null
   branch_id: string
+  customer_id: string | null
   user_id: string
   total: number
+  notes: string | null
   sale_date: string
   created_at: string
 }
@@ -28,7 +30,7 @@ export function useReports(branchId: string, from: string, to: string) {
     setLoading(true)
     let query = supabase
       .from('sales')
-      .select('id, sale_number, branch_id, user_id, total, sale_date, created_at')
+      .select('id, sale_number, branch_id, customer_id, user_id, total, notes, sale_date, created_at')
       .eq('status', 'completed')
       .gte('sale_date', from)
       .lte('sale_date', to)

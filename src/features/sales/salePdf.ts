@@ -70,12 +70,19 @@ export async function generateSalePdf(
     head: [['Producto', 'Cant.', 'Precio', 'Subtotal']],
     body: items
       .filter((i) => i.status !== 'cancelled')
-      .map((i) => [
-        `${i.custom_name ?? context.variantLabel(i.variant_id!)}${i.status === 'returned' ? ' (cambiado)' : ''}`,
-        String(i.quantity),
-        formatCLP(i.sold_price),
-        formatCLP(i.line_total),
-      ]),
+      .flatMap((i) => {
+        const row = [
+          `${i.custom_name ?? context.variantLabel(i.variant_id!)}${i.status === 'returned' ? ' (cambiado)' : ''}`,
+          String(i.quantity),
+          formatCLP(i.sold_price),
+          formatCLP(i.line_total),
+        ]
+        if (!i.notes) return [row]
+        return [
+          row,
+          [{ content: `Nota: ${i.notes}`, colSpan: 4, styles: { fontSize: 7, textColor: [130, 130, 130] as [number, number, number], fontStyle: 'italic' as const } }],
+        ]
+      }),
   })
 
   const afterItemsY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8

@@ -30,6 +30,7 @@ interface CartItem {
   quantity: number
   maxStock: number
   cost: number
+  note: string
 }
 
 export function NewSalePage() {
@@ -79,6 +80,7 @@ export function NewSalePage() {
           quantity: 1,
           maxStock: entry.stock,
           cost: entry.cost,
+          note: '',
         },
       ]
     })
@@ -99,6 +101,7 @@ export function NewSalePage() {
         quantity: 1,
         maxStock: Infinity,
         cost: 0,
+        note: '',
       },
     ])
   }
@@ -113,6 +116,10 @@ export function NewSalePage() {
 
   function updateCustomName(id: string, productName: string) {
     setCart((prev) => prev.map((i) => (i.id === id ? { ...i, productName } : i)))
+  }
+
+  function updateNote(id: string, note: string) {
+    setCart((prev) => prev.map((i) => (i.id === id ? { ...i, note } : i)))
   }
 
   function removeFromCart(id: string) {
@@ -163,8 +170,8 @@ export function NewSalePage() {
       p_customer_id: customerId,
       p_items: cart.map((i) =>
         i.isCustom
-          ? { custom_name: i.productName.trim(), quantity: i.quantity, sold_price: Number(i.soldPrice) }
-          : { variant_id: i.variantId as string, quantity: i.quantity, sold_price: Number(i.soldPrice) }
+          ? { custom_name: i.productName.trim(), quantity: i.quantity, sold_price: Number(i.soldPrice), notes: i.note.trim() || null }
+          : { variant_id: i.variantId as string, quantity: i.quantity, sold_price: Number(i.soldPrice), notes: i.note.trim() || null }
       ),
       p_payments: paymentsPayload,
       p_notes: notes.trim() || null,
@@ -266,6 +273,13 @@ export function NewSalePage() {
                           {canSeeCost && <div className="text-[11px] text-slate-300">costo: {formatCLP(item.cost)}</div>}
                         </>
                       )}
+                      <input
+                        type="text"
+                        placeholder="Nota de este producto (opcional)"
+                        value={item.note}
+                        onChange={(e) => updateNote(item.id, e.target.value)}
+                        className="mt-1 w-full rounded border border-slate-200 px-1.5 py-0.5 text-xs text-slate-600 placeholder:text-slate-300"
+                      />
                     </td>
                     <td className="px-4 py-2">
                       <input
@@ -323,7 +337,7 @@ export function NewSalePage() {
             <Input label="Fecha de vencimiento del crédito" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
           )}
 
-          <Textarea label="Notas (opcional)" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <Textarea label="Nota general de la venta (opcional)" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
