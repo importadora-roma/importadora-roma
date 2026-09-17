@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Megaphone, X } from 'lucide-react'
 import { formatDateTime } from '@/lib/format'
 import { useAppUpdates } from './useAppUpdates'
@@ -28,7 +29,14 @@ export function UpdatesBell() {
 
       {open && (
         <>
-          <button aria-label="Cerrar novedades" onClick={close} className="fixed inset-0 z-40 cursor-default" />
+          {/* Portaled — see AlertsBell.tsx for why: this bell sits inside
+              the topbar's backdrop-blur, which becomes the containing
+              block for `fixed` descendants and shrinks this full-screen
+              click-outside catcher down to the topbar's own height. */}
+          {createPortal(
+            <button aria-label="Cerrar novedades" onClick={close} className="fixed inset-0 z-40 cursor-default" />,
+            document.body
+          )}
           <div className="absolute right-0 z-50 mt-2 max-h-[70vh] w-80 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
             <div className="border-b border-slate-200 px-4 py-3">
               <p className="text-sm font-semibold text-slate-900">Novedades</p>

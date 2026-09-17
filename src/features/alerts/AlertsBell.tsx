@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { Bell, AlertTriangle, Clock, Receipt, Trash2 } from 'lucide-react'
 import { formatCLP } from '@/lib/format'
@@ -73,7 +74,15 @@ export function AlertsBell({ branchId, includeFinancial }: { branchId: string; i
 
       {open && (
         <>
-          <button aria-label="Cerrar alertas" onClick={close} className="fixed inset-0 z-40 cursor-default" />
+          {/* Portaled: this bell sits inside the topbar's backdrop-blur,
+              which — like any filter/backdrop-filter — becomes the
+              containing block for `fixed` descendants, shrinking this
+              full-screen click-outside catcher down to the topbar's own
+              height. Escaping to document.body keeps it viewport-sized. */}
+          {createPortal(
+            <button aria-label="Cerrar alertas" onClick={close} className="fixed inset-0 z-40 cursor-default" />,
+            document.body
+          )}
           <div className="absolute right-0 z-50 mt-2 max-h-[70vh] w-80 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
               <p className="text-sm font-semibold text-slate-900">Alertas</p>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { Search, Users, Package, Receipt } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -81,7 +82,15 @@ export function GlobalSearch() {
 
       {open && term.trim().length >= 2 && (
         <>
-          <button aria-label="Cerrar búsqueda" onClick={close} className="fixed inset-0 z-40 cursor-default" />
+          {/* Portaled — see AlertsBell.tsx for why: this search box sits
+              inside the topbar's backdrop-blur, which becomes the
+              containing block for `fixed` descendants and shrinks this
+              full-screen click-outside catcher down to the topbar's own
+              height. */}
+          {createPortal(
+            <button aria-label="Cerrar búsqueda" onClick={close} className="fixed inset-0 z-40 cursor-default" />,
+            document.body
+          )}
           <div className="absolute right-0 z-50 mt-1 max-h-96 w-80 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
             {!hasResults && <p className="px-4 py-6 text-center text-sm text-slate-400">Sin resultados.</p>}
 

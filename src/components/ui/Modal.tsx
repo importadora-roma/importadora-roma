@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 export function Modal({
@@ -14,7 +15,14 @@ export function Modal({
 }) {
   if (!open) return null
 
-  return (
+  // Rendered on document.body rather than in place: a modal triggered from
+  // inside the topbar (e.g. BranchSwitcher) would otherwise sit inside its
+  // backdrop-blur container, which — like any `filter`/`backdrop-filter` —
+  // creates a new containing block for `position: fixed` descendants. That
+  // shrinks this overlay down to the topbar's own height instead of the
+  // full viewport, which is most visible on a narrow (mobile) screen where
+  // the modal ends up rendered mostly off-screen above the fold.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="flex max-h-[90vh] w-full max-w-md flex-col rounded-lg bg-white shadow-xl">
         <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4">
@@ -25,6 +33,7 @@ export function Modal({
         </div>
         <div className="overflow-y-auto px-5 py-4">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
