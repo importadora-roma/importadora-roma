@@ -1,6 +1,6 @@
 import { lazy, Suspense, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { ShoppingCart, Wallet, AlertTriangle, FileText, Boxes, Receipt } from 'lucide-react'
+import { Wallet, AlertTriangle, FileText, Boxes, Receipt, Banknote } from 'lucide-react'
 import { formatCLP, todayCL } from '@/lib/format'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
@@ -10,6 +10,7 @@ import { useInventory } from '@/features/inventory/useInventory'
 import { useProducts } from '@/features/products/useProducts'
 import { useContainers } from '@/features/containers/useContainers'
 import { useInvoices } from '@/features/invoices/useInvoices'
+import type { PaymentMethod } from '@/types/database'
 
 // Dashboard is loaded eagerly (see App.tsx) — this chart section pulls in
 // recharts, so it's lazy-loaded on its own to keep that out of the main
@@ -23,12 +24,18 @@ export function DashboardPage() {
   const isTienda = branch?.branch_type === 'tienda'
 
   const day = todayCL()
-  const { sales, loading: loadingSales } = useReports(effectiveBranchId, day, day)
+  const { sales, payments: todayPayments, loading: loadingSales } = useReports(effectiveBranchId, day, day)
   const { register, expectedNow } = useCash(effectiveBranchId)
   const { inventory } = useInventory()
   const { variants } = useProducts()
 
   const todayTotal = sales.reduce((s, sale) => s + sale.total, 0)
+
+  const todayByMethod = useMemo(() => {
+    const totals: Record<PaymentMethod, number> = { efectivo: 0, tarjeta: 0, transferencia: 0 }
+    for (const p of todayPayments) totals[p.payment_method] += p.amount
+    return totals
+  }, [todayPayments])
 
   const lowStockCount = useMemo(() => {
     if (!effectiveBranchId) return 0
@@ -57,11 +64,32 @@ export function DashboardPage() {
         {!isTienda && (
           <div className="rounded-lg border border-slate-200 bg-white p-4">
             <div className="flex items-center gap-2 text-xs uppercase text-slate-500">
-              <ShoppingCart size={14} />
+              <Banknote size={14} />
               Ventas de hoy
             </div>
-            <p className="mt-2 text-xl font-semibold text-slate-900">{loadingSales ? '—' : formatCLP(todayTotal)}</p>
-            <p className="text-xs text-slate-400">{sales.length} ventas</p>
+            {loadingSales ? (
+              <p className="mt-2 text-xl font-semibold text-slate-400">—</p>
+            ) : (
+              <div className="mt-2 space-y-0.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Efectivo</span>
+                  <span className="font-medium text-slate-900">{formatCLP(todayByMethod.efectivo)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Tarjeta</span>
+                  <span className="font-medium text-slate-900">{formatCLP(todayByMethod.tarjeta)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Transferencia</span>
+                  <span className="font-medium text-slate-900">{formatCLP(todayByMethod.transferencia)}</span>
+                </div>
+                <div className="mt-1.5 flex justify-between border-t border-slate-100 pt-1.5">
+                  <span className="font-medium text-slate-700">Total</span>
+                  <span className="font-semibold text-slate-900">{formatCLP(todayTotal)}</span>
+                </div>
+              </div>
+            )}
+            <p className="mt-2 text-xs text-slate-400">{sales.length} ventas</p>
           </div>
         )}
 
