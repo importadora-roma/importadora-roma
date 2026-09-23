@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { supabase } from '@/lib/supabase'
-import { formatCLP, formatKilo } from '@/lib/format'
+import { formatCLP, formatVariantSpec } from '@/lib/format'
 import { useProducts } from '@/features/products/useProducts'
 import { useContainerSettings } from './useContainerSettings'
 import { useTranslation } from '@/i18n/I18nProvider'
@@ -46,7 +46,7 @@ export function VariantMappingModal({
     const variant = variants.find((v) => v.id === variantId)
     if (!variant) return ''
     const product = products.find((p) => p.id === variant.product_id)
-    return `${product?.name ?? '?'} — ${variant.calidad} — ${formatKilo(variant.kilo)}`
+    return `${product?.name ?? '?'} — ${formatVariantSpec(variant.calidad, variant.kilo, variant.unit_type)}`
   }
 
   async function handleSubmit() {

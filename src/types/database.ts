@@ -161,6 +161,7 @@ export interface Database {
           product_id: string
           calidad: string
           kilo: number
+          unit_type: 'fardo' | 'saco'
           sku: string | null
           cost: number
           price: number
@@ -178,6 +179,7 @@ export interface Database {
           product_id: string
           calidad: string
           kilo: number
+          unit_type?: 'fardo' | 'saco'
           sku?: string | null
           cost?: number
           price?: number

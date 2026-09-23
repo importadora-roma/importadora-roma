@@ -1,6 +1,7 @@
 import { useMemo, useState, type KeyboardEvent } from 'react'
 import { Camera, Search } from 'lucide-react'
-import { formatCLP, formatKilo } from '@/lib/format'
+import { formatCLP, formatKilo, unitLabel } from '@/lib/format'
+import { UnitBadge } from '@/components/ui/UnitBadge'
 import { CameraScanModal } from './CameraScanModal'
 import type { CatalogEntry } from './useSaleCatalog'
 import { useTopSellingVariantIds } from './useTopSellingVariants'
@@ -43,7 +44,7 @@ export function ProductSearch({
     const matches = catalog
       .filter((c) => showOutOfStock || c.stock > 0)
       .filter(
-        (c) => c.productName.toLowerCase().includes(q) || c.calidad.toLowerCase().includes(q) || c.sku?.toLowerCase() === q
+        (c) => c.productName.toLowerCase().includes(q) || c.calidad.toLowerCase().includes(q) || unitLabel(c.unitType).toLowerCase() === q || c.sku?.toLowerCase() === q
       )
     return matches.sort((a, b) => (b.stock > 0 ? 1 : 0) - (a.stock > 0 ? 1 : 0)).slice(0, SEARCH_RESULTS_LIMIT)
   }, [catalog, term, showOutOfStock, topVariantIds])
@@ -168,6 +169,7 @@ export function ProductSearch({
                 <span>
                   <span className="font-medium text-slate-900">{r.productName}</span>
                   <span className="text-slate-500"> — {r.calidad} {formatKilo(r.kilo)}</span>
+                  <UnitBadge unit={r.unitType} className="ml-1.5 align-middle" />
                 </span>
                 <span className={`ml-4 shrink-0 ${r.stock <= 0 ? 'text-red-600' : 'text-slate-600'}`}>
                   {formatCLP(r.price)} · stock {r.stock}

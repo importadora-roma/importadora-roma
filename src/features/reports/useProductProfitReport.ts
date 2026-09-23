@@ -8,6 +8,7 @@ export interface ProductProfitRow {
   productName: string
   calidad: string
   kilo: number
+  unitType: 'fardo' | 'saco' | null
   quantity: number
   revenue: number
   cost: number
@@ -64,6 +65,7 @@ export function useProductProfitReport(branchId: string, from: string, to: strin
         productName: agg.customName ?? product?.name ?? 'Producto eliminado',
         calidad: variant?.calidad ?? '—',
         kilo: variant?.kilo ?? 0,
+        unitType: variant?.unit_type ?? null,
         quantity: agg.quantity,
         revenue: agg.revenue,
         cost: agg.cost,

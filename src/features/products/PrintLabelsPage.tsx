@@ -3,7 +3,7 @@ import JsBarcode from 'jsbarcode'
 import { Printer, Search } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { formatCLP, formatKilo } from '@/lib/format'
+import { formatCLP, formatVariantSpec } from '@/lib/format'
 import { useProducts } from './useProducts'
 
 // Deterministic from the variant id, so it's stable across re-prints and
@@ -124,7 +124,7 @@ export function PrintLabelsPage() {
                     <span className="font-medium text-slate-900">{productById.get(v.product_id)?.name}</span>
                     <span className="text-slate-500">
                       {' '}
-                      — {v.calidad} {formatKilo(v.kilo)}
+                      — {formatVariantSpec(v.calidad, v.kilo, v.unit_type)}
                     </span>
                   </td>
                   <td className="px-4 py-2 font-mono text-xs text-slate-500">{v.sku || 'se genera al imprimir'}</td>
@@ -156,7 +156,7 @@ export function PrintLabelsPage() {
           <div key={key} className="label-card flex flex-col justify-between rounded border border-slate-300">
             <p className="truncate text-[10px] font-semibold leading-tight text-slate-900">{product?.name}</p>
             <p className="text-[9px] leading-tight text-slate-600">
-              {variant.calidad} {formatKilo(variant.kilo)}
+              {formatVariantSpec(variant.calidad, variant.kilo, variant.unit_type)}
             </p>
             <BarcodeSvg value={variant.sku || generateSku(variant.id)} />
             <div className="flex items-center justify-between">

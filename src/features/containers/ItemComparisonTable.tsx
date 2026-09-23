@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from '@/i18n/I18nProvider'
+import { UnitBadge } from '@/components/ui/UnitBadge'
 import type { ItemProgressStatus, ItemWithProgress } from './types'
 
 type Filter = 'all' | 'complete' | 'missing' | 'over'
@@ -100,7 +101,10 @@ export function ItemComparisonTable({ items }: { items: ItemWithProgress[] }) {
           <tbody className="divide-y divide-slate-100">
             {filtered.map((item) => (
               <tr key={item.id}>
-                <td className="px-3 py-2 font-medium text-slate-900">{item.product_name}</td>
+                <td className="px-3 py-2 font-medium text-slate-900">
+                  {item.product_name}
+                  {item.unit_type && <UnitBadge unit={item.unit_type} className="ml-1.5 align-middle" />}
+                </td>
                 <td className="px-3 py-2 text-slate-600">{item.calidad ?? '—'}</td>
                 <td className="px-3 py-2 font-mono text-xs text-slate-500">{item.code ?? '—'}</td>
                 <td className="px-3 py-2 text-right">{item.expected_qty}</td>

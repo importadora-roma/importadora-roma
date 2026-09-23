@@ -39,6 +39,8 @@ export interface ContainerItem {
   notes: string | null
   source: ContainerItemSource
   variant_id: string | null
+  // Derived from the mapped variant (null while the item is still unmapped).
+  unit_type?: 'fardo' | 'saco' | null
   cost_usd_per_kilo: number | null
   pushed_to_inventory_at: string | null
   created_at: string

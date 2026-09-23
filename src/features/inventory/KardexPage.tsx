@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Select, Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import { formatDateTime, formatKilo } from '@/lib/format'
+import { formatDateTime, formatVariantSpec } from '@/lib/format'
 import { useKardex } from './useKardex'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useProducts } from '@/features/products/useProducts'
@@ -102,7 +102,7 @@ export function KardexPage() {
                   <td className="px-4 py-3 text-slate-500">{formatDateTime(entry.created_at)}</td>
                   <td className="px-4 py-3">
                     <span className="font-medium text-slate-900">{productName}</span>
-                    {variant && <span className="text-slate-500"> — {variant.calidad} {formatKilo(variant.kilo)}</span>}
+                    {variant && <span className="text-slate-500"> — {formatVariantSpec(variant.calidad, variant.kilo, variant.unit_type)}</span>}
                   </td>
                   <td className="px-4 py-3 text-slate-600">{branchNameById.get(entry.branch_id) ?? '—'}</td>
                   <td className="px-4 py-3">{movementLabels[entry.movement_type]}</td>

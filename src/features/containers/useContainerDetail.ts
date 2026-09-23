@@ -67,7 +67,7 @@ export function useContainerDetail(containerId: string | null) {
       supabase.from('containers').select('*').eq('id', containerId).single(),
       supabase
         .from('container_items')
-        .select('*')
+        .select('*, variant:product_variants(unit_type)')
         .eq('container_id', containerId)
         .is('deleted_at', null)
         .order('created_at'),
@@ -84,7 +84,11 @@ export function useContainerDetail(containerId: string | null) {
       setError(firstError)
     } else {
       setContainer(containerRes.data as unknown as Container)
-      setItems((itemsRes.data ?? []) as unknown as ContainerItem[])
+      setItems(
+        ((itemsRes.data ?? []) as unknown as Array<ContainerItem & { variant?: { unit_type: 'fardo' | 'saco' } | null }>).map(
+          ({ variant, ...item }) => ({ ...item, unit_type: variant?.unit_type ?? null })
+        )
+      )
       setEvents((eventsRes.data ?? []) as unknown as ScanEvent[])
       setUnknownCodes((unknownRes.data ?? []) as unknown as UnknownCode[])
       setError(null)

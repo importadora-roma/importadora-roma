@@ -46,6 +46,18 @@ export function formatKilo(kilo: number): string {
   return `${kilo % 1 === 0 ? kilo : kilo.toFixed(2)}KG`
 }
 
+export type UnitType = 'fardo' | 'saco'
+
+export function unitLabel(unit: UnitType | null | undefined): string {
+  return unit === 'saco' ? 'Saco' : 'Fardo'
+}
+
+// "Primera 20KG · Saco" — saco (sack) and fardo (bale) are separate variants of
+// the same product/calidad/kilo, so every screen that names a variant says which.
+export function formatVariantSpec(calidad: string, kilo: number | null | undefined, unit: UnitType | null | undefined): string {
+  return `${calidad}${kilo ? ` ${formatKilo(kilo)}` : ''} · ${unitLabel(unit)}`
+}
+
 // Parses Chilean-formatted numbers where "." is a thousands separator and
 // "," is the decimal separator (e.g. "12.500" -> 12500, "12.500,50" -> 12500.5).
 // A single period followed by 1-2 trailing digits (e.g. "20.5") is treated

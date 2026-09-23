@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/Input'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import { formatKilo } from '@/lib/format'
+import { UnitBadge } from '@/components/ui/UnitBadge'
 import { useProducts } from '@/features/products/useProducts'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { useContainerDetail } from './useContainerDetail'
@@ -34,6 +35,7 @@ type LastScan = {
   productName: string
   calidad: string | null
   kilo: number | null
+  unitType: 'fardo' | 'saco' | null
   notExpected: boolean
   code: string
   scannedQty: number | null
@@ -130,6 +132,7 @@ export function ActiveContainerScreen() {
           productName: item?.product_name ?? itemProduct?.name ?? '—',
           calidad: item?.calidad ?? itemVariant?.calidad ?? null,
           kilo: itemVariant?.kilo ?? null,
+          unitType: itemVariant?.unit_type ?? item?.unit_type ?? null,
           notExpected: !item,
           code: item?.code ?? code,
           scannedQty: result.scanned_qty_for_item,
@@ -169,6 +172,7 @@ export function ActiveContainerScreen() {
           productName: knownProduct?.name ?? t('activeScreen.lastScan.unknownProduct'),
           calidad: knownVariant?.calidad ?? null,
           kilo: knownVariant?.kilo ?? null,
+          unitType: knownVariant?.unit_type ?? null,
           notExpected: true,
           code,
           scannedQty: null,
@@ -389,6 +393,7 @@ export function ActiveContainerScreen() {
               <p className="text-sm text-slate-600">
                 {lastScan.calidad ? `${lastScan.calidad}${lastScan.kilo ? ` ${formatKilo(lastScan.kilo)}` : ''} — ` : ''}
                 {lastScan.code}
+                {lastScan.unitType && <UnitBadge unit={lastScan.unitType} className="ml-2 align-middle" />}
               </p>
               {lastScan.notExpected && lastScan.calidad && (
                 <p className="text-xs font-medium text-orange-700">{t('activeScreen.lastScan.notExpected')}</p>

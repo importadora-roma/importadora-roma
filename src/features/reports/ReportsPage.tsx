@@ -3,7 +3,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { Download, Package } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input, Select } from '@/components/ui/Input'
-import { formatCLP, formatDate, todayCL } from '@/lib/format'
+import { formatCLP, formatDate, todayCL, unitLabel } from '@/lib/format'
 import { createPdfDoc, autoTable, getLogoDataUrl, addPieChartWithLegend } from '@/lib/pdf'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
@@ -199,7 +199,7 @@ export function ReportsPage() {
       body: productRows.flatMap((r) => {
         const mainRow = [
           r.productName,
-          `${r.calidad}${r.kilo ? ` ${r.kilo}kg` : ''}`,
+          `${r.calidad}${r.kilo ? ` ${r.kilo}kg` : ''}${r.unitType ? ` · ${unitLabel(r.unitType)}` : ''}`,
           String(r.quantity),
           formatCLP(r.revenue),
           formatCLP(r.cost),

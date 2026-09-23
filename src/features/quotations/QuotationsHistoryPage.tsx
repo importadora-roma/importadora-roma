@@ -3,7 +3,7 @@ import { Eye, Mail, MessageCircle, Printer } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Select } from '@/components/ui/Input'
-import { formatCLP, formatDate, formatDateTime, formatKilo } from '@/lib/format'
+import { formatCLP, formatDate, formatDateTime, formatVariantSpec } from '@/lib/format'
 import { whatsappUrl, mailtoUrl } from '@/lib/share'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
@@ -41,7 +41,7 @@ export function QuotationsHistoryPage() {
     const variant = variantById.get(variantId)
     if (!variant) return '—'
     const productName = productNameById.get(variant.product_id) ?? '—'
-    return `${productName} — ${variant.calidad} ${formatKilo(variant.kilo)}`
+    return `${productName} — ${formatVariantSpec(variant.calidad, variant.kilo, variant.unit_type)}`
   }
 
   const [detail, setDetail] = useState<Quotation | null>(null)
@@ -89,7 +89,7 @@ export function QuotationsHistoryPage() {
       ...detailItems.map((item) => {
         const variant = variantById.get(item.variant_id)
         const name = variant ? productNameById.get(variant.product_id) ?? '—' : '—'
-        return `- ${item.quantity} x ${name}${variant ? ` (${variant.calidad} ${formatKilo(variant.kilo)})` : ''}: ${formatCLP(item.unit_price * item.quantity)}`
+        return `- ${item.quantity} x ${name}${variant ? ` (${formatVariantSpec(variant.calidad, variant.kilo, variant.unit_type)})` : ''}: ${formatCLP(item.unit_price * item.quantity)}`
       }),
       `Total: ${formatCLP(q.total)}`,
       q.valid_until ? `Válida hasta: ${formatDate(q.valid_until)}` : '',
@@ -189,7 +189,7 @@ export function QuotationsHistoryPage() {
                 return (
                   <tr key={item.id}>
                     <td className="py-1.5 pr-2">
-                      {productName} {variant && `— ${variant.calidad} ${formatKilo(variant.kilo)}`}
+                      {productName} {variant && `— ${formatVariantSpec(variant.calidad, variant.kilo, variant.unit_type)}`}
                     </td>
                     <td className="py-1.5 pr-2">{item.quantity}</td>
                     <td className="py-1.5">{formatCLP(item.unit_price)}</td>

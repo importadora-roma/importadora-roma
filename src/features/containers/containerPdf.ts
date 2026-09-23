@@ -1,5 +1,5 @@
 import { createPdfDoc, autoTable, getLogoDataUrl } from '@/lib/pdf'
-import { formatDate } from '@/lib/format'
+import { formatDate, unitLabel } from '@/lib/format'
 import type { Container, ItemWithProgress } from './types'
 
 const statusLabels: Record<ItemWithProgress['itemStatus'], string> = {
@@ -40,7 +40,7 @@ export async function generateContainerPdf(
     head: [['Producto', 'Calidad', 'Código', 'Esperado', 'Escaneado', 'Restante', 'Estado']],
     body: itemsWithProgress.map((i) => [
       i.product_name,
-      i.calidad ?? '—',
+      i.calidad ? `${i.calidad}${i.unit_type ? ` · ${unitLabel(i.unit_type)}` : ''}` : '—',
       i.code ?? '—',
       String(i.expected_qty),
       String(i.scannedQty),

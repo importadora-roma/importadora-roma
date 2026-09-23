@@ -3,6 +3,7 @@ import { Trash2, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Select, Textarea } from '@/components/ui/Input'
 import { formatCLP, formatKilo } from '@/lib/format'
+import { UnitBadge } from '@/components/ui/UnitBadge'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useSaleCatalog, type CatalogEntry } from '@/features/sales/useSaleCatalog'
 import { ProductSearch } from '@/features/sales/ProductSearch'
@@ -13,6 +14,7 @@ interface TransferCartItem {
   productName: string
   calidad: string
   kilo: number
+  unitType?: 'fardo' | 'saco'
   quantity: number
   availableStock: number
   unitPrice: string
@@ -43,6 +45,7 @@ export function NewTransferPage() {
           productName: entry.productName,
           calidad: entry.calidad,
           kilo: entry.kilo,
+          unitType: entry.unitType,
           quantity: 1,
           availableStock: entry.stock,
           unitPrice: entry.cost ? String(entry.cost) : '',
@@ -159,6 +162,7 @@ export function NewTransferPage() {
                 <td className="px-4 py-2">
                   <span className="font-medium text-slate-900">{item.productName}</span>
                   <span className="text-slate-500"> — {item.calidad} {formatKilo(item.kilo)}</span>
+                  <UnitBadge unit={item.unitType} className="ml-1.5 align-middle" />
                   <div className={`text-xs ${item.quantity > item.availableStock ? 'text-red-600' : 'text-slate-400'}`}>
                     stock disponible: {item.availableStock}
                   </div>

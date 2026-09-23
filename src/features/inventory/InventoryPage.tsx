@@ -3,7 +3,8 @@ import { Pencil, Download, Trash2, AlertTriangle, Plus, Minus, PackagePlus } fro
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Input, Select, Textarea } from '@/components/ui/Input'
-import { formatKilo } from '@/lib/format'
+import { formatKilo, formatVariantSpec } from '@/lib/format'
+import { UnitBadge } from '@/components/ui/UnitBadge'
 import { exportToExcel } from '@/lib/excel'
 import { useAuthStore } from '@/stores/authStore'
 import { useInventory } from './useInventory'
@@ -362,7 +363,10 @@ export function InventoryPage() {
               <tr key={variant.id}>
                 <td className="px-4 py-3 font-medium text-slate-900">{productName}</td>
                 <td className="px-4 py-3 text-slate-600">{variant.calidad}</td>
-                <td className="px-4 py-3 text-slate-600">{formatKilo(variant.kilo)}</td>
+                <td className="px-4 py-3 text-slate-600">
+                  {formatKilo(variant.kilo)}
+                  <UnitBadge unit={variant.unit_type} className="ml-1.5 align-middle" />
+                </td>
                 <td className="px-4 py-3">
                   {canSeeCost ? (
                     <>
@@ -427,7 +431,7 @@ export function InventoryPage() {
       <Modal open={!!adjustTarget} onClose={() => setAdjustTarget(null)} title="Ajustar stock">
         <div className="space-y-4">
           <p className="text-sm text-slate-600">
-            {productNameById.get(adjustTarget?.product_id ?? '')} — {adjustTarget?.calidad} {adjustTarget && formatKilo(adjustTarget.kilo)}
+            {productNameById.get(adjustTarget?.product_id ?? '')} — {adjustTarget && formatVariantSpec(adjustTarget.calidad, adjustTarget.kilo, adjustTarget.unit_type)}
           </p>
           <Input label="Nueva cantidad" type="number" min={0} value={newQuantity} onChange={(e) => setNewQuantity(e.target.value)} />
           <Input label="Motivo" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Ej: conteo físico, carga inicial..." />

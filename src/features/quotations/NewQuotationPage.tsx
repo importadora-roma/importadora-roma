@@ -3,6 +3,7 @@ import { Trash2, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Input'
 import { formatCLP, formatKilo } from '@/lib/format'
+import { UnitBadge } from '@/components/ui/UnitBadge'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useSaleCatalog, type CatalogEntry } from '@/features/sales/useSaleCatalog'
 import { ProductSearch } from '@/features/sales/ProductSearch'
@@ -14,6 +15,7 @@ interface QuoteCartItem {
   productName: string
   calidad: string
   kilo: number
+  unitType?: 'fardo' | 'saco'
   unitPrice: string
   quantity: number
 }
@@ -40,7 +42,7 @@ export function NewQuotationPage() {
       if (existing) return prev.map((i) => (i.variantId === entry.variantId ? { ...i, quantity: i.quantity + 1 } : i))
       return [
         ...prev,
-        { variantId: entry.variantId, productName: entry.productName, calidad: entry.calidad, kilo: entry.kilo, unitPrice: String(entry.price), quantity: 1 },
+        { variantId: entry.variantId, productName: entry.productName, calidad: entry.calidad, kilo: entry.kilo, unitType: entry.unitType, unitPrice: String(entry.price), quantity: 1 },
       ]
     })
   }
@@ -120,6 +122,7 @@ export function NewQuotationPage() {
                     <td className="px-4 py-2">
                       <span className="font-medium text-slate-900">{item.productName}</span>
                       <span className="text-slate-500"> — {item.calidad} {formatKilo(item.kilo)}</span>
+                      <UnitBadge unit={item.unitType} className="ml-1.5 align-middle" />
                     </td>
                     <td className="px-4 py-2">
                       <input

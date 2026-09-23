@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input, Select, Textarea } from '@/components/ui/Input'
-import { formatKilo } from '@/lib/format'
+import { formatVariantSpec } from '@/lib/format'
 import { useProducts } from '@/features/products/useProducts'
 import { useTranslation } from '@/i18n/I18nProvider'
 import type { ContainerItem, UnknownCode } from './types'
@@ -166,7 +166,7 @@ export function UnknownCodeResolveDialog({
                   <option value="">{t('unknownDialog.selectPlaceholder')}</option>
                   {activeVariants.map((v) => (
                     <option key={v.id} value={v.id}>
-                      {productNameById.get(v.product_id) ?? '—'} — {v.calidad} {formatKilo(v.kilo)}
+                      {productNameById.get(v.product_id) ?? '—'} — {formatVariantSpec(v.calidad, v.kilo, v.unit_type)}
                     </option>
                   ))}
                 </Select>

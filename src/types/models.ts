@@ -33,6 +33,7 @@ export interface ProductVariant {
   product_id: string
   calidad: string
   kilo: number
+  unit_type: 'fardo' | 'saco'
   sku: string | null
   cost: number
   price: number

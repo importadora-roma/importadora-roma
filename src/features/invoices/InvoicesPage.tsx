@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { ReasonModal } from '@/components/ui/ReasonModal'
-import { formatCLP, formatDateTime, formatKilo } from '@/lib/format'
+import { formatCLP, formatDateTime, formatVariantSpec } from '@/lib/format'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useProducts } from '@/features/products/useProducts'
 import { useInvoices, loadInvoiceLines, type InvoiceQueueRow } from './useInvoices'
@@ -298,12 +298,12 @@ export function InvoicesPage() {
 function buildLines(
   items: SaleItem[],
   productNameById: Map<string, string>,
-  variantById: Map<string, { product_id: string; calidad: string; kilo: number }>
+  variantById: Map<string, { product_id: string; calidad: string; kilo: number; unit_type: 'fardo' | 'saco' }>
 ): InvoiceLine[] {
   return items.map((item) => {
     const variant = item.variant_id ? variantById.get(item.variant_id) : undefined
     const productName = item.custom_name ?? (variant ? productNameById.get(variant.product_id) ?? '—' : '—')
-    const variantLabel = variant ? `${variant.calidad} ${formatKilo(variant.kilo)}` : '—'
+    const variantLabel = variant ? `${formatVariantSpec(variant.calidad, variant.kilo, variant.unit_type)}` : '—'
     const grossUnit = item.sold_price
     const netUnit = Math.round(grossUnit / (1 + IVA_RATE))
     const grossLine = item.line_total

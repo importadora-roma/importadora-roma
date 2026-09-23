@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Eye, Printer } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { formatCLP, formatDateTime, formatKilo } from '@/lib/format'
+import { formatCLP, formatDateTime, formatVariantSpec } from '@/lib/format'
 import { useBranches } from '@/features/branches/useBranches'
 import { useProducts } from '@/features/products/useProducts'
 import { useTransfers, type Transfer, type TransferItem } from './useTransfers'
@@ -29,7 +29,7 @@ export function TransferHistoryPage() {
     const variant = variantById.get(variantId)
     if (!variant) return '—'
     const productName = productNameById.get(variant.product_id) ?? '—'
-    return `${productName} — ${variant.calidad} ${formatKilo(variant.kilo)}`
+    return `${productName} — ${formatVariantSpec(variant.calidad, variant.kilo, variant.unit_type)}`
   }
 
   const [detail, setDetail] = useState<Transfer | null>(null)
@@ -128,7 +128,7 @@ export function TransferHistoryPage() {
                 return (
                   <tr key={item.id}>
                     <td className="py-1.5 pr-2">
-                      {productName} {variant && `— ${variant.calidad} ${formatKilo(variant.kilo)}`}
+                      {productName} {variant && `— ${formatVariantSpec(variant.calidad, variant.kilo, variant.unit_type)}`}
                     </td>
                     <td className="py-1.5 pr-2">{item.quantity}</td>
                     <td className="py-1.5 pr-2 text-slate-500">{item.unit_price ? formatCLP(item.unit_price) : '—'}</td>
