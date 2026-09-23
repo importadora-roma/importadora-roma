@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Download, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { Modal } from '@/components/ui/Modal'
 import { useAuthStore } from '@/stores/authStore'
 import { supabase } from '@/lib/supabase'
 import { formatDateTime } from '@/lib/format'
@@ -37,6 +38,9 @@ export function ContainerDetailPage() {
   const [mappingOpen, setMappingOpen] = useState(false)
   const [pushResult, setPushResult] = useState<{ itemsPushed: number; itemsSkippedUnmapped: number } | null>(null)
   const [reopening, setReopening] = useState(false)
+  const [approveOpen, setApproveOpen] = useState(false)
+  const [approving, setApproving] = useState(false)
+  const [approveError, setApproveError] = useState<string | null>(null)
 
   if (loading) return <p className="text-sm text-slate-400">{t('activeScreen.loading')}</p>
   if (error || !container) return <p className="text-sm text-red-600">{error ?? t('activeScreen.notFound')}</p>
@@ -52,6 +56,25 @@ export function ContainerDetailPage() {
   }
 
   const unmappedItems = items.filter((i) => !i.variant_id)
+  // Scanned fardos that are not in the branch's stock yet — nothing reaches
+  // inventory until an admin/supervisor approves the container.
+  const pendingUnits = itemsWithProgress
+    .filter((i) => !i.pushed_to_inventory_at)
+    .reduce((sum, i) => sum + Math.max(i.scannedQty, 0), 0)
+
+  async function handleApprove() {
+    setApproving(true)
+    setApproveError(null)
+    const { data, error } = await supabase.rpc('approve_container_stock', { p_container_id: containerId! })
+    setApproving(false)
+    if (error) {
+      setApproveError(error.message)
+      return
+    }
+    setApproveOpen(false)
+    if (data) setPushResult({ itemsPushed: data.itemsPushed, itemsSkippedUnmapped: data.itemsSkippedUnmapped })
+    reload()
+  }
 
   return (
     <div>
@@ -95,12 +118,19 @@ export function ContainerDetailPage() {
 
       {canManage && container.status === 'completed' && (
         <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
-          {unmappedItems.length === 0 ? (
-            <p className="text-sm text-green-700">{t('containerDetail.pushed')}</p>
-          ) : (
+          {pendingUnits > 0 && (
             <>
-              <p className="text-sm text-amber-700">{t('containerDetail.unmappedRemaining', { count: unmappedItems.length })}</p>
-              <Button className="mt-2" onClick={() => setMappingOpen(true)}>
+              <p className="text-sm font-medium text-violet-700">{t('containerDetail.pendingApproval', { units: pendingUnits })}</p>
+              <Button className="mt-2" onClick={() => setApproveOpen(true)}>
+                {t('containerDetail.approve')}
+              </Button>
+            </>
+          )}
+          {pendingUnits === 0 && unmappedItems.length === 0 && <p className="text-sm text-green-700">{t('containerDetail.pushed')}</p>}
+          {unmappedItems.length > 0 && (
+            <>
+              <p className="mt-2 text-sm text-amber-700">{t('containerDetail.unmappedRemaining', { count: unmappedItems.length })}</p>
+              <Button className="mt-2" variant="secondary" onClick={() => setMappingOpen(true)}>
                 {t('containerDetail.pushToInventory')}
               </Button>
             </>
@@ -186,6 +216,26 @@ export function ContainerDetailPage() {
           )}
         </div>
       )}
+
+      <Modal open={approveOpen} onClose={() => setApproveOpen(false)} title={t('containerDetail.approveTitle')}>
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            {t('containerDetail.approveBody', {
+              units: pendingUnits,
+              diff: totals.scanned - totals.expected > 0 ? `+${totals.scanned - totals.expected}` : String(totals.scanned - totals.expected),
+            })}
+          </p>
+          {approveError && <p className="text-sm text-red-600">{approveError}</p>}
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setApproveOpen(false)}>
+              {t('containerDetail.cancel')}
+            </Button>
+            <Button onClick={handleApprove} disabled={approving}>
+              {approving ? t('containerDetail.approving') : t('containerDetail.approveConfirm')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <VariantMappingModal
         open={mappingOpen}

@@ -6,6 +6,8 @@ import { Modal } from '@/components/ui/Modal'
 import { Textarea } from '@/components/ui/Input'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
+import { formatKilo } from '@/lib/format'
+import { useProducts } from '@/features/products/useProducts'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { useContainerDetail } from './useContainerDetail'
 import { useContainerScanning, type RecordScanResult } from './useContainerScanning'
@@ -31,6 +33,8 @@ interface ScanExtra {
 type LastScan = {
   productName: string
   calidad: string | null
+  kilo: number | null
+  notExpected: boolean
   code: string
   scannedQty: number | null
   expectedQty: number | null
@@ -43,6 +47,7 @@ export function ActiveContainerScreen() {
   const profile = useAuthStore((s) => s.profile)
   const canManage = profile?.role === 'admin' || profile?.role === 'supervisor'
   const { t } = useTranslation()
+  const { products, variants } = useProducts()
 
   const {
     container,
@@ -113,9 +118,19 @@ export function ActiveContainerScreen() {
 
       if (result.container_item_id) {
         const item = items.find((i) => i.id === result.container_item_id)
+        // The server can auto-add a scanned code that matches a known fardo
+        // (variant sku) to the list; this device doesn't have that new item
+        // yet, so fall back to the sku lookup for the name and refresh items.
+        const normalize = (c: string) => c.replace(/[\s-]/g, '').toUpperCase()
+        const skuVariant = variants.find((v) => v.sku && normalize(v.sku) === normalize(code))
+        const itemVariant = item?.variant_id ? variants.find((v) => v.id === item.variant_id) : skuVariant
+        const itemProduct = itemVariant ? products.find((p) => p.id === itemVariant.product_id) : undefined
+        if (!item) void reload()
         setLastScan({
-          productName: item?.product_name ?? '—',
-          calidad: item?.calidad ?? null,
+          productName: item?.product_name ?? itemProduct?.name ?? '—',
+          calidad: item?.calidad ?? itemVariant?.calidad ?? null,
+          kilo: itemVariant?.kilo ?? null,
+          notExpected: !item,
           code: item?.code ?? code,
           scannedQty: result.scanned_qty_for_item,
           expectedQty: result.expected_qty_for_item,
@@ -144,9 +159,17 @@ export function ActiveContainerScreen() {
         }
         playBeep(result.match_status === 'over')
       } else {
+        // Not on the expected list — but the barcode may still belong to a
+        // known fardo (its variant sku), so show which one it is.
+        const normalize = (c: string) => c.replace(/[\s-]/g, '').toUpperCase()
+        const scanned = normalize(code)
+        const knownVariant = variants.find((v) => v.sku && normalize(v.sku) === scanned)
+        const knownProduct = knownVariant ? products.find((p) => p.id === knownVariant.product_id) : undefined
         setLastScan({
-          productName: t('activeScreen.lastScan.unknownProduct'),
-          calidad: null,
+          productName: knownProduct?.name ?? t('activeScreen.lastScan.unknownProduct'),
+          calidad: knownVariant?.calidad ?? null,
+          kilo: knownVariant?.kilo ?? null,
+          notExpected: true,
           code,
           scannedQty: null,
           expectedQty: null,
@@ -162,7 +185,7 @@ export function ActiveContainerScreen() {
       setPhotoOn(false)
       inputRef.current?.focus()
     },
-    [recordScan, items, containerId, profile?.id, appendLocalEvent, reloadUnknownCodesOnly, t]
+    [recordScan, items, containerId, profile?.id, appendLocalEvent, reloadUnknownCodesOnly, t, products, variants, reload]
   )
 
   const handleBarcodeDetect = useCallback((code: string) => submitScan(code, 1, 'barcode'), [submitScan])
@@ -364,9 +387,12 @@ export function ActiveContainerScreen() {
               <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{t('activeScreen.lastScan.title')}</p>
               <p className="mt-1 text-lg font-semibold text-slate-900">{lastScan.productName}</p>
               <p className="text-sm text-slate-600">
-                {lastScan.calidad ? `${lastScan.calidad} — ` : ''}
+                {lastScan.calidad ? `${lastScan.calidad}${lastScan.kilo ? ` ${formatKilo(lastScan.kilo)}` : ''} — ` : ''}
                 {lastScan.code}
               </p>
+              {lastScan.notExpected && lastScan.calidad && (
+                <p className="text-xs font-medium text-orange-700">{t('activeScreen.lastScan.notExpected')}</p>
+              )}
               {lastScan.scannedQty !== null && lastScan.expectedQty !== null && (
                 <p className="mt-1 text-sm font-medium text-slate-700">
                   {lastScan.scannedQty} / {lastScan.expectedQty}
@@ -419,6 +445,12 @@ export function ActiveContainerScreen() {
       {container.status === 'completed' && (
         <div className="mt-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
           <p>{t('activeScreen.completedBanner')}</p>
+          <p className="mt-1 font-medium">{t('activeScreen.completedPendingApproval')}</p>
+          {canManage && (
+            <Button className="mt-3 mr-2" onClick={() => navigate(`/contenedores/historial/${containerId}`)}>
+              {t('containerDetail.approve')}
+            </Button>
+          )}
           {canManage && (
             <Button variant="secondary" className="mt-3" onClick={handleReopen}>
               {t('activeScreen.reopen')}

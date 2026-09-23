@@ -21,6 +21,28 @@ const statusClass: Record<ContainerStatus, string> = {
   completed: 'bg-green-100 text-green-700',
 }
 
+type DisplayStatus = ContainerStatus | 'pending_approval' | 'in_stock'
+
+const displayKey: Record<DisplayStatus, string> = {
+  ...statusKey,
+  pending_approval: 'status.pendingApproval',
+  in_stock: 'status.inStock',
+}
+
+const displayClass: Record<DisplayStatus, string> = {
+  ...statusClass,
+  pending_approval: 'bg-violet-100 text-violet-700',
+  in_stock: 'bg-green-100 text-green-700',
+}
+
+// A completed container is only "en stock" once its scanned fardos were
+// actually approved into inventory; until then it is pending approval.
+function displayStatus(status: ContainerStatus, summary: Summary | undefined): DisplayStatus {
+  if (status !== 'completed') return status
+  if (!summary) return status
+  return summary.pending_stock_qty > 0 ? 'pending_approval' : 'in_stock'
+}
+
 interface Summary {
   container_id: string
   expected_qty: number
@@ -28,6 +50,7 @@ interface Summary {
   items_total: number
   items_complete: number
   pending_unknown_count: number
+  pending_stock_qty: number
 }
 
 export function ContainerHistoryPage() {
@@ -36,6 +59,7 @@ export function ContainerHistoryPage() {
   const { containers, loading } = useContainers(branchId)
   const [summaries, setSummaries] = useState<Record<string, Summary>>({})
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<DisplayStatus | ''>('')
 
   useEffect(() => {
     if (containers.length === 0) return
@@ -54,6 +78,7 @@ export function ContainerHistoryPage() {
   }, [containers])
 
   const filtered = containers.filter((c) => {
+    if (statusFilter && displayStatus(c.status, summaries[c.id]) !== statusFilter) return false
     if (!search) return true
     const q = search.toLowerCase()
     return c.code.toLowerCase().includes(q) || (c.internal_number ?? '').toLowerCase().includes(q) || (c.supplier ?? '').toLowerCase().includes(q)
@@ -70,6 +95,18 @@ export function ContainerHistoryPage() {
         placeholder={t('containerHistory.searchPlaceholder')}
         className="mt-4 w-full max-w-sm rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
       />
+      <select
+        value={statusFilter}
+        onChange={(e) => setStatusFilter(e.target.value as DisplayStatus | '')}
+        className="mt-2 block w-full max-w-sm rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
+      >
+        <option value="">{t('containerHistory.filter.all')}</option>
+        {(['importing', 'counting', 'pending_approval', 'in_stock'] as DisplayStatus[]).map((k) => (
+          <option key={k} value={k}>
+            {t(displayKey[k])}
+          </option>
+        ))}
+      </select>
 
       {loading ? (
         <p className="mt-6 text-sm text-slate-400">{t('containerHistory.loading')}</p>
@@ -114,7 +151,10 @@ export function ContainerHistoryPage() {
                       {diff === null ? '—' : diff > 0 ? `+${diff}` : diff}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusClass[c.status]}`}>{t(statusKey[c.status])}</span>
+                      {(() => {
+                        const ds = displayStatus(c.status, s)
+                        return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${displayClass[ds]}`}>{t(displayKey[ds])}</span>
+                      })()}
                     </td>
                   </tr>
                 )
