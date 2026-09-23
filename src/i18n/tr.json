@@ -229,6 +229,9 @@
   "containerHistory.col.scanned": "Okutulan",
   "containerHistory.col.diff": "Fark",
   "containerHistory.col.status": "Durum",
+  "containerHistory.delete": "Sil",
+  "containerHistory.deleteTitle": "{number} konteynerini sil",
+  "containerHistory.deleteStockWarning": "Bu konteyner zaten stoğa eklendi: silmek stoğu GERİ ALMAZ.",
   "containerHistory.noResults": "Sonuç yok",
 
   "status.pendingApproval": "ONAY BEKLİYOR",

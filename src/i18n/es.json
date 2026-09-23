@@ -229,6 +229,9 @@
   "containerHistory.col.scanned": "Escaneado",
   "containerHistory.col.diff": "Diferencia",
   "containerHistory.col.status": "Estado",
+  "containerHistory.delete": "Eliminar",
+  "containerHistory.deleteTitle": "Eliminar contenedor {number}",
+  "containerHistory.deleteStockWarning": "Este contenedor ya sumó stock: eliminarlo NO revierte el inventario.",
   "containerHistory.noResults": "Sin resultados",
 
   "status.pendingApproval": "PENDIENTE DE APROBACIÓN",

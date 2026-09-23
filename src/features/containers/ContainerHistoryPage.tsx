@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Trash2 } from 'lucide-react'
+import { ReasonModal } from '@/components/ui/ReasonModal'
+import { useAuthStore } from '@/stores/authStore'
 import { supabase } from '@/lib/supabase'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { formatDate } from '@/lib/format'
 import { useTranslation } from '@/i18n/I18nProvider'
 import { useContainers } from './useContainers'
 import type { ContainerStatus } from '@/types/database'
+import type { Container } from './types'
 
 const statusKey: Record<ContainerStatus, string> = {
   draft: 'status.draft',
@@ -56,7 +60,10 @@ interface Summary {
 export function ContainerHistoryPage() {
   const { t } = useTranslation()
   const { branchId } = useEffectiveBranch()
-  const { containers, loading } = useContainers(branchId)
+  const { containers, loading, softDeleteContainer } = useContainers(branchId)
+  const profile = useAuthStore((s) => s.profile)
+  const canManage = profile?.role === 'admin' || profile?.role === 'supervisor'
+  const [deleteTarget, setDeleteTarget] = useState<Container | null>(null)
   const [summaries, setSummaries] = useState<Record<string, Summary>>({})
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<DisplayStatus | ''>('')
@@ -122,6 +129,7 @@ export function ContainerHistoryPage() {
                 <th className="px-4 py-2 text-right">{t('containerHistory.col.scanned')}</th>
                 <th className="px-4 py-2 text-right">{t('containerHistory.col.diff')}</th>
                 <th className="px-4 py-2">{t('containerHistory.col.status')}</th>
+                {canManage && <th className="px-4 py-2" />}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -156,12 +164,19 @@ export function ContainerHistoryPage() {
                         return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${displayClass[ds]}`}>{t(displayKey[ds])}</span>
                       })()}
                     </td>
+                    {canManage && (
+                      <td className="px-4 py-3 text-right">
+                        <button onClick={() => setDeleteTarget(c)} className="text-slate-400 hover:text-red-600" aria-label={t('containerHistory.delete')}>
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 )
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
+                  <td colSpan={8} className="px-4 py-6 text-center text-slate-400">
                     {t('containerHistory.noResults')}
                   </td>
                 </tr>
@@ -170,6 +185,23 @@ export function ContainerHistoryPage() {
           </table>
         </div>
       )}
+
+      <ReasonModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title={
+          t('containerHistory.deleteTitle', { number: deleteTarget?.internal_number ?? '' }) +
+          (deleteTarget?.status === 'completed' && summaries[deleteTarget.id]?.pending_stock_qty === 0
+            ? ` — ${t('containerHistory.deleteStockWarning')}`
+            : '')
+        }
+        confirmLabel={t('containerHistory.delete')}
+        onConfirm={async (reason) => {
+          const result = await softDeleteContainer(deleteTarget!.id, reason)
+          if (!result.error) setDeleteTarget(null)
+          return result
+        }}
+      />
     </div>
   )
 }
