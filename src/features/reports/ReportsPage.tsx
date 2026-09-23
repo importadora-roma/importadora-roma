@@ -9,8 +9,8 @@ import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useCustomers } from '@/features/customers/useCustomers'
-import { useProducts } from '@/features/products/useProducts'
 import { useReports } from './useReports'
+import { DailyReportButtons } from './DailyReportButtons'
 import { useProfitReport } from './useProfitReport'
 import { useProductProfitReport } from './useProductProfitReport'
 import { useCommissionReport } from './useCommissionReport'
@@ -49,10 +49,10 @@ export function ReportsPage() {
   const [branchId, setBranchId] = useState(activeBranchId)
   const [from, setFrom] = useState(startOfMonth())
   const [to, setTo] = useState(todayCL())
+  const [reportDay, setReportDay] = useState(todayCL())
 
   const { sales, payments, loading, error } = useReports(branchId, from, to)
   const { customers } = useCustomers()
-  const { products, variants } = useProducts()
   const { cogs, grossMargin, loading: loadingMargin } = useProfitReport(branchId, from, to)
   const { expenses, total: totalExpenses, loading: loadingExpenses } = useExpenses(branchId, from, to)
   const { total: transferValue, transferCount, loading: loadingTransfers } = useTransferValue(branchId, from, to)
@@ -88,14 +88,6 @@ export function ReportsPage() {
   }, [sales])
 
   const customerNameById = useMemo(() => new Map(customers.map((c) => [c.id, c.name])), [customers])
-  const productNameById = useMemo(() => new Map(products.map((p) => [p.id, p.name])), [products])
-  const variantById = useMemo(() => new Map(variants.map((v) => [v.id, v])), [variants])
-  function itemLabelFor(variantId: string | null, customName: string | null): string {
-    if (customName) return customName
-    const variant = variantId ? variantById.get(variantId) : undefined
-    if (!variant) return '—'
-    return `${productNameById.get(variant.product_id) ?? '—'} — ${variant.calidad} ${variant.kilo}kg`
-  }
 
   const selectedBranch = branchId ? branches.find((b) => b.id === branchId) : null
   const branchName = selectedBranch?.name ?? 'Todas las sucursales'
@@ -171,6 +163,30 @@ export function ReportsPage() {
       columnStyles: { 1: { halign: 'right' } },
     })
 
+    const noteStyles = { fontSize: 7, textColor: [130, 130, 130] as [number, number, number], fontStyle: 'italic' as const }
+
+    // Each product line's notes print as small sub-rows right under that
+    // product, grouped by the same variant/custom-name key useProductProfitReport
+    // uses to build productRows, so a note always lands under the row it belongs to.
+    const saleNumberById = new Map(sales.map((s) => [s.id, s.sale_number]))
+    const { data: itemNoteRows } = sales.length
+      ? await supabase
+          .from('sale_items')
+          .select('sale_id, variant_id, custom_name, notes')
+          .in('sale_id', sales.map((s) => s.id))
+          .not('notes', 'is', null)
+          .eq('status', 'active')
+      : { data: [] }
+
+    const notesByProductKey = new Map<string, { folio: string; note: string }[]>()
+    for (const row of itemNoteRows ?? []) {
+      if (!row.notes) continue
+      const key = (row.variant_id as string | null) ?? `custom:${row.custom_name as string | null}`
+      const list = notesByProductKey.get(key) ?? []
+      list.push({ folio: saleNumberById.get(row.sale_id as string) ?? '—', note: row.notes as string })
+      notesByProductKey.set(key, list)
+    }
+
     const productsTableTop = finalY() + 12
     doc.setFontSize(10)
     doc.setTextColor(30)
@@ -180,15 +196,23 @@ export function ReportsPage() {
       startY: productsTableTop,
       head: [['Producto', 'Calidad', 'Fardos', 'Ingresos', 'Costo', 'Margen', 'Margen %']],
       headStyles: { fillColor: [16, 29, 58] },
-      body: productRows.map((r) => [
-        r.productName,
-        `${r.calidad}${r.kilo ? ` ${r.kilo}kg` : ''}`,
-        String(r.quantity),
-        formatCLP(r.revenue),
-        formatCLP(r.cost),
-        formatCLP(r.margin),
-        `${r.marginPct.toFixed(1)}%`,
-      ]),
+      body: productRows.flatMap((r) => {
+        const mainRow = [
+          r.productName,
+          `${r.calidad}${r.kilo ? ` ${r.kilo}kg` : ''}`,
+          String(r.quantity),
+          formatCLP(r.revenue),
+          formatCLP(r.cost),
+          formatCLP(r.margin),
+          `${r.marginPct.toFixed(1)}%`,
+        ]
+        const notes = notesByProductKey.get(r.variantId) ?? []
+        if (notes.length === 0) return [mainRow]
+        return [
+          mainRow,
+          ...notes.map((n) => [{ content: `Nota (venta ${n.folio}): ${n.note}`, colSpan: 7, styles: noteStyles }]),
+        ]
+      }),
       columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' } },
       styles: { fontSize: 8 },
     })
@@ -211,48 +235,25 @@ export function ReportsPage() {
       columnStyles: { 1: { halign: 'right' } },
     })
 
-    // Every sale in the period that carries a note — either the sale's own
-    // general note, or a note on one of its individual product lines — the
-    // note itself prints as a small sub-row right under that sale's row,
-    // however far back it happened, since this table follows the same
-    // from/to range as the rest of the report.
-    const { data: itemNoteRows } = sales.length
-      ? await supabase
-          .from('sale_items')
-          .select('sale_id, variant_id, custom_name, notes')
-          .in('sale_id', sales.map((s) => s.id))
-          .not('notes', 'is', null)
-          .eq('status', 'active')
-      : { data: [] }
+    // Product-level notes already printed as sub-rows under "Ventas por
+    // producto" above. This section only covers a sale's own general note
+    // (not tied to any one product line), so it stays short and separate.
+    const salesWithGeneralNote = sales.filter((s) => s.notes?.trim())
 
-    const itemNotesBySale = new Map<string, { label: string; note: string }[]>()
-    for (const row of itemNoteRows ?? []) {
-      if (!row.notes) continue
-      const list = itemNotesBySale.get(row.sale_id as string) ?? []
-      list.push({ label: itemLabelFor(row.variant_id as string | null, row.custom_name as string | null), note: row.notes as string })
-      itemNotesBySale.set(row.sale_id as string, list)
-    }
-
-    const salesWithAnyNote = sales.filter((s) => s.notes?.trim() || itemNotesBySale.has(s.id))
-
-    if (salesWithAnyNote.length > 0) {
+    if (salesWithGeneralNote.length > 0) {
       const notesTop = finalY() + 12
       doc.setFontSize(10)
       doc.setTextColor(30)
-      doc.text('Ventas con notas', 14, notesTop - 4)
+      doc.text('Ventas con nota general', 14, notesTop - 4)
       doc.setTextColor(0)
-      const noteStyles = { fontSize: 7, textColor: [130, 130, 130] as [number, number, number], fontStyle: 'italic' as const }
-      const notesBody = salesWithAnyNote.flatMap((s) => [
+      const notesBody = salesWithGeneralNote.flatMap((s) => [
         [
           s.sale_number ?? '—',
           formatDate(`${s.sale_date}T00:00:00`),
           s.customer_id ? customerNameById.get(s.customer_id) ?? '—' : '—',
           formatCLP(s.total),
         ],
-        ...(s.notes?.trim() ? [[{ content: `Nota general: ${s.notes}`, colSpan: 4, styles: noteStyles }]] : []),
-        ...(itemNotesBySale.get(s.id) ?? []).map((item) => [
-          { content: `${item.label}: ${item.note}`, colSpan: 4, styles: noteStyles },
-        ]),
+        [{ content: `Nota: ${s.notes}`, colSpan: 4, styles: noteStyles }],
       ])
       autoTable(doc, {
         startY: notesTop,
@@ -286,6 +287,11 @@ export function ReportsPage() {
           <Download size={16} />
           Exportar PDF
         </Button>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4">
+        <Input label="Reporte diario — día" type="date" max={todayCL()} value={reportDay} onChange={(e) => setReportDay(e.target.value)} />
+        {reportDay && <DailyReportButtons branchId={branchId} day={reportDay} />}
       </div>
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}

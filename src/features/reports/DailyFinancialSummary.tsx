@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { formatCLP, todayCL } from '@/lib/format'
 import { useProfitReport } from './useProfitReport'
+import { DailyReportButtons } from './DailyReportButtons'
 import { useExpenses } from '@/features/expenses/useExpenses'
 import { useTransferValue } from '@/features/transfers/useTransferValue'
 import type { ExpenseCategory } from '@/types/database'
@@ -91,6 +92,9 @@ export function DailyFinancialSummary({ branchId }: { branchId: string }) {
           <Plus size={14} />
           Agregar gasto
         </Button>
+      </div>
+      <div className="mt-3">
+        <DailyReportButtons branchId={branchId} day={day} />
       </div>
       <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div>

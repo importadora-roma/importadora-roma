@@ -957,6 +957,7 @@ export interface Database {
           items_total: number
           items_complete: number
           pending_unknown_count: number
+          pending_stock_qty: number
         }
         Relationships: []
       }
@@ -1178,6 +1179,10 @@ export interface Database {
           p_container_id: string
           p_variant_mappings?: { container_item_id: string; variant_id: string }[] | null
         }
+        Returns: { itemsPushed: number; itemsSkippedUnmapped: number }
+      }
+      approve_container_stock: {
+        Args: { p_container_id: string }
         Returns: { itemsPushed: number; itemsSkippedUnmapped: number }
       }
       set_sale_requires_invoice: {
