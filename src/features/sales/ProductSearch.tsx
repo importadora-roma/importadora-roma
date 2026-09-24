@@ -1,4 +1,4 @@
-import { useMemo, useState, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { Camera, Search } from 'lucide-react'
 import { formatCLP, formatKilo, unitLabel } from '@/lib/format'
 import { UnitBadge } from '@/components/ui/UnitBadge'
@@ -24,6 +24,7 @@ export function ProductSearch({
   const [showOutOfStock, setShowOutOfStock] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const { topVariantIds } = useTopSellingVariantIds(branchId)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const results = useMemo(() => {
     const q = term.trim().toLowerCase()
@@ -56,6 +57,7 @@ export function ProductSearch({
     setTerm('')
     setOpen(false)
     setSelected(new Set())
+    inputRef.current?.focus()
   }
 
   function toggleSelected(variantId: string) {
@@ -79,20 +81,41 @@ export function ProductSearch({
     setSelected(new Set())
   }
 
-  // A USB barcode scanner types the code into whatever input is focused and
-  // ends with Enter — if that matches a SKU exactly, add it straight to the
-  // cart instead of requiring a manual click, same as a real POS scan.
-  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key !== 'Enter') return
-    const code = term.trim().toLowerCase()
-    if (!code) return
-    const scanned = catalog.find((c) => c.sku?.toLowerCase() === code)
-    if (scanned) selectAndClear(scanned)
+  const normalizeCode = (c: string) => c.replace(/[\s-]/g, '').toLowerCase()
+
+  function findBySku(raw: string): CatalogEntry | undefined {
+    const code = normalizeCode(raw)
+    if (!code) return undefined
+    return catalog.find((c) => c.sku && normalizeCode(c.sku) === code)
   }
+
+  // A barcode scanner types the whole code in a burst, usually ending with
+  // Enter (some are set up with Tab or nothing at all). Enter/Tab add an exact
+  // SKU match right away; without a terminator, a short pause after the last
+  // character does the same, so the scan never just sits in the search box.
+  // The cart takes the item and the box is cleared and refocused for the next scan.
+  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== 'Enter' && e.key !== 'Tab') return
+    const scanned = findBySku(term)
+    if (scanned) {
+      e.preventDefault()
+      selectAndClear(scanned)
+    }
+  }
+
+  useEffect(() => {
+    if (term.trim().length < 6) return
+    const timer = setTimeout(() => {
+      const scanned = findBySku(term)
+      if (scanned) selectAndClear(scanned)
+    }, 150)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [term])
 
   function handleCameraDetect(code: string) {
     setScannerOpen(false)
-    const scanned = catalog.find((c) => c.sku?.toLowerCase() === code.toLowerCase())
+    const scanned = findBySku(code)
     if (scanned) {
       selectAndClear(scanned)
     } else {
@@ -107,6 +130,7 @@ export function ProductSearch({
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
           <input
+            ref={inputRef}
             value={term}
             onChange={(e) => {
               setTerm(e.target.value)
