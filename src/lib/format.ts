@@ -46,6 +46,15 @@ export function formatKilo(kilo: number): string {
   return `${kilo % 1 === 0 ? kilo : kilo.toFixed(2)}KG`
 }
 
+// Supplier packing lists grade fardos E / A / B; the system names them
+// Primera / Segunda / Tercera, so imports convert the letters on the way in.
+const CALIDAD_ALIASES: Record<string, string> = { E: 'Primera', A: 'Segunda', B: 'Tercera' }
+
+export function normalizeCalidad(raw: string): string {
+  const trimmed = raw.trim()
+  return CALIDAD_ALIASES[trimmed.toUpperCase()] ?? trimmed
+}
+
 export type UnitType = 'fardo' | 'saco'
 
 export function unitLabel(unit: UnitType | null | undefined): string {

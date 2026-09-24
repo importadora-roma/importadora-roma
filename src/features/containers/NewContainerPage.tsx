@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { parseDelimitedText, parseSpreadsheetFile } from '@/lib/excel'
 import { normalizeCode } from '@/lib/codeNormalize'
+import { normalizeCalidad } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useTranslation } from '@/i18n/I18nProvider'
@@ -137,7 +138,7 @@ export function NewContainerPage() {
       .map((row) => ({
         code: get(row, 'code'),
         product_name: get(row, 'product_name'),
-        calidad: get(row, 'calidad'),
+        calidad: normalizeCalidad(get(row, 'calidad')),
         expected_qty: get(row, 'expected_qty'),
         unit: get(row, 'unit'),
         cost_usd_per_kilo: get(row, 'cost_usd_per_kilo'),
@@ -164,7 +165,7 @@ export function NewContainerPage() {
     previewRows.forEach((row) => {
       if (!row.code.trim()) return
       const norm = normalizeCode(row.code)
-      const productKey = `${row.product_name.trim().toLowerCase()}|${row.calidad.trim().toLowerCase()}`
+      const productKey = `${row.product_name.trim().toLowerCase()}|${normalizeCalidad(row.calidad).toLowerCase()}`
       if (!conflictKeys.has(norm)) conflictKeys.set(norm, new Set())
       conflictKeys.get(norm)!.add(productKey)
     })
@@ -205,7 +206,7 @@ export function NewContainerPage() {
       .map(({ row }) => ({
         code: row.code.trim() || null,
         product_name: row.product_name.trim(),
-        calidad: row.calidad.trim() || null,
+        calidad: normalizeCalidad(row.calidad) || null,
         expected_qty: Number(row.expected_qty),
         unit: row.unit.trim() || null,
         cost_usd_per_kilo: row.cost_usd_per_kilo.trim() ? Number(row.cost_usd_per_kilo) : null,
