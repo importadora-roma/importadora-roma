@@ -646,6 +646,7 @@ export interface Database {
           id: string
           container_id: string
           code: string | null
+          line_no: number
           code_normalized: string | null
           product_name: string
           calidad: string | null

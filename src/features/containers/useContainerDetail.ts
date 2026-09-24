@@ -70,7 +70,7 @@ export function useContainerDetail(containerId: string | null) {
         .select('*, variant:product_variants(unit_type)')
         .eq('container_id', containerId)
         .is('deleted_at', null)
-        .order('created_at'),
+        .order('line_no'),
       supabase.from('container_scan_events').select('*').eq('container_id', containerId).order('created_at'),
       supabase
         .from('container_unknown_codes')
