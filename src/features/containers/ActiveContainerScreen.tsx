@@ -122,7 +122,7 @@ export function ActiveContainerScreen() {
         // (variant sku) to the list; this device doesn't have that new item
         // yet, so fall back to the sku lookup for the name and refresh items.
         const normalize = (c: string) => c.replace(/[\s-]/g, '').toUpperCase()
-        const skuVariant = variants.find((v) => v.sku && normalize(v.sku) === normalize(code))
+        const skuVariant = variants.find((v) => [v.sku, ...(v.extra_barcodes ?? [])].some((b) => b && normalize(b) === normalize(code)))
         const itemVariant = item?.variant_id ? variants.find((v) => v.id === item.variant_id) : skuVariant
         const itemProduct = itemVariant ? products.find((p) => p.id === itemVariant.product_id) : undefined
         if (!item) void reload()
@@ -163,7 +163,7 @@ export function ActiveContainerScreen() {
         // known fardo (its variant sku), so show which one it is.
         const normalize = (c: string) => c.replace(/[\s-]/g, '').toUpperCase()
         const scanned = normalize(code)
-        const knownVariant = variants.find((v) => v.sku && normalize(v.sku) === scanned)
+        const knownVariant = variants.find((v) => [v.sku, ...(v.extra_barcodes ?? [])].some((b) => b && normalize(b) === scanned))
         const knownProduct = knownVariant ? products.find((p) => p.id === knownVariant.product_id) : undefined
         setLastScan({
           productName: knownProduct?.name ?? t('activeScreen.lastScan.unknownProduct'),

@@ -193,6 +193,23 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['product_variants']['Insert']>
         Relationships: []
       }
+      variant_barcodes: {
+        Row: {
+          id: string
+          variant_id: string
+          code: string
+          code_normalized: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          variant_id: string
+          code: string
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['variant_barcodes']['Insert']>
+        Relationships: []
+      }
       inventory: {
         Row: {
           id: string

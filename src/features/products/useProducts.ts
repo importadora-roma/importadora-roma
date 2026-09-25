@@ -12,7 +12,7 @@ export function useProducts() {
 
   const reload = useCallback(async () => {
     setLoading(true)
-    const [productsRes, variantsRes] = await Promise.all([
+    const [productsRes, variantsRes, barcodesRes] = await Promise.all([
       supabase.from('products').select('*').is('deleted_at', null).order('name'),
       supabase
         .from('product_variants')
@@ -20,6 +20,7 @@ export function useProducts() {
         .is('deleted_at', null)
         .order('calidad')
         .order('kilo'),
+      supabase.from('variant_barcodes').select('variant_id, code'),
     ])
     if (productsRes.error) {
       setError(productsRes.error.message)
@@ -27,7 +28,13 @@ export function useProducts() {
       setError(variantsRes.error.message)
     } else {
       setProducts((productsRes.data ?? []) as unknown as Product[])
-      setVariants((variantsRes.data ?? []) as unknown as ProductVariant[])
+      const extra = new Map<string, string[]>()
+      for (const b of (barcodesRes.data ?? []) as unknown as { variant_id: string; code: string }[]) {
+        extra.set(b.variant_id, [...(extra.get(b.variant_id) ?? []), b.code])
+      }
+      setVariants(
+        ((variantsRes.data ?? []) as unknown as ProductVariant[]).map((v) => ({ ...v, extra_barcodes: extra.get(v.id) ?? [] }))
+      )
       setError(null)
     }
     setLoading(false)

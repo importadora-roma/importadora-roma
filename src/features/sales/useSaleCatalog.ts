@@ -11,6 +11,7 @@ export interface CatalogEntry {
   cost: number
   stock: number
   sku: string | null
+  barcodes: string[]
 }
 
 export function useSaleCatalog(branchId: string) {
@@ -30,6 +31,7 @@ export function useSaleCatalog(branchId: string) {
         cost: v.cost,
         stock: inventory.find((i) => i.variant_id === v.id && i.branch_id === branchId)?.quantity ?? 0,
         sku: v.sku,
+        barcodes: [...(v.sku ? [v.sku] : []), ...(v.extra_barcodes ?? [])],
       }))
   }, [products, variants, inventory, branchId])
 

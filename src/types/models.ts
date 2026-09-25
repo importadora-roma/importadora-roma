@@ -34,6 +34,8 @@ export interface ProductVariant {
   calidad: string
   kilo: number
   sku: string | null
+  // Additional barcodes that also identify this variant (see variant_barcodes).
+  extra_barcodes?: string[]
   cost: number
   price: number
   supplier: string | null

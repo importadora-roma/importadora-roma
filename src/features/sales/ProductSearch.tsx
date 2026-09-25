@@ -44,7 +44,7 @@ export function ProductSearch({
     const matches = catalog
       .filter((c) => showOutOfStock || c.stock > 0)
       .filter(
-        (c) => c.productName.toLowerCase().includes(q) || c.calidad.toLowerCase().includes(q) || c.sku?.toLowerCase() === q
+        (c) => c.productName.toLowerCase().includes(q) || c.calidad.toLowerCase().includes(q) || c.barcodes.some((b) => b.toLowerCase() === q)
       )
     return matches.sort((a, b) => (b.stock > 0 ? 1 : 0) - (a.stock > 0 ? 1 : 0)).slice(0, SEARCH_RESULTS_LIMIT)
   }, [catalog, term, showOutOfStock, topVariantIds])
@@ -85,7 +85,7 @@ export function ProductSearch({
   function findBySku(raw: string): CatalogEntry | undefined {
     const code = normalizeCode(raw)
     if (!code) return undefined
-    return catalog.find((c) => c.sku && normalizeCode(c.sku) === code)
+    return catalog.find((c) => c.barcodes.some((b) => normalizeCode(b) === code))
   }
 
   // A barcode scanner types the whole code in a burst, usually ending with
