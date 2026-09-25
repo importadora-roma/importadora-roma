@@ -29,7 +29,7 @@ export function TransferHistoryPage() {
     const variant = variantById.get(variantId)
     if (!variant) return '—'
     const productName = productNameById.get(variant.product_id) ?? '—'
-    return `${productName} — ${formatVariantSpec(variant.calidad, variant.kilo, variant.unit_type)}`
+    return `${productName} — ${formatVariantSpec(variant.calidad, variant.kilo)}`
   }
 
   const [detail, setDetail] = useState<Transfer | null>(null)
@@ -128,7 +128,7 @@ export function TransferHistoryPage() {
                 return (
                   <tr key={item.id}>
                     <td className="py-1.5 pr-2">
-                      {productName} {variant && `— ${formatVariantSpec(variant.calidad, variant.kilo, variant.unit_type)}`}
+                      {productName} {variant && `— ${formatVariantSpec(variant.calidad, variant.kilo)}`}
                     </td>
                     <td className="py-1.5 pr-2">{item.quantity}</td>
                     <td className="py-1.5 pr-2 text-slate-500">{item.unit_price ? formatCLP(item.unit_price) : '—'}</td>

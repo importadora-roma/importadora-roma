@@ -166,7 +166,7 @@ export function UnknownCodeResolveDialog({
                   <option value="">{t('unknownDialog.selectPlaceholder')}</option>
                   {activeVariants.map((v) => (
                     <option key={v.id} value={v.id}>
-                      {productNameById.get(v.product_id) ?? '—'} — {formatVariantSpec(v.calidad, v.kilo, v.unit_type)}
+                      {productNameById.get(v.product_id) ?? '—'} — {formatVariantSpec(v.calidad, v.kilo)}
                     </option>
                   ))}
                 </Select>

@@ -102,7 +102,7 @@ export function KardexPage() {
                   <td className="px-4 py-3 text-slate-500">{formatDateTime(entry.created_at)}</td>
                   <td className="px-4 py-3">
                     <span className="font-medium text-slate-900">{productName}</span>
-                    {variant && <span className="text-slate-500"> — {formatVariantSpec(variant.calidad, variant.kilo, variant.unit_type)}</span>}
+                    {variant && <span className="text-slate-500"> — {formatVariantSpec(variant.calidad, variant.kilo)}</span>}
                   </td>
                   <td className="px-4 py-3 text-slate-600">{branchNameById.get(entry.branch_id) ?? '—'}</td>
                   <td className="px-4 py-3">{movementLabels[entry.movement_type]}</td>

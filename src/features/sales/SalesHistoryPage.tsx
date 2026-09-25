@@ -56,7 +56,7 @@ export function SalesHistoryPage() {
     const variant = variantById.get(variantId)
     if (!variant) return '—'
     const productName = productNameById.get(variant.product_id) ?? '—'
-    return `${productName} — ${formatVariantSpec(variant.calidad, variant.kilo, variant.unit_type)}`
+    return `${productName} — ${formatVariantSpec(variant.calidad, variant.kilo)}`
   }
 
   function itemLabel(item: SaleItem): string {
@@ -477,7 +477,7 @@ function ExchangeModal({
         <ProductSearch catalog={catalog} onSelect={setSelected} branchId={branchId} />
         {selected && (
           <p className="text-sm text-slate-700">
-            Seleccionado: {selected.productName} — {formatVariantSpec(selected.calidad, selected.kilo, selected.unitType)} ({formatCLP(selected.price)})
+            Seleccionado: {selected.productName} — {formatVariantSpec(selected.calidad, selected.kilo)} ({formatCLP(selected.price)})
           </p>
         )}
         <Input label="Cantidad" type="number" min={1} value={quantity} onChange={(e) => setQuantity(e.target.value)} />

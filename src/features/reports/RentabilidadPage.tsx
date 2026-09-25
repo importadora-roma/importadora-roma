@@ -5,7 +5,6 @@ import { Input, Select, Textarea } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { ReasonModal } from '@/components/ui/ReasonModal'
 import { formatCLP, formatDate, formatKilo, todayCL } from '@/lib/format'
-import { UnitBadge } from '@/components/ui/UnitBadge'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
@@ -267,7 +266,6 @@ export function RentabilidadPage() {
                   <td className="px-4 py-2 font-medium text-slate-900">{r.productName}</td>
                   <td className="px-4 py-2 text-slate-500">
                     {r.calidad} {r.kilo ? formatKilo(r.kilo) : ''}
-                    {r.unitType && <UnitBadge unit={r.unitType} className="ml-1.5 align-middle" />}
                   </td>
                   <td className="px-4 py-2 text-right">{r.quantity}</td>
                   <td className="px-4 py-2 text-right">{formatCLP(r.revenue)}</td>

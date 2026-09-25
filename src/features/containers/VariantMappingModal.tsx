@@ -46,7 +46,7 @@ export function VariantMappingModal({
     const variant = variants.find((v) => v.id === variantId)
     if (!variant) return ''
     const product = products.find((p) => p.id === variant.product_id)
-    return `${product?.name ?? '?'} — ${formatVariantSpec(variant.calidad, variant.kilo, variant.unit_type)}`
+    return `${product?.name ?? '?'} — ${formatVariantSpec(variant.calidad, variant.kilo)}`
   }
 
   async function handleSubmit() {

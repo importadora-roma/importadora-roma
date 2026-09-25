@@ -69,7 +69,6 @@ export function useProducts() {
     cost: number
     price: number
     supplier: string | null
-    unit_type?: 'fardo' | 'saco'
   }) {
     const { data, error } = await supabase.from('product_variants').insert(input).select().single()
     if (error) return { variant: null, error: error.message }
@@ -79,7 +78,7 @@ export function useProducts() {
 
   async function updateVariant(
     id: string,
-    input: Partial<Pick<ProductVariant, 'calidad' | 'kilo' | 'sku' | 'cost' | 'price' | 'supplier' | 'active' | 'unit_type'>>
+    input: Partial<Pick<ProductVariant, 'calidad' | 'kilo' | 'sku' | 'cost' | 'price' | 'supplier' | 'active'>>
   ) {
     const { error } = await supabase.from('product_variants').update(input).eq('id', id)
     if (error) return { error: error.message }

@@ -5,7 +5,6 @@ import { Modal } from '@/components/ui/Modal'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { ReasonModal } from '@/components/ui/ReasonModal'
 import { formatCLP, formatKilo, formatVariantSpec } from '@/lib/format'
-import { UnitBadge } from '@/components/ui/UnitBadge'
 import { useProducts } from './useProducts'
 import { useCalidadCostDefaults } from './useCalidadCostDefaults'
 import type { Product, ProductVariant } from '@/types/models'
@@ -25,11 +24,10 @@ interface VariantForm {
   cost: string
   price: string
   supplier: string
-  unitType: 'fardo' | 'saco'
 }
 
 const emptyProductForm: ProductForm = { name: '', description: '', category: '' }
-const emptyVariantForm: VariantForm = { calidad: '', kilo: '', sku: '', cost: '', price: '', supplier: '', unitType: 'fardo' }
+const emptyVariantForm: VariantForm = { calidad: '', kilo: '', sku: '', cost: '', price: '', supplier: '' }
 
 function scaleIfShorthand(value: number): number {
   return value > 0 && value < 1000 ? value * 1000 : value
@@ -127,7 +125,6 @@ export function ProductsPage() {
       cost: String(variant.cost),
       price: String(variant.price),
       supplier: variant.supplier ?? '',
-      unitType: variant.unit_type,
     })
     setVariantFormError(null)
     setVariantModalOpen(true)
@@ -172,7 +169,6 @@ export function ProductsPage() {
       cost,
       price,
       supplier: variantForm.supplier.trim() || null,
-      unit_type: variantForm.unitType,
     }
     const { error } = editingVariant
       ? await updateVariant(editingVariant.id, payload)
@@ -297,7 +293,6 @@ export function ProductsPage() {
                                 <td className="py-2 pr-4">{variant.calidad}</td>
                                 <td className="py-2 pr-4">
                                   {formatKilo(variant.kilo)}
-                                  <UnitBadge unit={variant.unit_type} className="ml-1.5 align-middle" />
                                 </td>
                                 <td className="py-2 pr-4 text-slate-500">{variant.sku || '—'}</td>
                                 <td className="py-2 pr-4 text-slate-500">{variant.supplier || '—'}</td>
@@ -399,14 +394,6 @@ export function ProductsPage() {
             onChange={(e) => setVariantForm({ ...variantForm, kilo: e.target.value })}
             placeholder="Ej: 20"
           />
-          <Select
-            label="Tipo de unidad"
-            value={variantForm.unitType}
-            onChange={(e) => setVariantForm({ ...variantForm, unitType: e.target.value as 'fardo' | 'saco' })}
-          >
-            <option value="fardo">Fardo</option>
-            <option value="saco">Saco</option>
-          </Select>
           <Input label="SKU (opcional)" value={variantForm.sku} onChange={(e) => setVariantForm({ ...variantForm, sku: e.target.value })} />
           <Input
             label="Proveedor (opcional)"
@@ -447,7 +434,7 @@ export function ProductsPage() {
       <ReasonModal
         open={!!deleteVariantTarget}
         onClose={() => setDeleteVariantTarget(null)}
-        title={`Eliminar variante "${deleteVariantTarget ? formatVariantSpec(deleteVariantTarget.calidad, deleteVariantTarget.kilo, deleteVariantTarget.unit_type) : ''}"`}
+        title={`Eliminar variante "${deleteVariantTarget ? formatVariantSpec(deleteVariantTarget.calidad, deleteVariantTarget.kilo) : ''}"`}
         confirmLabel="Eliminar"
         onConfirm={(reason) => softDeleteVariant(deleteVariantTarget!.id, reason)}
       />

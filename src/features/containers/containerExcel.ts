@@ -1,5 +1,5 @@
 import { exportMultiSheetExcel } from '@/lib/excel'
-import { formatDateTime, unitLabel } from '@/lib/format'
+import { formatDateTime } from '@/lib/format'
 import type { Container, ItemWithProgress, ScanEvent, UnknownCode } from './types'
 
 const statusLabels: Record<ItemWithProgress['itemStatus'], string> = {
@@ -35,7 +35,6 @@ export function exportContainerExcel(
   const itemRows = itemsWithProgress.map((i) => ({
     Producto: i.product_name,
     Calidad: i.calidad ?? '',
-    Unidad: i.unit_type ? unitLabel(i.unit_type) : '',
     Código: i.code ?? '',
     Esperado: i.expected_qty,
     Escaneado: i.scannedQty,

@@ -11,7 +11,6 @@ export interface CatalogEntry {
   cost: number
   stock: number
   sku: string | null
-  unitType: 'fardo' | 'saco'
 }
 
 export function useSaleCatalog(branchId: string) {
@@ -31,7 +30,6 @@ export function useSaleCatalog(branchId: string) {
         cost: v.cost,
         stock: inventory.find((i) => i.variant_id === v.id && i.branch_id === branchId)?.quantity ?? 0,
         sku: v.sku,
-        unitType: v.unit_type,
       }))
   }, [products, variants, inventory, branchId])
 

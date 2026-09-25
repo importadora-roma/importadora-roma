@@ -3,7 +3,6 @@ import { Trash2, CheckCircle2, PackagePlus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Input'
 import { formatCLP, formatKilo, todayCL } from '@/lib/format'
-import { UnitBadge } from '@/components/ui/UnitBadge'
 import { supabase } from '@/lib/supabase'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useAuthStore } from '@/stores/authStore'
@@ -26,7 +25,6 @@ interface CartItem {
   productName: string
   calidad: string
   kilo: number
-  unitType?: 'fardo' | 'saco'
   originalPrice: number
   soldPrice: string
   quantity: number
@@ -77,7 +75,6 @@ export function NewSalePage() {
           productName: entry.productName,
           calidad: entry.calidad,
           kilo: entry.kilo,
-          unitType: entry.unitType,
           originalPrice: entry.price,
           soldPrice: String(entry.price),
           quantity: 1,
@@ -269,7 +266,6 @@ export function NewSalePage() {
                         <>
                           <span className="font-medium text-slate-900">{item.productName}</span>
                           <span className="text-slate-500"> — {item.calidad} {formatKilo(item.kilo)}</span>
-                          <UnitBadge unit={item.unitType} className="ml-1.5 align-middle" />
                           <div className={`text-xs ${item.maxStock - item.quantity < 0 ? 'text-red-600' : 'text-slate-400'}`}>
                             stock disponible: {item.maxStock}
                             {item.quantity > item.maxStock && ' (quedará negativo)'}

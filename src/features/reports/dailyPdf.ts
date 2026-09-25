@@ -1,5 +1,5 @@
 import { createPdfDoc, autoTable, getLogoDataUrl, addPieChartWithLegend, BRAND_NAVY } from '@/lib/pdf'
-import { formatCLP, formatDate, todayCL, unitLabel } from '@/lib/format'
+import { formatCLP, formatDate, todayCL } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
 import type { ReportSale } from './useReports'
 import type { ProductProfitRow } from './useProductProfitReport'
@@ -198,7 +198,7 @@ export async function generateDailyPdf(data: DailyReportData, mode: DailyPdfMode
     head: [detailed ? ['Producto', 'Calidad', 'Fardos', 'Ingresos', 'Costo', 'Margen', 'Margen %'] : ['Producto', 'Calidad', 'Fardos', 'Ingresos']],
     headStyles: { fillColor: BRAND_NAVY },
     body: data.productRows.flatMap((r) => {
-      const label = `${r.calidad}${r.kilo ? ` ${r.kilo}kg` : ''}${r.unitType ? ` · ${unitLabel(r.unitType)}` : ''}`
+      const label = `${r.calidad}${r.kilo ? ` ${r.kilo}kg` : ''}`
       const main = detailed
         ? [r.productName, label, String(r.quantity), formatCLP(r.revenue), formatCLP(r.cost), formatCLP(r.margin), `${r.marginPct.toFixed(1)}%`]
         : [r.productName, label, String(r.quantity), formatCLP(r.revenue)]

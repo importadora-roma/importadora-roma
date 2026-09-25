@@ -55,16 +55,9 @@ export function normalizeCalidad(raw: string): string {
   return CALIDAD_ALIASES[trimmed.toUpperCase()] ?? trimmed
 }
 
-export type UnitType = 'fardo' | 'saco'
-
-export function unitLabel(unit: UnitType | null | undefined): string {
-  return unit === 'saco' ? 'Saco' : 'Fardo'
-}
-
-// "Primera 20KG · Saco" — saco (sack) and fardo (bale) are separate variants of
-// the same product/calidad/kilo, so every screen that names a variant says which.
-export function formatVariantSpec(calidad: string, kilo: number | null | undefined, unit: UnitType | null | undefined): string {
-  return `${calidad}${kilo ? ` ${formatKilo(kilo)}` : ''} · ${unitLabel(unit)}`
+// "Primera 20KG"
+export function formatVariantSpec(calidad: string, kilo: number | null | undefined): string {
+  return `${calidad}${kilo ? ` ${formatKilo(kilo)}` : ''}`
 }
 
 // Parses Chilean-formatted numbers where "." is a thousands separator and
