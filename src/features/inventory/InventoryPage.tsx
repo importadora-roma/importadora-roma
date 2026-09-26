@@ -91,7 +91,10 @@ export function InventoryPage() {
       })
       .filter(
         (row) =>
-          !term || row.productName.toLowerCase().includes(term) || row.variant.calidad.toLowerCase().includes(term)
+          !term ||
+          row.productName.toLowerCase().includes(term) ||
+          row.variant.calidad.toLowerCase().includes(term) ||
+          [row.variant.sku, ...(row.variant.extra_barcodes ?? [])].some((b) => b && b.toLowerCase() === term)
       )
       .sort((a, b) => a.variant.sort_order - b.variant.sort_order)
   }, [variants, inventory, effectiveBranchId, productNameById, search])
