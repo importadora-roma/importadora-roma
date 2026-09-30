@@ -44,6 +44,7 @@ export function ProductsPage() {
     softDeleteProduct,
     createVariant,
     updateVariant,
+    setVariantBarcode,
     softDeleteVariant,
   } = useProducts()
   const { defaults: calidadDefaults } = useCalidadCostDefaults()
@@ -59,6 +60,7 @@ export function ProductsPage() {
   const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null)
   const [variantForm, setVariantForm] = useState<VariantForm>(emptyVariantForm)
   const [variantFormError, setVariantFormError] = useState<string | null>(null)
+  const [variantMergeInfo, setVariantMergeInfo] = useState<string | null>(null)
 
   const [deleteProductTarget, setDeleteProductTarget] = useState<Product | null>(null)
   const [deleteVariantTarget, setDeleteVariantTarget] = useState<ProductVariant | null>(null)
@@ -112,6 +114,7 @@ export function ProductsPage() {
     setEditingVariant(null)
     setVariantForm(emptyVariantForm)
     setVariantFormError(null)
+    setVariantMergeInfo(null)
     setVariantModalOpen(true)
   }
 
@@ -127,6 +130,7 @@ export function ProductsPage() {
       supplier: variant.supplier ?? '',
     })
     setVariantFormError(null)
+    setVariantMergeInfo(null)
     setVariantModalOpen(true)
   }
 
@@ -165,19 +169,47 @@ export function ProductsPage() {
     const payload = {
       calidad: variantForm.calidad.trim(),
       kilo,
-      sku: variantForm.sku.trim() || null,
       cost,
       price,
       supplier: variantForm.supplier.trim() || null,
     }
-    const { error } = editingVariant
-      ? await updateVariant(editingVariant.id, payload)
-      : await createVariant({ ...payload, product_id: variantProductId! })
-    setSaving(false)
-    if (error) {
-      setVariantFormError(error)
-      return
+    const nextSku = variantForm.sku.trim() || null
+    let variantId: string
+    if (editingVariant) {
+      const { error } = await updateVariant(editingVariant.id, payload)
+      if (error) {
+        setSaving(false)
+        setVariantFormError(error)
+        return
+      }
+      variantId = editingVariant.id
+    } else {
+      const { variant, error } = await createVariant({ ...payload, sku: null, product_id: variantProductId! })
+      if (error || !variant) {
+        setSaving(false)
+        setVariantFormError(error ?? 'No se pudo crear la variante')
+        return
+      }
+      variantId = variant.id
     }
+
+    // Assign the barcode via the merge-aware RPC: if it's already on record for
+    // another (usually a leftover duplicate) variant, this folds that variant's
+    // stock and history into the one just saved instead of failing.
+    setVariantMergeInfo(null)
+    if (nextSku !== (editingVariant?.sku ?? null)) {
+      const { merged, mergedProductName, error } = await setVariantBarcode(variantId, nextSku)
+      if (error) {
+        setSaving(false)
+        setVariantFormError(error)
+        return
+      }
+      if (merged) {
+        setVariantMergeInfo(`Código combinado con el duplicado "${mergedProductName ?? 'producto anterior'}" — stock de ambas sucursales sumado.`)
+      }
+    }
+
+    setSaving(false)
     setVariantModalOpen(false)
   }
 
@@ -195,6 +227,7 @@ export function ProductsPage() {
       </div>
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+      {variantMergeInfo && <p className="mt-4 text-sm text-emerald-600">{variantMergeInfo}</p>}
 
       <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
         <table className="w-full text-left text-sm">
