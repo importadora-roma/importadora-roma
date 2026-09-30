@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight, Plus, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -65,6 +65,24 @@ export function ProductsPage() {
   const [deleteProductTarget, setDeleteProductTarget] = useState<Product | null>(null)
   const [deleteVariantTarget, setDeleteVariantTarget] = useState<ProductVariant | null>(null)
   const [saving, setSaving] = useState(false)
+  const [search, setSearch] = useState('')
+
+  const isSearching = search.trim() !== ''
+  const filteredProducts = useMemo(() => {
+    const term = search.trim().toLowerCase()
+    if (!term) return products
+    return products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(term) ||
+        variants.some(
+          (v) =>
+            v.product_id === p.id &&
+            (v.calidad.toLowerCase().includes(term) ||
+              (v.sku ?? '').toLowerCase().includes(term) ||
+              (v.extra_barcodes ?? []).some((b) => b.toLowerCase().includes(term)))
+        )
+    )
+  }, [products, variants, search])
 
   function toggleExpand(productId: string) {
     setExpanded((prev) => {
@@ -229,7 +247,16 @@ export function ProductsPage() {
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
       {variantMergeInfo && <p className="mt-4 text-sm text-emerald-600">{variantMergeInfo}</p>}
 
-      <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="mt-4">
+        <Input
+          placeholder="Buscar por producto, calidad o código de barra..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-xs"
+        />
+      </div>
+
+      <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>
@@ -249,16 +276,16 @@ export function ProductsPage() {
                 </td>
               </tr>
             )}
-            {!loading && products.length === 0 && (
+            {!loading && filteredProducts.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
-                  No hay productos registrados todavía.
+                  {isSearching ? 'No se encontraron productos para esa búsqueda.' : 'No hay productos registrados todavía.'}
                 </td>
               </tr>
             )}
-            {products.map((product) => {
+            {filteredProducts.map((product) => {
               const productVariants = variants.filter((v) => v.product_id === product.id)
-              const isExpanded = expanded.has(product.id)
+              const isExpanded = isSearching || expanded.has(product.id)
               return (
                 <Fragment key={product.id}>
                   <tr>
