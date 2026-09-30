@@ -32,3 +32,6 @@ dist-ssr
 *.sw?
 .vercel
 .env*
+
+# Separate project (its own git repo), kept in this working copy for convenience only
+elturco-diseno/
