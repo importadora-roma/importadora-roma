@@ -46,7 +46,7 @@ export function InventoryPage() {
   const isAdmin = profile?.role === 'admin'
   const canSeeCost = profile?.role === 'admin' || profile?.role === 'supervisor'
   const { branchId: effectiveBranchId, branches } = useEffectiveBranch()
-  const { products, variants, loading: loadingProducts, updateVariant, createProduct, createVariant } = useProducts()
+  const { products, variants, loading: loadingProducts, updateVariant, createProduct, createVariant, setVariantBarcode } = useProducts()
   const { inventory, loading: loadingInventory, adjustInventory, clearBranchInventory } = useInventory()
   const { defaults: calidadDefaults } = useCalidadCostDefaults()
 
@@ -57,6 +57,7 @@ export function InventoryPage() {
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [skuError, setSkuError] = useState<{ variantId: string; message: string } | null>(null)
+  const [skuInfo, setSkuInfo] = useState<{ variantId: string; message: string } | null>(null)
   const [adjustingId, setAdjustingId] = useState<string | null>(null)
 
   const [clearOpen, setClearOpen] = useState(false)
@@ -75,8 +76,16 @@ export function InventoryPage() {
   async function handleSkuBlur(variant: ProductVariant, value: string) {
     const next = value.trim() || null
     if (next === (variant.sku ?? null)) return
-    const { error } = await updateVariant(variant.id, { sku: next })
+    const { merged, mergedProductName, error } = await setVariantBarcode(variant.id, next)
     setSkuError(error ? { variantId: variant.id, message: error } : null)
+    setSkuInfo(
+      !error && merged
+        ? {
+            variantId: variant.id,
+            message: `Código combinado con el duplicado "${mergedProductName ?? 'producto anterior'}" — stock de ambas sucursales sumado.`,
+          }
+        : null
+    )
   }
 
   const productNameById = useMemo(() => new Map(products.map((p) => [p.id, p.name])), [products])
@@ -253,7 +262,11 @@ export function InventoryPage() {
       })
       if (variantError || !variant) {
         setAddSaving(false)
-        setAddError(variantError ?? 'No se pudo crear la variante')
+        setAddError(
+          variantError?.includes('product_variants_sku_unique_idx')
+            ? 'Ese código de barra ya pertenece a otro producto. Búsquelo en Inventario y edite su código ahí en vez de crear uno nuevo.'
+            : (variantError ?? 'No se pudo crear la variante')
+        )
         return
       }
       variantId = variant.id
@@ -379,6 +392,7 @@ export function InventoryPage() {
                         className="w-36 rounded-md border border-slate-300 px-2 py-1 font-mono text-sm"
                       />
                       {skuError?.variantId === variant.id && <p className="mt-0.5 text-xs text-red-600">{skuError.message}</p>}
+                      {skuInfo?.variantId === variant.id && <p className="mt-0.5 text-xs text-emerald-600">{skuInfo.message}</p>}
                     </>
                   ) : (
                     <span className="font-mono text-slate-500">{variant.sku ?? '—'}</span>

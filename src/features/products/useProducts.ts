@@ -93,6 +93,14 @@ export function useProducts() {
     return { error: null }
   }
 
+  async function setVariantBarcode(id: string, barcode: string | null) {
+    const { data, error } = await supabase.rpc('set_variant_barcode', { p_variant_id: id, p_barcode: barcode })
+    if (error) return { merged: false, mergedProductName: null as string | null, error: error.message }
+    await reload()
+    const result = data as { merged: boolean; merged_product_name: string | null } | null
+    return { merged: result?.merged ?? false, mergedProductName: result?.merged_product_name ?? null, error: null }
+  }
+
   async function softDeleteVariant(id: string, reason: string) {
     const { error } = await supabase
       .from('product_variants')
@@ -114,6 +122,7 @@ export function useProducts() {
     softDeleteProduct,
     createVariant,
     updateVariant,
+    setVariantBarcode,
     softDeleteVariant,
   }
 }
