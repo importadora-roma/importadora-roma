@@ -255,18 +255,14 @@ export function InventoryPage() {
         product_id: productId,
         calidad: addForm.calidad.trim(),
         kilo,
-        sku: addForm.sku.trim() || null,
+        sku: null,
         cost,
         price,
         supplier: null,
       })
       if (variantError || !variant) {
         setAddSaving(false)
-        setAddError(
-          variantError?.includes('product_variants_sku_unique_idx')
-            ? 'Ese código de barra ya pertenece a otro producto. Búsquelo en Inventario y edite su código ahí en vez de crear uno nuevo.'
-            : (variantError ?? 'No se pudo crear la variante')
-        )
+        setAddError(variantError ?? 'No se pudo crear la variante')
         return
       }
       variantId = variant.id
@@ -289,9 +285,27 @@ export function InventoryPage() {
       }
     }
 
+    // Assign the barcode last: if it's already on record for a leftover duplicate
+    // variant, this merges that duplicate's stock (from either sucursal) into the
+    // one just saved above, so nothing gets overwritten by the stock step.
+    let mergeInfo: string | null = null
+    if (addForm.sku.trim()) {
+      const { merged, mergedProductName, error: skuError } = await setVariantBarcode(variantId, addForm.sku.trim())
+      if (skuError) {
+        setAddSaving(false)
+        setAddError(`Producto guardado, pero no se pudo asignar el código de barra: ${skuError}`)
+        return
+      }
+      if (merged) {
+        mergeInfo = `Código combinado con el duplicado "${mergedProductName ?? 'producto anterior'}" — stock de ambas sucursales sumado.`
+      }
+    }
+
     setAddSaving(false)
     setAddOpen(false)
-    setAddInfo(existingVariant ? 'Esa calidad y kilo ya existían para este producto — se sumó el stock a la variante existente.' : null)
+    setAddInfo(
+      mergeInfo ?? (existingVariant ? 'Esa calidad y kilo ya existían para este producto — se sumó el stock a la variante existente.' : null)
+    )
   }
 
   function handleExport() {
