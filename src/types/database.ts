@@ -1098,6 +1098,10 @@ export interface Database {
         Args: { p_branch_id: string; p_reason: string }
         Returns: { itemsCleared: number }
       }
+      set_variant_barcode: {
+        Args: { p_variant_id: string; p_barcode: string | null }
+        Returns: { merged: boolean; merged_product_name: string | null }
+      }
       reserve_variant_sort_order_block: {
         Args: { p_count: number }
         Returns: number
