@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Input, Select, Textarea } from '@/components/ui/Input'
+import { ReasonModal } from '@/components/ui/ReasonModal'
 import { formatCLP, todayCL } from '@/lib/format'
 import { useProfitReport } from './useProfitReport'
 import { DailyReportButtons } from './DailyReportButtons'
-import { useExpenses } from '@/features/expenses/useExpenses'
+import { useExpenses, type Expense } from '@/features/expenses/useExpenses'
 import { useTransferValue } from '@/features/transfers/useTransferValue'
+import { useAuthStore } from '@/stores/authStore'
 import type { ExpenseCategory } from '@/types/database'
 
 const categoryLabels: Record<ExpenseCategory, string> = {
@@ -19,9 +21,12 @@ const categoryLabels: Record<ExpenseCategory, string> = {
 
 export function DailyFinancialSummary({ branchId }: { branchId: string }) {
   const day = todayCL()
+  const profile = useAuthStore((s) => s.profile)
+  const canManageExpenses = profile?.role === 'admin' || profile?.role === 'supervisor'
   const { cogs, grossMargin, loading: loadingMargin } = useProfitReport(branchId, day, day)
-  const { expenses, total: totalExpenses, loading: loadingExpenses, createExpense } = useExpenses(branchId, day, day)
+  const { expenses, total: totalExpenses, loading: loadingExpenses, createExpense, deleteExpense } = useExpenses(branchId, day, day)
   const { total: transferValue, transferCount, loading: loadingTransfers } = useTransferValue(branchId, day, day)
+  const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null)
 
   const netProfit = grossMargin - totalExpenses
 
@@ -129,6 +134,34 @@ export function DailyFinancialSummary({ branchId }: { branchId: string }) {
         </div>
       )}
 
+      {!loadingExpenses && expenses.length > 0 && (
+        <div className="mt-4 border-t border-slate-100 pt-3">
+          <p className="text-xs uppercase text-slate-500">Gastos de hoy</p>
+          <ul className="mt-2 divide-y divide-slate-100">
+            {expenses.map((e) => (
+              <li key={e.id} className="flex items-center justify-between gap-2 py-1.5 text-sm">
+                <div className="min-w-0">
+                  <span className="text-slate-900">{e.description}</span>
+                  <span className="ml-2 text-xs text-slate-400">{categoryLabels[e.category]}</span>
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  <span className="font-medium text-slate-700">{formatCLP(e.amount)}</span>
+                  {canManageExpenses && (
+                    <button
+                      onClick={() => setDeleteTarget(e)}
+                      className="text-slate-400 hover:text-red-600"
+                      title="Eliminar gasto"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {!loadingTransfers && transferValue > 0 && (
         <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
           Traslados enviados a otras sucursales hoy: <span className="font-medium text-slate-700">{formatCLP(transferValue)}</span> (
@@ -169,6 +202,14 @@ export function DailyFinancialSummary({ branchId }: { branchId: string }) {
           </div>
         </div>
       </Modal>
+
+      <ReasonModal
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        title={`Eliminar gasto: ${deleteTarget?.description ?? ''}`}
+        confirmLabel="Eliminar"
+        onConfirm={(reason) => deleteExpense(deleteTarget!.id, reason)}
+      />
     </div>
   )
 }
