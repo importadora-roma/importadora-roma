@@ -9,11 +9,13 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 // USB barcode readers act as a keyboard, typing the code followed by Enter.
-// The manual code field already handles that fine while it's focused — this
-// listener is the resilience fallback for when focus has drifted elsewhere
-// (the operator clicked a filter, scrolled the table, etc.), so a scan
-// isn't silently lost. It ignores keystrokes while an actual form field has
-// focus, since that field owns its own Enter handling already.
+// A field that owns its own Enter handling (the containers manual-code box,
+// the sales product search box) already handles that fine while it's
+// focused — this listener is the resilience fallback for when focus has
+// drifted elsewhere (the operator clicked a filter, scrolled the table, a
+// slow re-render hadn't refocused the box yet), so a scan isn't silently
+// lost. It ignores keystrokes while an actual form field has focus, since
+// that field owns its own Enter handling already.
 export function UsbScannerInput({ active, onScan }: { active: boolean; onScan: (code: string) => void }) {
   const bufferRef = useRef('')
   const lastKeyTimeRef = useRef(0)

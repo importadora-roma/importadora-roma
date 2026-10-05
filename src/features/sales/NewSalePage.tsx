@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import { Trash2, CheckCircle2, PackagePlus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Input'
+import { UsbScannerInput } from '@/components/UsbScannerInput'
 import { formatCLP, formatKilo, todayCL } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useAuthStore } from '@/stores/authStore'
 import { useAlertSettings } from '@/features/alerts/useAlertSettings'
-import { useSaleCatalog, type CatalogEntry } from './useSaleCatalog'
+import { useSaleCatalog, findCatalogEntryByCode, type CatalogEntry } from './useSaleCatalog'
 import { ProductSearch } from './ProductSearch'
 import { PaymentSplit, type PaymentLine } from './PaymentSplit'
 import { CustomerSelect } from './CustomerSelect'
@@ -84,6 +85,15 @@ export function NewSalePage() {
         },
       ]
     })
+  }
+
+  // Resilience fallback for the USB scanner gun: catches scans even if focus
+  // has drifted off the search box (a slow re-render on a long cart hadn't
+  // refocused it yet, the cashier clicked a quantity field between scans),
+  // so rapid-fire scanning a stack of fardos never silently drops one.
+  function handleUsbScan(code: string) {
+    const scanned = findCatalogEntryByCode(catalog, code)
+    if (scanned) addToCart(scanned)
   }
 
   function addCustomItem() {
@@ -200,6 +210,8 @@ export function NewSalePage() {
 
   return (
     <div>
+      <UsbScannerInput active onScan={handleUsbScan} />
+
       {successMessage && (
         <div className="mb-4 flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
           <CheckCircle2 size={16} />

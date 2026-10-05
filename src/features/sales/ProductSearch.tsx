@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { Camera, Search } from 'lucide-react'
 import { formatCLP, formatKilo } from '@/lib/format'
 import { CameraScanModal } from './CameraScanModal'
-import type { CatalogEntry } from './useSaleCatalog'
+import { findCatalogEntryByCode, type CatalogEntry } from './useSaleCatalog'
 import { useTopSellingVariantIds } from './useTopSellingVariants'
 
 const SEARCH_RESULTS_LIMIT = 50
@@ -81,12 +81,8 @@ export function ProductSearch({
     setSelected(new Set())
   }
 
-  const normalizeCode = (c: string) => c.replace(/[\s-]/g, '').toLowerCase()
-
   function findBySku(raw: string): CatalogEntry | undefined {
-    const code = normalizeCode(raw)
-    if (!code) return undefined
-    return catalog.find((c) => c.barcodes.some((b) => normalizeCode(b) === code))
+    return findCatalogEntryByCode(catalog, raw)
   }
 
   // A barcode scanner types the whole code in a burst, usually ending with
