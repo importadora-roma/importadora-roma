@@ -42,9 +42,12 @@ export function DailyFinancialSummary({ branchId }: { branchId: string }) {
   const [amount, setAmount] = useState('')
   const [notes, setNotes] = useState('')
   const [paidFromCash, setPaidFromCash] = useState(true)
+  const [expenseDate, setExpenseDate] = useState(day)
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
+
+  const isBackdated = expenseDate !== day
 
   function openAdd() {
     setCategory('otro')
@@ -52,6 +55,7 @@ export function DailyFinancialSummary({ branchId }: { branchId: string }) {
     setAmount('')
     setNotes('')
     setPaidFromCash(true)
+    setExpenseDate(day)
     setFormError(null)
     setAddOpen(true)
   }
@@ -67,12 +71,17 @@ export function DailyFinancialSummary({ branchId }: { branchId: string }) {
       setFormError('Ingresa un monto válido')
       return
     }
+    if (!expenseDate) {
+      setFormError('Ingresa la fecha del gasto')
+      return
+    }
     setSaving(true)
+    const backdated = expenseDate !== day
     const { error, registerAdjusted } = await createExpense({
       category,
       description: description.trim(),
       amount: amt,
-      expense_date: day,
+      expense_date: expenseDate,
       notes: notes.trim() || null,
       paid_from_cash: paidFromCash,
     })
@@ -83,9 +92,11 @@ export function DailyFinancialSummary({ branchId }: { branchId: string }) {
     }
     setAddOpen(false)
     setSavedMessage(
-      paidFromCash && !registerAdjusted
-        ? 'Gasto guardado. La caja está cerrada, así que no se descontó del efectivo — ábrela y regístralo ahí si corresponde.'
-        : null
+      backdated
+        ? 'Gasto retroactivo guardado — no aparecerá en el resumen de hoy (quedó registrado en su propia fecha) y no se descontó de la caja de hoy.'
+        : paidFromCash && !registerAdjusted
+          ? 'Gasto guardado. La caja está cerrada, así que no se descontó del efectivo — ábrela y regístralo ahí si corresponde.'
+          : null
     )
   }
 
@@ -171,7 +182,7 @@ export function DailyFinancialSummary({ branchId }: { branchId: string }) {
 
       {savedMessage && <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-amber-600">{savedMessage}</p>}
 
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Agregar gasto de hoy">
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Agregar gasto">
         <div className="space-y-4">
           <Select label="Categoría" value={category} onChange={(e) => setCategory(e.target.value as ExpenseCategory)}>
             <option value="sueldo">Sueldo</option>
@@ -186,10 +197,16 @@ export function DailyFinancialSummary({ branchId }: { branchId: string }) {
             placeholder="Ej: compra de insumos, flete, colación..."
           />
           <Input label="Monto" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          {canManageExpenses && (
+            <Input label="Fecha del gasto" type="date" max={day} value={expenseDate} onChange={(e) => setExpenseDate(e.target.value)} />
+          )}
           <label className="flex items-center gap-2 text-sm text-slate-700">
             <input type="checkbox" checked={paidFromCash} onChange={(e) => setPaidFromCash(e.target.checked)} />
             Pagado en efectivo desde la caja (descuenta del efectivo esperado)
           </label>
+          {isBackdated && paidFromCash && (
+            <p className="text-xs text-amber-600">Gasto retroactivo: el pago en efectivo no se descontará de la caja de hoy.</p>
+          )}
           <Textarea label="Notas (opcional)" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
           {formError && <p className="text-sm text-red-600">{formError}</p>}
           <div className="flex justify-end gap-2">
