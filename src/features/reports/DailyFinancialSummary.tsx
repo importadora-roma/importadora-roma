@@ -43,6 +43,12 @@ export function DailyFinancialSummary({ branchId }: { branchId: string }) {
   const [notes, setNotes] = useState('')
   const [paidFromCash, setPaidFromCash] = useState(true)
   const [expenseDate, setExpenseDate] = useState(day)
+  // Whether the user explicitly picked a date — if not, resolve "today"
+  // fresh at submit time instead of trusting this field or the `day` it was
+  // seeded from, both of which were only computed once when the dashboard
+  // last rendered and go stale if the tab sits open across midnight (common
+  // on a till/back-office computer that's never reloaded).
+  const [expenseDateTouched, setExpenseDateTouched] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
@@ -55,7 +61,8 @@ export function DailyFinancialSummary({ branchId }: { branchId: string }) {
     setAmount('')
     setNotes('')
     setPaidFromCash(true)
-    setExpenseDate(day)
+    setExpenseDate(todayCL())
+    setExpenseDateTouched(false)
     setFormError(null)
     setAddOpen(true)
   }
@@ -76,12 +83,14 @@ export function DailyFinancialSummary({ branchId }: { branchId: string }) {
       return
     }
     setSaving(true)
-    const backdated = expenseDate !== day
+    const freshToday = todayCL()
+    const effectiveDate = expenseDateTouched ? expenseDate : freshToday
+    const backdated = effectiveDate !== freshToday
     const { error, registerAdjusted } = await createExpense({
       category,
       description: description.trim(),
       amount: amt,
-      expense_date: expenseDate,
+      expense_date: effectiveDate,
       notes: notes.trim() || null,
       paid_from_cash: paidFromCash,
     })
@@ -198,7 +207,16 @@ export function DailyFinancialSummary({ branchId }: { branchId: string }) {
           />
           <Input label="Monto" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
           {canManageExpenses && (
-            <Input label="Fecha del gasto" type="date" max={day} value={expenseDate} onChange={(e) => setExpenseDate(e.target.value)} />
+            <Input
+              label="Fecha del gasto"
+              type="date"
+              max={todayCL()}
+              value={expenseDate}
+              onChange={(e) => {
+                setExpenseDate(e.target.value)
+                setExpenseDateTouched(true)
+              }}
+            />
           )}
           <label className="flex items-center gap-2 text-sm text-slate-700">
             <input type="checkbox" checked={paidFromCash} onChange={(e) => setPaidFromCash(e.target.checked)} />

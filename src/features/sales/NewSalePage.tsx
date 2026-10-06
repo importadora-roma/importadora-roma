@@ -45,6 +45,11 @@ export function NewSalePage() {
   const [customerId, setCustomerId] = useState<string | null>(null)
   const [payments, setPayments] = useState<PaymentLine[]>([{ method: 'efectivo', amount: '' }])
   const [saleDate, setSaleDate] = useState(todayCL())
+  // Whether the cashier explicitly picked a date — if not, always resend
+  // today's real date at submit time (see handleSubmit) rather than trust
+  // this state, which was only ever set once at mount and goes stale if the
+  // tab is left open across midnight (common on a till that's never reloaded).
+  const [saleDateTouched, setSaleDateTouched] = useState(false)
   const [dueDate, setDueDate] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -141,6 +146,7 @@ export function NewSalePage() {
     setCustomerId(null)
     setPayments([{ method: 'efectivo', amount: '' }])
     setSaleDate(todayCL())
+    setSaleDateTouched(false)
     setDueDate('')
     setNotes('')
     setError(null)
@@ -185,7 +191,7 @@ export function NewSalePage() {
       ),
       p_payments: paymentsPayload,
       p_notes: notes.trim() || null,
-      p_sale_date: saleDate,
+      p_sale_date: saleDateTouched ? saleDate : todayCL(),
     })
 
     if (error) {
@@ -330,7 +336,16 @@ export function NewSalePage() {
           <CustomerSelect customerId={customerId} onChange={setCustomerId} />
 
           {canSeeCost && (
-            <Input label="Fecha de la venta" type="date" max={todayCL()} value={saleDate} onChange={(e) => setSaleDate(e.target.value)} />
+            <Input
+              label="Fecha de la venta"
+              type="date"
+              max={todayCL()}
+              value={saleDate}
+              onChange={(e) => {
+                setSaleDate(e.target.value)
+                setSaleDateTouched(true)
+              }}
+            />
           )}
           {isBackdated && hasCash && (
             <p className="text-xs text-amber-600">
