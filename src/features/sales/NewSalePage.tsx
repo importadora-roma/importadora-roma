@@ -45,6 +45,7 @@ export function NewSalePage() {
   // tab is left open across midnight (common on a till that's never reloaded).
   const [saleDateTouched, setSaleDateTouched] = useState(false)
   const [dueDate, setDueDate] = useState('')
+  const [isTerreno, setIsTerreno] = useState(false)
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -142,6 +143,7 @@ export function NewSalePage() {
     setSaleDate(todayCL())
     setSaleDateTouched(false)
     setDueDate('')
+    setIsTerreno(false)
     setNotes('')
     setError(null)
   }
@@ -186,6 +188,7 @@ export function NewSalePage() {
       p_payments: paymentsPayload,
       p_notes: notes.trim() || null,
       p_sale_date: saleDateTouched ? saleDate : todayCL(),
+      p_is_terreno: isTerreno,
     })
 
     if (error) {
@@ -346,6 +349,11 @@ export function NewSalePage() {
               Venta retroactiva: los pagos en efectivo no se sumarán a la caja de hoy.
             </p>
           )}
+
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input type="checkbox" checked={isTerreno} onChange={(e) => setIsTerreno(e.target.checked)} />
+            Vendido en terreno
+          </label>
 
           <div className="flex justify-between border-t border-slate-200 pt-3 text-base font-semibold text-slate-900">
             <span>Total</span>

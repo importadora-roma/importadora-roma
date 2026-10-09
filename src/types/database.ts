@@ -273,6 +273,7 @@ export interface Database {
           requires_invoice: boolean
           due_date: string | null
           sale_date: string
+          is_terreno: boolean
           created_at: string
           updated_at: string
         }
@@ -292,6 +293,7 @@ export interface Database {
           requires_invoice?: boolean
           due_date?: string | null
           sale_date?: string
+          is_terreno?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -1016,6 +1018,7 @@ export interface Database {
           p_notes?: string | null
           p_sale_date?: string | null
           p_user_id?: string | null
+          p_is_terreno?: boolean
         }
         Returns: string
       }

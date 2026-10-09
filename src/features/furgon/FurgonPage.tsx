@@ -8,11 +8,10 @@ import { supabase } from '@/lib/supabase'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useProducts } from '@/features/products/useProducts'
 import { useInventory } from '@/features/inventory/useInventory'
-import { useReports } from '@/features/reports/useReports'
-import { useCommissionReport } from '@/features/reports/useCommissionReport'
 import { useUsers } from '@/features/users/useUsers'
 import { useSaleCatalog, type CatalogEntry } from '@/features/sales/useSaleCatalog'
 import { ProductSearch } from '@/features/sales/ProductSearch'
+import { useTerrenoSales } from './useTerrenoSales'
 import type { SalePaymentMethod } from '@/types/database'
 
 const paymentLabels: Record<SalePaymentMethod, string> = {
@@ -37,14 +36,17 @@ interface TodayItemSummary {
   quantity: number
 }
 
-// A focused dashboard for a van/route-sales branch ("Furgón"): load what the
-// rep took out, enter what they sold when they report back, and see stock,
-// today's tally and commission owed — all scoped to whichever branch the
-// topbar switcher has selected. Create the branch itself in Configuración →
-// Sucursales (tipo: Importadora); this page isn't tied to one hardcoded name.
+// A focused dashboard for route/field sales ("Furgón"): load what a rep took
+// out, enter what they sold when they report back, and see stock, today's
+// tally and commission owed. Sales here (and anything checked "Vendido en
+// terreno" from the regular Ventas screen) are tracked by that flag, not by
+// branch — a sale still depletes and pays against whatever branch's stock/
+// till it actually used, it's just also tagged for this page's own feed, so
+// a regular in-store sale can never show up here just because the topbar
+// branch switcher happened to be left on the wrong branch.
 export function FurgonPage() {
   const navigate = useNavigate()
-  const { branchId, branch, isAdmin } = useEffectiveBranch()
+  const { branchId, branch, setBranchId, isAdmin, branches } = useEffectiveBranch()
   const { products, variants, loading: loadingProducts } = useProducts()
   const { inventory, loading: loadingInventory, reload: reloadInventory } = useInventory()
   const { users } = useUsers()
@@ -53,14 +55,13 @@ export function FurgonPage() {
 
   const from30 = addDaysCL(-30)
   const today = todayCL()
-  const { sales, loading: loadingSales, reload: reloadSales } = useReports(branchId, from30, today)
-  const { rows: commissionRows, loading: loadingCommission } = useCommissionReport(branchId, from30, today)
+  const { sales, loading: loadingSales, reload: reloadSales } = useTerrenoSales(from30, today)
 
   // Quick sale entry — same create_sale RPC the full Ventas screen uses
   // (so stock, cash register and commission all stay consistent), just a
   // shorter form: no customer, one payment method for the whole sale, and a
   // "Vendedor" picker since the person entering this often isn't the one
-  // who actually made the sale in the field.
+  // who actually made the sale in the field. Always tagged terreno.
   const [cart, setCart] = useState<QuickSaleLine[]>([])
   const [paymentMethod, setPaymentMethod] = useState<SalePaymentMethod>('efectivo')
   const [sellerId, setSellerId] = useState('')
@@ -76,8 +77,8 @@ export function FurgonPage() {
     [users, branchId]
   )
 
-  // Re-pick a default seller whenever the branch changes, so switching
-  // branches never leaves a stale seller from the previous one selected.
+  // Re-pick a default seller whenever the stock branch changes, so it never
+  // leaves a stale seller from a previous branch selected.
   useEffect(() => {
     setSellerId('')
   }, [branchId])
@@ -132,6 +133,7 @@ export function FurgonPage() {
       p_notes: null,
       p_sale_date: todayCL(),
       p_user_id: sellerId || null,
+      p_is_terreno: true,
     })
     setSaleSaving(false)
     if (error) {
@@ -143,12 +145,15 @@ export function FurgonPage() {
     await Promise.all([reloadInventory(), reloadSales()])
   }
 
-  // Aggregate what's actually been sold today (across every sale of the
-  // day, not just the ones entered from this tab), for the "2 Fashion
-  // Verano, 3 Ropa de Casa" running tally.
+  const todaySales = useMemo(() => sales.filter((s) => s.sale_date === today), [sales, today])
+  const todaySaleIds = useMemo(() => todaySales.map((s) => s.id), [todaySales])
+
+  const productNameById = useMemo(() => new Map(products.map((p) => [p.id, p.name])), [products])
+
+  // Aggregate what's actually been sold today across every terreno sale
+  // (any branch), for the "2 Fashion Verano, 3 Ropa de Casa" running tally.
   const [todayItems, setTodayItems] = useState<TodayItemSummary[]>([])
   const [loadingTodayItems, setLoadingTodayItems] = useState(false)
-  const todaySaleIds = useMemo(() => sales.filter((s) => s.sale_date === today).map((s) => s.id), [sales, today])
 
   useEffect(() => {
     let cancelled = false
@@ -185,7 +190,32 @@ export function FurgonPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todaySaleIds.join(','), variants])
 
-  const productNameById = useMemo(() => new Map(products.map((p) => [p.id, p.name])), [products])
+  // Commission on terreno sales specifically (any branch), not the
+  // branch-scoped commission report the Reportes screen uses.
+  const commissionRows = useMemo(() => {
+    const userById = new Map(users.map((u) => [u.id, u]))
+    const byUser = new Map<string, { salesCount: number; revenue: number }>()
+    for (const sale of sales) {
+      const entry = byUser.get(sale.user_id) ?? { salesCount: 0, revenue: 0 }
+      entry.salesCount += 1
+      entry.revenue += sale.total
+      byUser.set(sale.user_id, entry)
+    }
+    return Array.from(byUser.entries())
+      .map(([userId, agg]) => {
+        const user = userById.get(userId)
+        const commissionPct = user?.commission_pct ?? 0
+        return {
+          userId,
+          userName: user?.full_name ?? 'Usuario eliminado',
+          commissionPct,
+          salesCount: agg.salesCount,
+          revenue: agg.revenue,
+          commission: agg.revenue * (commissionPct / 100),
+        }
+      })
+      .sort((a, b) => b.revenue - a.revenue)
+  }, [sales, users])
 
   const stockRows = useMemo(() => {
     return variants
@@ -201,7 +231,7 @@ export function FurgonPage() {
 
   const totalFardos = stockRows.reduce((s, r) => s + Math.max(r.stock, 0), 0)
   const salesTotal = sales.reduce((s, sale) => s + sale.total, 0)
-  const loading = loadingProducts || loadingInventory || loadingSales || loadingCommission
+  const loading = loadingProducts || loadingInventory || loadingSales
 
   return (
     <div>
@@ -209,10 +239,7 @@ export function FurgonPage() {
         <MapPin className="text-slate-400" size={20} />
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Furgón · Venta en terreno</h1>
-          <p className="text-sm text-slate-500">
-            {branch ? `Mostrando: ${branch.name}` : 'Sin sucursal seleccionada'}
-            {isAdmin && ' — cambia de sucursal arriba si necesitas ver otro furgón.'}
-          </p>
+          <p className="text-sm text-slate-500">Ventas marcadas "Vendido en terreno", de cualquier sucursal.</p>
         </div>
       </div>
 
@@ -238,8 +265,24 @@ export function FurgonPage() {
       <div className="mt-6 rounded-lg border border-slate-200 bg-white p-4">
         <p className="text-sm font-medium text-slate-700">Registrar lo vendido</p>
         <p className="mt-0.5 text-xs text-slate-400">
-          Ej: el vendedor volvió y reportó que vendió 2 Fashion Verano y 3 Ropa de Casa — agrégalos aquí y queda contabilizado.
+          Ej: el vendedor volvió y reportó que vendió 2 Fashion Verano y 3 Ropa de Casa — agrégalos aquí y queda contabilizado
+          (se marca automáticamente como "Vendido en terreno").
         </p>
+
+        <div className="mt-3">
+          <label className="block text-xs font-medium text-slate-600">Stock a descontar de</label>
+          {isAdmin ? (
+            <Select value={branchId} onChange={(e) => setBranchId(e.target.value)} className="mt-1 max-w-xs">
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </Select>
+          ) : (
+            <p className="mt-1 text-sm text-slate-900">{branch?.name ?? 'Sin sucursal asignada'}</p>
+          )}
+        </div>
 
         <div className="mt-3">
           <ProductSearch catalog={catalog} onSelect={addToCart} branchId={branchId} />
@@ -330,7 +373,7 @@ export function FurgonPage() {
 
       {(loadingTodayItems || todayItems.length > 0) && (
         <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
-          <p className="px-4 pt-3 text-sm font-medium text-slate-700">Vendido hoy</p>
+          <p className="px-4 pt-3 text-sm font-medium text-slate-700">Vendido hoy en terreno</p>
           <table className="mt-1 w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
@@ -358,9 +401,9 @@ export function FurgonPage() {
         </div>
       )}
 
-      {todaySaleIds.length > 0 && (
+      {todaySales.length > 0 && (
         <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white">
-          <p className="px-4 pt-3 text-sm font-medium text-slate-700">Ventas de hoy</p>
+          <p className="px-4 pt-3 text-sm font-medium text-slate-700">Ventas de hoy en terreno</p>
           <table className="mt-1 w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
@@ -370,8 +413,8 @@ export function FurgonPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {sales
-                .filter((s) => s.sale_date === today)
+              {todaySales
+                .slice()
                 .sort((a, b) => b.created_at.localeCompare(a.created_at))
                 .map((s) => (
                   <tr key={s.id}>
@@ -387,11 +430,11 @@ export function FurgonPage() {
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <p className="text-xs uppercase text-slate-500">Fardos a bordo</p>
+          <p className="text-xs uppercase text-slate-500">Fardos a bordo ({branch?.name ?? '—'})</p>
           <p className="mt-1 text-lg font-semibold text-slate-900">{loading ? '—' : totalFardos}</p>
         </div>
         <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <p className="text-xs uppercase text-slate-500">Ventas (últimos 30 días)</p>
+          <p className="text-xs uppercase text-slate-500">Ventas en terreno (últimos 30 días)</p>
           <p className="mt-1 text-lg font-semibold text-slate-900">{loading ? '—' : `${sales.length} · ${formatCLP(salesTotal)}`}</p>
         </div>
         <div className="rounded-lg border border-slate-200 bg-white p-4">
