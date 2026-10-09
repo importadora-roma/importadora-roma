@@ -9,6 +9,16 @@
 -- inventory_movements still record the actual logged-in user as the one
 -- who performed the action, only sales.user_id (what commission reports
 -- key on) can be overridden.
+--
+-- create_sale is gaining a 7th parameter here. CREATE OR REPLACE only
+-- replaces a function whose argument list matches exactly -- a changed
+-- signature defines a second, overloaded create_sale alongside the old
+-- 6-arg one instead of replacing it, which would make every call from the
+-- app (and the positional call inside convert_quotation_to_sale) ambiguous
+-- between the two and break every sale, not just Furgón's. Drop the old
+-- signature first so this really replaces it.
+drop function if exists public.create_sale(uuid, uuid, jsonb, jsonb, text, date);
+
 create or replace function public.create_sale(
   p_branch_id uuid,
   p_customer_id uuid,
