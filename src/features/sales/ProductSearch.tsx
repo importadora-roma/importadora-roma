@@ -20,7 +20,7 @@ export function ProductSearch({
   const [term, setTerm] = useState('')
   const [open, setOpen] = useState(false)
   const [scannerOpen, setScannerOpen] = useState(false)
-  const [showOutOfStock, setShowOutOfStock] = useState(false)
+  const [showOutOfStock, setShowOutOfStock] = useState(true)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const { topVariantIds } = useTopSellingVariantIds(branchId)
   const inputRef = useRef<HTMLInputElement>(null)
