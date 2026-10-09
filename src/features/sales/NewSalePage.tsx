@@ -3,7 +3,7 @@ import { Trash2, CheckCircle2, PackagePlus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Input'
 import { UsbScannerInput } from '@/components/UsbScannerInput'
-import { formatCLP, formatKilo, todayCL } from '@/lib/format'
+import { addDaysCL, formatCLP, formatKilo, todayCL } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useAuthStore } from '@/stores/authStore'
@@ -12,12 +12,6 @@ import { useSaleCatalog, findCatalogEntryByCode, type CatalogEntry } from './use
 import { ProductSearch } from './ProductSearch'
 import { PaymentSplit, type PaymentLine } from './PaymentSplit'
 import { CustomerSelect } from './CustomerSelect'
-
-function addDays(days: number): string {
-  const d = new Date()
-  d.setDate(d.getDate() + days)
-  return d.toISOString().slice(0, 10)
-}
 
 interface CartItem {
   id: string
@@ -62,7 +56,7 @@ export function NewSalePage() {
   const isBackdated = saleDate !== todayCL()
 
   useEffect(() => {
-    if (hasCredit && !dueDate) setDueDate(addDays(alertSettings.credit_default_term_days))
+    if (hasCredit && !dueDate) setDueDate(addDaysCL(alertSettings.credit_default_term_days))
     if (!hasCredit && dueDate) setDueDate('')
   }, [hasCredit, dueDate, alertSettings.credit_default_term_days])
 

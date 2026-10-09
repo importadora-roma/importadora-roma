@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ShoppingCart, ArrowLeftRight, Wallet, Users, MapPin, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Input'
-import { formatCLP, formatKilo, formatTimeCL, todayCL } from '@/lib/format'
+import { addDaysCL, formatCLP, formatKilo, formatTimeCL, todayCL } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useProducts } from '@/features/products/useProducts'
@@ -20,12 +20,6 @@ const paymentLabels: Record<SalePaymentMethod, string> = {
   tarjeta: 'Tarjeta',
   transferencia: 'Transferencia',
   credito: 'Crédito',
-}
-
-function daysAgo(n: number): string {
-  const d = new Date()
-  d.setDate(d.getDate() - n)
-  return d.toISOString().slice(0, 10)
 }
 
 interface QuickSaleLine {
@@ -57,7 +51,7 @@ export function FurgonPage() {
   const { catalog } = useSaleCatalog(branchId)
   const [showAll, setShowAll] = useState(false)
 
-  const from30 = daysAgo(30)
+  const from30 = addDaysCL(-30)
   const today = todayCL()
   const { sales, loading: loadingSales, reload: reloadSales } = useReports(branchId, from30, today)
   const { rows: commissionRows, loading: loadingCommission } = useCommissionReport(branchId, from30, today)

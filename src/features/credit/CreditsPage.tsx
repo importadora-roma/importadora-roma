@@ -3,7 +3,7 @@ import { Eye, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Input, Select } from '@/components/ui/Input'
-import { formatCLP, formatDate, formatDateTime } from '@/lib/format'
+import { formatCLP, formatDate, formatDateTime, todayCL } from '@/lib/format'
 import { whatsappUrl } from '@/lib/share'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useAuthStore } from '@/stores/authStore'
@@ -21,7 +21,10 @@ export function CreditsPage() {
   const [search, setSearch] = useState('')
 
   const { rows, pending, totalOutstanding, loading, error, loadPayments, recordPayment, updateDueDate } = useCreditSales(branchId)
-  const today = new Date().toISOString().slice(0, 10)
+  // Chile's own date — using the browser's/UTC date here would wrongly mark
+  // a credit due *today* as overdue for a few hours every evening (Chile is
+  // behind UTC, so UTC rolls to tomorrow first).
+  const today = todayCL()
   const { customers } = useCustomers()
   const customerNameById = useMemo(() => new Map(customers.map((c) => [c.id, c.name])), [customers])
   const customerById = useMemo(() => new Map(customers.map((c) => [c.id, c])), [customers])

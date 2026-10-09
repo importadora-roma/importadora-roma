@@ -42,6 +42,15 @@ export function todayCL(): string {
   return santiagoDateFormatter.format(new Date())
 }
 
+// Chile's today, offset by N calendar days (negative for "N days ago").
+// Does the arithmetic on todayCL()'s own Y-M-D via Date.UTC (a pure
+// calendar calculation, not a real-world instant), so it can't pick up the
+// same UTC-vs-Santiago drift it exists to avoid, and isn't affected by DST.
+export function addDaysCL(days: number): string {
+  const [y, m, d] = todayCL().split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10)
+}
+
 // Hour:minute per the business's own clock (Chile), not the viewing
 // device's timezone — same reasoning as todayCL() above. Used wherever a
 // sale's actual time matters (sales history, receipts, daily reports).

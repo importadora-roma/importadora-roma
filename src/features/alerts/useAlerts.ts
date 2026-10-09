@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { todayCL } from '@/lib/format'
 import { useProducts } from '@/features/products/useProducts'
 import { useInventory } from '@/features/inventory/useInventory'
 import { useCreditSales } from '@/features/credit/useCreditSales'
@@ -54,7 +55,11 @@ export function useAlerts(branchId: string, includeFinancial: boolean) {
 
   const overdueCredit = useMemo<OverdueCreditAlert[]>(() => {
     if (!includeFinancial) return []
-    const today = new Date().toISOString().slice(0, 10)
+    // Chile's own date, not the browser's/UTC's — Chile is behind UTC, so
+    // for a few hours every evening UTC has already rolled to tomorrow
+    // while it's still today in Santiago; using toISOString() here would
+    // wrongly flag a credit due *today* as overdue during that window.
+    const today = todayCL()
     return creditPending
       .filter((r): r is typeof r & { dueDate: string } => !!r.dueDate && r.dueDate < today)
       .map((r) => ({
