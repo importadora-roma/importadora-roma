@@ -1015,6 +1015,7 @@ export interface Database {
           p_payments: { payment_method: SalePaymentMethod; amount: number }[]
           p_notes?: string | null
           p_sale_date?: string | null
+          p_user_id?: string | null
         }
         Returns: string
       }
