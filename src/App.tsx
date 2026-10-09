@@ -15,6 +15,7 @@ const KardexPage = lazy(() => import('@/features/inventory/KardexPage').then((m)
 const CashPage = lazy(() => import('@/features/cash/CashPage').then((m) => ({ default: m.CashPage })))
 const SalesTabsPage = lazy(() => import('@/features/sales/SalesTabsPage').then((m) => ({ default: m.SalesTabsPage })))
 const TransfersTabsPage = lazy(() => import('@/features/transfers/TransfersTabsPage').then((m) => ({ default: m.TransfersTabsPage })))
+const FurgonPage = lazy(() => import('@/features/furgon/FurgonPage').then((m) => ({ default: m.FurgonPage })))
 const QuotationsTabsPage = lazy(() => import('@/features/quotations/QuotationsTabsPage').then((m) => ({ default: m.QuotationsTabsPage })))
 const ReportsPage = lazy(() => import('@/features/reports/ReportsPage').then((m) => ({ default: m.ReportsPage })))
 const RentabilidadPage = lazy(() => import('@/features/reports/RentabilidadPage').then((m) => ({ default: m.RentabilidadPage })))
@@ -182,6 +183,14 @@ function App() {
                   }
                 />
               </Route>
+              <Route
+                path="furgon"
+                element={
+                  <RoleGate roles={['admin', 'supervisor']}>
+                    <FurgonPage />
+                  </RoleGate>
+                }
+              />
               <Route
                 path="reportes"
                 element={

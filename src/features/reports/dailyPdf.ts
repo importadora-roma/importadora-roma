@@ -1,5 +1,5 @@
 import { createPdfDoc, autoTable, getLogoDataUrl, addPieChartWithLegend, BRAND_NAVY } from '@/lib/pdf'
-import { formatCLP, formatDate, todayCL } from '@/lib/format'
+import { formatCLP, formatDate, formatTimeCL, todayCL } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
 import type { ReportSale } from './useReports'
 import type { ProductProfitRow } from './useProductProfitReport'
@@ -184,6 +184,26 @@ export async function generateDailyPdf(data: DailyReportData, mode: DailyPdfMode
       formatCLP
     )
     belowSummaryY = Math.max(paymentY, expenseY) - 10
+  }
+
+  // One row per sale with its real clock time, so a shift can be reconciled
+  // against when each transaction actually happened — not just the day total.
+  if (data.sales.length > 0) {
+    const salesByTime = [...data.sales].sort((a, b) => a.created_at.localeCompare(b.created_at))
+    autoTable(doc, {
+      startY: belowSummaryY + 10,
+      head: [['Hora', 'Folio', 'Cliente', 'Total']],
+      headStyles: { fillColor: BRAND_NAVY },
+      body: salesByTime.map((s) => [
+        formatTimeCL(s.created_at),
+        s.sale_number ?? '—',
+        s.customer_id ? data.customerNameById.get(s.customer_id) ?? '—' : '—',
+        formatCLP(s.total),
+      ]),
+      columnStyles: { 3: { halign: 'right' } },
+      styles: { fontSize: 8 },
+    })
+    belowSummaryY = finalY()
   }
 
   // Product table: the simple report leaves out everything about cost.

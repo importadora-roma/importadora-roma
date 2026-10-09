@@ -21,6 +21,7 @@ import {
   X,
   KeyRound,
   BookOpen,
+  MapPin,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
@@ -50,6 +51,7 @@ const navItems: NavItem[] = [
   { to: '/inventario', label: 'Inventario', icon: Package, roles: ['admin', 'supervisor'] },
   { to: '/kardex', label: 'Kardex', icon: ClipboardList, roles: ['admin', 'supervisor'] },
   { to: '/transferencias', label: 'Transferencias', icon: Truck, roles: ['admin', 'supervisor'] },
+  { to: '/furgon', label: 'Furgón', icon: MapPin, roles: ['admin', 'supervisor'] },
   { to: '/contenedores', label: 'Contenedores', icon: Boxes, importadoraOnly: true },
   { to: '/caja', label: 'Caja', icon: Wallet, roles: ['admin', 'supervisor'], importadoraOnly: true },
   { to: '/creditos', label: 'Créditos', icon: CreditCard, roles: ['admin', 'supervisor'], importadoraOnly: true },

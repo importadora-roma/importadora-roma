@@ -42,6 +42,20 @@ export function todayCL(): string {
   return santiagoDateFormatter.format(new Date())
 }
 
+// Hour:minute per the business's own clock (Chile), not the viewing
+// device's timezone — same reasoning as todayCL() above. Used wherever a
+// sale's actual time matters (sales history, receipts, daily reports).
+const santiagoTimeFormatter = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'America/Santiago',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+})
+
+export function formatTimeCL(isoString: string): string {
+  return santiagoTimeFormatter.format(new Date(isoString))
+}
+
 export function formatKilo(kilo: number): string {
   return `${kilo % 1 === 0 ? kilo : kilo.toFixed(2)}KG`
 }

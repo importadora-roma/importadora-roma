@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Select, Input } from '@/components/ui/Input'
 import { ReasonModal } from '@/components/ui/ReasonModal'
-import { formatCLP, formatDate, formatDateTime, formatVariantSpec } from '@/lib/format'
+import { formatCLP, formatDate, formatDateTime, formatTimeCL, formatVariantSpec } from '@/lib/format'
 import { whatsappUrl, mailtoUrl } from '@/lib/share'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
@@ -142,7 +142,7 @@ export function SalesHistoryPage() {
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>
               <th className="px-4 py-3">Folio</th>
-              <th className="px-4 py-3">Fecha</th>
+              <th className="px-4 py-3">Fecha / Hora</th>
               <th className="px-4 py-3">Cliente</th>
               <th className="px-4 py-3">Total</th>
               <th className="px-4 py-3">Estado</th>
@@ -169,6 +169,7 @@ export function SalesHistoryPage() {
                 <td className="px-4 py-3 font-medium text-slate-900">{sale.sale_number}</td>
                 <td className="px-4 py-3 text-slate-500">
                   {formatDate(`${sale.sale_date}T00:00:00`)}
+                  <span className="ml-1 text-xs text-slate-400">{formatTimeCL(sale.created_at)}</span>
                   {sale.sale_date !== sale.created_at.slice(0, 10) && (
                     <span
                       className="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
@@ -205,6 +206,11 @@ export function SalesHistoryPage() {
 
       <Modal open={!!detailSale} onClose={() => setDetailSale(null)} title={`Venta ${detailSale?.sale_number ?? ''}`}>
         <div className="space-y-4">
+          {detailSale && (
+            <p className="-mt-2 text-xs text-slate-400">
+              {formatDate(`${detailSale.sale_date}T00:00:00`)} · {formatTimeCL(detailSale.created_at)}
+            </p>
+          )}
           <table className="w-full text-left text-sm">
             <thead className="text-xs uppercase text-slate-400">
               <tr>
