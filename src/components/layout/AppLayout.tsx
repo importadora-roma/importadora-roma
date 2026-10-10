@@ -135,19 +135,19 @@ export function AppLayout() {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 -translate-x-full flex-col border-r border-slate-200 bg-white transition-transform duration-200 ease-out md:static md:z-auto md:h-full md:w-60 md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 -translate-x-full flex-col bg-brand-900 transition-transform duration-200 ease-out md:static md:z-auto md:h-full md:w-60 md:translate-x-0 ${
           menuOpen ? 'translate-x-0 shadow-xl' : ''
         }`}
       >
-        <div className="flex items-center justify-between border-b border-slate-200 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))]">
+        <div className="flex items-center justify-between border-b border-white/10 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))]">
           <div className="flex items-center gap-2.5">
-            <img src="/pwa-192.png" alt="" className="h-8 w-8 rounded-lg" />
+            <img src="/pwa-192.png" alt="" className="h-8 w-8 rounded-lg ring-1 ring-white/15" />
             <div>
-              <p className="text-sm font-semibold text-slate-900">Importadora Roma</p>
-              <p className="text-xs text-slate-500">{profile?.full_name}</p>
+              <p className="text-sm font-semibold text-white">Importadora Roma</p>
+              <p className="text-xs text-brand-300">{profile?.full_name}</p>
             </div>
           </div>
-          <button onClick={() => setMenuOpen(false)} className="text-slate-400 hover:text-slate-600 md:hidden" aria-label="Cerrar menú">
+          <button onClick={() => setMenuOpen(false)} className="text-brand-300 hover:text-white md:hidden" aria-label="Cerrar menú">
             <X size={20} />
           </button>
         </div>
@@ -159,7 +159,7 @@ export function AppLayout() {
               end={item.to === '/'}
               className={({ isActive }) =>
                 `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive ? 'bg-brand-50 text-brand-800' : 'text-slate-700 hover:bg-slate-100'
+                  isActive ? 'bg-white/10 text-gold-400' : 'text-brand-100 hover:bg-white/5 hover:text-white'
                 }`
               }
             >
@@ -168,30 +168,30 @@ export function AppLayout() {
             </NavLink>
           ))}
         </nav>
-        <div className="border-t border-slate-200 p-2">
+        <div className="border-t border-white/10 p-2">
           <button
             onClick={handleDownloadGuide}
             disabled={guideLoading}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-brand-100 hover:bg-white/5 hover:text-white disabled:opacity-50"
           >
             <BookOpen size={18} />
             {guideLoading ? 'Generando...' : 'Manual de usuario'}
           </button>
           <button
             onClick={openPasswordModal}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-brand-100 hover:bg-white/5 hover:text-white"
           >
             <KeyRound size={18} />
             Cambiar contraseña
           </button>
           <button
             onClick={() => signOut()}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-brand-100 hover:bg-white/5 hover:text-white"
           >
             <LogOut size={18} />
             Cerrar sesión
           </button>
-          <p className="mt-1 select-none px-3 text-[10px] text-slate-300">Hecho por Deniz Semiz</p>
+          <p className="mt-1 select-none px-3 text-[10px] text-white/30">Hecho por Deniz Semiz</p>
         </div>
       </aside>
 
