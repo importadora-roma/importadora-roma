@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
+import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { ReasonModal } from '@/components/ui/ReasonModal'
@@ -110,7 +112,7 @@ export function DailyFinancialSummary({ branchId }: { branchId: string }) {
   }
 
   return (
-    <div className="mt-6 rounded-lg border border-slate-200 bg-white p-4">
+    <Card className="mt-6 p-4">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-slate-700">Resumen financiero de hoy</p>
         <Button variant="secondary" onClick={openAdd} disabled={!branchId}>
@@ -147,9 +149,9 @@ export function DailyFinancialSummary({ branchId }: { branchId: string }) {
           {(Object.keys(categoryLabels) as ExpenseCategory[])
             .filter((c) => expensesByCategory[c] > 0)
             .map((c) => (
-              <span key={c} className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
+              <Badge key={c} tone="neutral" className="px-3 py-1">
                 {categoryLabels[c]}: <span className="font-medium text-slate-900">{formatCLP(expensesByCategory[c])}</span>
-              </span>
+              </Badge>
             ))}
         </div>
       )}
@@ -245,6 +247,6 @@ export function DailyFinancialSummary({ branchId }: { branchId: string }) {
         confirmLabel="Eliminar"
         onConfirm={(reason) => deleteExpense(deleteTarget!.id, reason)}
       />
-    </div>
+    </Card>
   )
 }

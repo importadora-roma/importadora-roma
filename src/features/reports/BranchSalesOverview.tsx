@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
+import { Card } from '@/components/ui/Card'
 import { formatCLP, todayCL } from '@/lib/format'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useReports } from './useReports'
@@ -110,7 +111,7 @@ export function BranchSalesOverview() {
   }, [rows, transferValue])
 
   return (
-    <div className="mt-6 rounded-lg border border-slate-200 bg-white p-4">
+    <Card className="mt-6 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-medium text-slate-700">Ventas por método de pago</p>
         <div className="flex gap-1">
@@ -118,8 +119,8 @@ export function BranchSalesOverview() {
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className={`rounded-full px-3 py-1 text-xs font-medium ${
-                period === p ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                period === p ? 'bg-brand-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
               {p === 'today' ? 'Hoy' : p === 'week' ? 'Últimos 7 días' : 'Este mes'}
@@ -199,6 +200,6 @@ export function BranchSalesOverview() {
           )}
         </>
       )}
-    </div>
+    </Card>
   )
 }

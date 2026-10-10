@@ -1,6 +1,7 @@
 import { lazy, Suspense, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { Wallet, AlertTriangle, FileText, Boxes, Receipt, Banknote } from 'lucide-react'
+import { Wallet, AlertTriangle, FileText, Boxes, Receipt, Banknote, ArrowRight } from 'lucide-react'
+import { Card } from '@/components/ui/Card'
 import { formatCLP, todayCL } from '@/lib/format'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
@@ -17,6 +18,27 @@ import type { PaymentMethod } from '@/types/database'
 // bundle, same as ReportsPage.tsx already gets lazy-loaded as a route.
 const BranchSalesOverview = lazy(() => import('./BranchSalesOverview').then((m) => ({ default: m.BranchSalesOverview })))
 const DailyFinancialSummary = lazy(() => import('./DailyFinancialSummary').then((m) => ({ default: m.DailyFinancialSummary })))
+
+type ChipTone = 'brand' | 'emerald' | 'amber' | 'red' | 'slate'
+
+const chipToneClasses: Record<ChipTone, string> = {
+  brand: 'bg-brand-50 text-brand-700',
+  emerald: 'bg-emerald-50 text-emerald-600',
+  amber: 'bg-amber-50 text-amber-600',
+  red: 'bg-red-50 text-red-600',
+  slate: 'bg-slate-100 text-slate-500',
+}
+
+function KpiLabel({ icon: Icon, tone, children }: { icon: typeof Banknote; tone: ChipTone; children: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${chipToneClasses[tone]}`}>
+        <Icon size={16} />
+      </div>
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{children}</p>
+    </div>
+  )
+}
 
 export function DashboardPage() {
   const profile = useAuthStore((s) => s.profile)
@@ -62,11 +84,10 @@ export function DashboardPage() {
 
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {!isTienda && (
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <div className="flex items-center gap-2 text-xs uppercase text-slate-500">
-              <Banknote size={14} />
+          <Card className="p-4">
+            <KpiLabel icon={Banknote} tone="emerald">
               Ventas de hoy
-            </div>
+            </KpiLabel>
             {loadingSales ? (
               <p className="mt-2 text-xl font-semibold text-slate-400">—</p>
             ) : (
@@ -90,15 +111,14 @@ export function DashboardPage() {
               </div>
             )}
             <p className="mt-2 text-xs text-slate-400">{sales.length} ventas</p>
-          </div>
+          </Card>
         )}
 
         {canSeeCash && (
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <div className="flex items-center gap-2 text-xs uppercase text-slate-500">
-              <Wallet size={14} />
+          <Card className="p-4">
+            <KpiLabel icon={Wallet} tone={register ? 'brand' : 'slate'}>
               Caja
-            </div>
+            </KpiLabel>
             {register ? (
               <>
                 <p className="mt-2 text-xl font-semibold text-slate-900">{formatCLP(expectedNow)}</p>
@@ -110,27 +130,25 @@ export function DashboardPage() {
                 <p className="text-xs text-red-600">Cerrada</p>
               </>
             )}
-          </div>
+          </Card>
         )}
 
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <div className="flex items-center gap-2 text-xs uppercase text-slate-500">
-            <AlertTriangle size={14} />
+        <Card className="p-4">
+          <KpiLabel icon={AlertTriangle} tone={lowStockCount > 0 ? 'red' : 'slate'}>
             Sin stock
-          </div>
+          </KpiLabel>
           <p className={`mt-2 text-xl font-semibold ${lowStockCount > 0 ? 'text-red-600' : 'text-slate-900'}`}>{lowStockCount}</p>
           <p className="text-xs text-slate-400">variantes en 0 o negativo</p>
-        </div>
+        </Card>
 
         {canSeeContainers && (
           <Link
             to="/contenedores/activo"
-            className="rounded-lg border border-slate-200 bg-white p-4 hover:border-slate-300 hover:shadow-sm"
+            className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:border-slate-300 hover:shadow-md"
           >
-            <div className="flex items-center gap-2 text-xs uppercase text-slate-500">
-              <Boxes size={14} />
+            <KpiLabel icon={Boxes} tone={containersInCounting > 0 ? 'amber' : 'slate'}>
               Contenedores en conteo
-            </div>
+            </KpiLabel>
             <p className={`mt-2 text-xl font-semibold ${containersInCounting > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
               {containersInCounting}
             </p>
@@ -139,31 +157,45 @@ export function DashboardPage() {
         )}
 
         {canSeeInvoices && (
-          <Link to="/facturas" className="rounded-lg border border-slate-200 bg-white p-4 hover:border-slate-300 hover:shadow-sm">
-            <div className="flex items-center gap-2 text-xs uppercase text-slate-500">
-              <Receipt size={14} />
+          <Link
+            to="/facturas"
+            className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:border-slate-300 hover:shadow-md"
+          >
+            <KpiLabel icon={Receipt} tone={pendingInvoices > 0 ? 'amber' : 'slate'}>
               Facturas pendientes
-            </div>
+            </KpiLabel>
             <p className={`mt-2 text-xl font-semibold ${pendingInvoices > 0 ? 'text-amber-600' : 'text-slate-900'}`}>{pendingInvoices}</p>
             <p className="text-xs text-slate-400">ventas esperando ser facturadas</p>
           </Link>
         )}
 
         {isTienda ? (
-          <Link to="/transferencias" className="flex flex-col justify-center rounded-lg border border-slate-200 bg-slate-900 p-4 text-white hover:bg-slate-800">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <FileText size={16} />
-              Transferencias
+          <Link
+            to="/transferencias"
+            className="group flex flex-col justify-center rounded-lg bg-gradient-to-br from-brand-800 to-brand-950 p-4 text-white shadow-sm transition-shadow hover:shadow-md"
+          >
+            <div className="flex items-center justify-between text-sm font-medium">
+              <span className="flex items-center gap-2">
+                <FileText size={16} className="text-gold-400" />
+                Transferencias
+              </span>
+              <ArrowRight size={14} className="text-white/40 transition-transform group-hover:translate-x-0.5" />
             </div>
-            <p className="mt-1 text-xs text-slate-300">Ver traslados recibidos</p>
+            <p className="mt-1 text-xs text-brand-200">Ver traslados recibidos</p>
           </Link>
         ) : (
-          <Link to="/ventas" className="flex flex-col justify-center rounded-lg border border-slate-200 bg-slate-900 p-4 text-white hover:bg-slate-800">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <FileText size={16} />
-              Nueva venta
+          <Link
+            to="/ventas"
+            className="group flex flex-col justify-center rounded-lg bg-gradient-to-br from-brand-800 to-brand-950 p-4 text-white shadow-sm transition-shadow hover:shadow-md"
+          >
+            <div className="flex items-center justify-between text-sm font-medium">
+              <span className="flex items-center gap-2">
+                <FileText size={16} className="text-gold-400" />
+                Nueva venta
+              </span>
+              <ArrowRight size={14} className="text-white/40 transition-transform group-hover:translate-x-0.5" />
             </div>
-            <p className="mt-1 text-xs text-slate-300">Registrar una venta ahora</p>
+            <p className="mt-1 text-xs text-brand-200">Registrar una venta ahora</p>
           </Link>
         )}
       </div>
