@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Eye, Mail, MessageCircle, Printer } from 'lucide-react'
+import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { Select, Input } from '@/components/ui/Input'
 import { ReasonModal } from '@/components/ui/ReasonModal'
@@ -137,7 +139,7 @@ export function SalesHistoryPage() {
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+      <Card className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>
@@ -171,26 +173,19 @@ export function SalesHistoryPage() {
                   {formatDate(`${sale.sale_date}T00:00:00`)}
                   <span className="ml-1 text-xs text-slate-400">{formatTimeCL(sale.created_at)}</span>
                   {sale.sale_date !== sale.created_at.slice(0, 10) && (
-                    <span
-                      className="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
-                      title={`Ingresada el ${formatDateTime(sale.created_at)}`}
-                    >
+                    <Badge tone="warning" className="ml-1" title={`Ingresada el ${formatDateTime(sale.created_at)}`}>
                       Retroactiva
-                    </span>
+                    </Badge>
                   )}
                 </td>
                 <td className="px-4 py-3 text-slate-600">{sale.customer_id ? customerNameById.get(sale.customer_id) ?? '—' : '—'}</td>
                 <td className="px-4 py-3 font-medium text-slate-900">{formatCLP(sale.total)}</td>
                 <td className="px-4 py-3">
-                  <span
-                    className={`rounded-full px-2 py-1 text-xs font-medium ${
-                      sale.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                    }`}
-                  >
-                    {statusLabels[sale.status]}
-                  </span>
+                  <Badge tone={sale.status === 'completed' ? 'success' : 'danger'}>{statusLabels[sale.status]}</Badge>
                   {sale.requires_invoice && (
-                    <span className="ml-1 rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">Factura</span>
+                    <Badge tone="brand" className="ml-1">
+                      Factura
+                    </Badge>
                   )}
                 </td>
                 <td className="px-4 py-3 text-right">
@@ -202,7 +197,7 @@ export function SalesHistoryPage() {
             ))}
           </tbody>
         </table>
-      </div>
+      </Card>
 
       <Modal open={!!detailSale} onClose={() => setDetailSale(null)} title={`Venta ${detailSale?.sale_number ?? ''}`}>
         <div className="space-y-4">

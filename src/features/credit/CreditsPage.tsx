@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Eye, MessageCircle } from 'lucide-react'
+import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { Input, Select } from '@/components/ui/Input'
 import { formatCLP, formatDate, formatDateTime, todayCL } from '@/lib/format'
@@ -147,10 +149,10 @@ export function CreditsPage() {
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
-        <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-3">
+        <Card className="p-3">
           <p className="text-xs uppercase text-slate-400">Al día</p>
           <p className="mt-1 text-base font-semibold text-slate-900">{formatCLP(aging.current)}</p>
-        </div>
+        </Card>
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
           <p className="text-xs uppercase text-amber-600">1-30 días</p>
           <p className="mt-1 text-base font-semibold text-amber-800">{formatCLP(aging.d1_30)}</p>
@@ -169,7 +171,7 @@ export function CreditsPage() {
         </div>
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+      <Card className="mt-6 overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>
@@ -210,15 +212,11 @@ export function CreditsPage() {
                 </td>
                 <td className="px-4 py-3">
                   {row.dueDate ? (
-                    <span
-                      className={
-                        row.dueDate < today && row.remaining > 0
-                          ? 'rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700'
-                          : 'text-slate-500'
-                      }
-                    >
-                      {row.dueDate}
-                    </span>
+                    row.dueDate < today && row.remaining > 0 ? (
+                      <Badge tone="danger">{row.dueDate}</Badge>
+                    ) : (
+                      <span className="text-slate-500">{row.dueDate}</span>
+                    )
                   ) : (
                     <span className="text-slate-300">—</span>
                   )}
@@ -243,7 +241,7 @@ export function CreditsPage() {
             ))}
           </tbody>
         </table>
-      </div>
+      </Card>
 
       <Modal open={!!detail} onClose={() => setDetail(null)} title={`Crédito venta ${detail?.saleNumber ?? ''}`}>
         <div className="space-y-4">
