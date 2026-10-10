@@ -135,7 +135,7 @@ export function AppLayout() {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 -translate-x-full flex-col bg-brand-900 transition-transform duration-200 ease-out md:static md:z-auto md:h-full md:w-60 md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 -translate-x-full flex-col bg-brand-700 transition-transform duration-200 ease-out md:static md:z-auto md:h-full md:w-60 md:translate-x-0 ${
           menuOpen ? 'translate-x-0 shadow-xl' : ''
         }`}
       >
