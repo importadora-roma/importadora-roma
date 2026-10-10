@@ -1,10 +1,38 @@
 @import "tailwindcss";
 
+/* Brand palette, sourced from the Comercial Decoline / Importadora Roma
+   logo (deep navy + gold ring). Used for primary actions, active nav state
+   and accents in place of the generic slate/violet defaults. */
+@theme {
+  --color-brand-50: #eef2f8;
+  --color-brand-100: #dbe3f0;
+  --color-brand-200: #b7c7e0;
+  --color-brand-300: #8ea3c9;
+  --color-brand-400: #5f78a8;
+  --color-brand-500: #3f5886;
+  --color-brand-600: #2d4169;
+  --color-brand-700: #1f2f4f;
+  --color-brand-800: #16233c;
+  --color-brand-900: #0f1829;
+  --color-brand-950: #080e18;
+
+  --color-gold-50: #fbf7ec;
+  --color-gold-100: #f3e7c4;
+  --color-gold-200: #e9d496;
+  --color-gold-300: #dcb968;
+  --color-gold-400: #cda148;
+  --color-gold-500: #b1863a;
+  --color-gold-600: #8c6a2f;
+  --color-gold-700: #6b5125;
+  --color-gold-800: #4a381a;
+  --color-gold-900: #2c2110;
+}
+
 :root {
   color-scheme: light;
 }
 
 body {
   margin: 0;
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
 }
