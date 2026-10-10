@@ -87,10 +87,16 @@ async function fetchDayCash(branchId: string, day: string, cashSales: number): P
       .lte('closed_at', to)
       .order('closed_at', { ascending: false })
     const dayFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit' })
-    const match = (closed ?? []).find((r) => r.closed_at && dayFormatter.format(new Date(r.closed_at as string)) === day)
-    if (match) {
-      const amount = match.actual_amount ?? match.expected_amount
-      if (amount !== null && amount !== undefined) return { label: 'Efectivo en caja al cierre', amount: Number(amount) }
+    // A branch can open/close its register more than once in the same
+    // Chile day (opened, closed early by mistake, reopened); summing every
+    // register that closed that day is what "the register(s) closed that
+    // day held" actually means — picking just the latest one silently
+    // dropped the earlier session's cash from the day's total.
+    const matches = (closed ?? []).filter((r) => r.closed_at && dayFormatter.format(new Date(r.closed_at as string)) === day)
+    if (matches.length > 0) {
+      const amount = matches.reduce((sum, r) => sum + Number(r.actual_amount ?? r.expected_amount ?? 0), 0)
+      const label = matches.length > 1 ? 'Efectivo en caja al cierre (varias cajas)' : 'Efectivo en caja al cierre'
+      return { label, amount }
     }
   }
   return { label: 'Efectivo cobrado en el día (sin caja registrada)', amount: cashSales }

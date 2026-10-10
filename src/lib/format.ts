@@ -42,6 +42,14 @@ export function todayCL(): string {
   return santiagoDateFormatter.format(new Date())
 }
 
+// Chile-local calendar date (YYYY-MM-DD) of an arbitrary instant, not just
+// "now" — for turning a timestamptz like sent_at/created_at into the same
+// kind of date string sale_date/expense_date already store, before
+// comparing it against a Chile-local date range.
+export function dateCL(isoString: string): string {
+  return santiagoDateFormatter.format(new Date(isoString))
+}
+
 // Chile's today, offset by N calendar days (negative for "N days ago").
 // Does the arithmetic on todayCL()'s own Y-M-D via Date.UTC (a pure
 // calendar calculation, not a real-world instant), so it can't pick up the
