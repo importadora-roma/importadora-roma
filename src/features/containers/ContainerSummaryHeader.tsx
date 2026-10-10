@@ -6,7 +6,7 @@ export function ContainerSummaryHeader({ totals }: { totals: ContainerTotals }) 
   const progressColor = totals.hasOver ? 'bg-red-600' : totals.percent >= 100 ? 'bg-green-600' : 'bg-slate-900'
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-6">
+    <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-6">
       <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
         <Stat label={t('summary.expected')} value={totals.expected} />
         <Stat label={t('summary.scanned')} value={totals.scanned} />

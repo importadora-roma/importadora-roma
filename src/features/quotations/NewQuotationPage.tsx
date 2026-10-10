@@ -96,7 +96,7 @@ export function NewQuotationPage() {
         <div className="lg:col-span-2">
           <ProductSearch catalog={catalog} onSelect={addItem} branchId={effectiveBranchId} />
 
-          <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+          <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
@@ -151,7 +151,7 @@ export function NewQuotationPage() {
           </div>
         </div>
 
-        <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+        <div className="space-y-4 rounded-lg border border-slate-200 bg-white shadow-sm p-4">
           <CustomerSelect customerId={customerId} onChange={setCustomerId} />
           <Input label="Válida hasta (opcional)" type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} />
           <div className="flex justify-between border-t border-slate-200 pt-3 text-base font-semibold text-slate-900">

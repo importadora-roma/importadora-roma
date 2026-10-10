@@ -1,7 +1,7 @@
 export function SetupScreen() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-      <div className="max-w-lg rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
+      <div className="max-w-lg rounded-lg border border-slate-200 bg-white shadow-sm p-8 shadow-sm">
         <h1 className="text-xl font-semibold text-slate-900">Falta configurar Supabase</h1>
         <p className="mt-3 text-sm text-slate-600">
           Crea un archivo <code className="rounded bg-slate-100 px-1.5 py-0.5">.env</code> en la

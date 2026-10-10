@@ -289,7 +289,7 @@ export function ReportsPage() {
         </Button>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4">
+      <div className="mt-4 flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white shadow-sm p-4">
         <Input label="Reporte diario — día" type="date" max={todayCL()} value={reportDay} onChange={(e) => setReportDay(e.target.value)} />
         {reportDay && <DailyReportButtons branchId={branchId} day={reportDay} />}
       </div>
@@ -297,14 +297,14 @@ export function ReportsPage() {
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-4">
           <p className="text-xs uppercase text-slate-500">Total ventas</p>
           <p className="mt-1 text-xl font-semibold text-slate-900">{formatCLP(grandTotal)}</p>
           <p className="text-xs text-slate-400">
             {sales.length} ventas · {loadingProducts ? '—' : totalUnitsSold} fardos
           </p>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-4">
           <div className="flex items-center gap-1 text-xs uppercase text-slate-500">
             <Package size={12} />
             Fardos vendidos
@@ -312,15 +312,15 @@ export function ReportsPage() {
           <p className="mt-1 text-xl font-semibold text-slate-900">{loadingProducts ? '—' : totalUnitsSold}</p>
           <p className="text-xs text-slate-400">{productRows.length} producto{productRows.length === 1 ? '' : 's'} distintos</p>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-4">
           <p className="text-xs uppercase text-slate-500">Efectivo</p>
           <p className="mt-1 text-xl font-semibold text-slate-900">{formatCLP(totalsByMethod.efectivo)}</p>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-4">
           <p className="text-xs uppercase text-slate-500">Tarjeta</p>
           <p className="mt-1 text-xl font-semibold text-slate-900">{formatCLP(totalsByMethod.tarjeta)}</p>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-4">
           <p className="text-xs uppercase text-slate-500">Transferencia (pago)</p>
           <p className="mt-1 text-xl font-semibold text-slate-900">{formatCLP(totalsByMethod.transferencia)}</p>
         </div>
@@ -330,15 +330,15 @@ export function ReportsPage() {
         <p className="text-sm font-medium text-slate-700">Resumen del período</p>
         <p className="mt-1 text-xs text-slate-400">Ventas menos costo y gastos — la utilidad real, no solo lo vendido.</p>
         <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
+          <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-4">
             <p className="text-xs uppercase text-slate-500">Costo (COGS)</p>
             <p className="mt-1 text-xl font-semibold text-slate-900">{loadingMargin ? '—' : formatCLP(cogs)}</p>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
+          <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-4">
             <p className="text-xs uppercase text-slate-500">Margen bruto</p>
             <p className="mt-1 text-xl font-semibold text-slate-900">{loadingMargin ? '—' : formatCLP(grossMargin)}</p>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
+          <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-4">
             <p className="text-xs uppercase text-slate-500">Gastos</p>
             <p className="mt-1 text-xl font-semibold text-slate-900">{loadingExpenses ? '—' : formatCLP(totalExpenses)}</p>
           </div>
@@ -351,7 +351,7 @@ export function ReportsPage() {
         </div>
       </div>
 
-      <div className="mt-6 rounded-lg border border-slate-200 bg-white p-4">
+      <div className="mt-6 rounded-lg border border-slate-200 bg-white shadow-sm p-4">
         <p className="text-xs uppercase text-slate-500">Traslados a otras sucursales</p>
         <p className="mt-1 text-xl font-semibold text-slate-900">{loadingTransfers ? '—' : formatCLP(transferValue)}</p>
         <p className="text-xs text-slate-400">
@@ -361,7 +361,7 @@ export function ReportsPage() {
         </p>
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
         <p className="px-4 pt-4 text-sm font-medium text-slate-700">Gastos por categoría</p>
         <table className="mt-2 w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
@@ -397,7 +397,7 @@ export function ReportsPage() {
         </table>
       </div>
 
-      <div className="mt-6 rounded-lg border border-slate-200 bg-white p-4">
+      <div className="mt-6 rounded-lg border border-slate-200 bg-white shadow-sm p-4">
         <p className="mb-4 text-sm font-medium text-slate-700">Ventas por día</p>
         {loading ? (
           <p className="py-10 text-center text-sm text-slate-400">Cargando...</p>

@@ -262,7 +262,7 @@ export function FurgonPage() {
         </Button>
       </div>
 
-      <div className="mt-6 rounded-lg border border-slate-200 bg-white p-4">
+      <div className="mt-6 rounded-lg border border-slate-200 bg-white shadow-sm p-4">
         <p className="text-sm font-medium text-slate-700">Registrar lo vendido</p>
         <p className="mt-0.5 text-xs text-slate-400">
           Ej: el vendedor volvió y reportó que vendió 2 Fashion Verano y 3 Ropa de Casa — agrégalos aquí y queda contabilizado
@@ -372,7 +372,7 @@ export function FurgonPage() {
       </div>
 
       {(loadingTodayItems || todayItems.length > 0) && (
-        <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
           <p className="px-4 pt-3 text-sm font-medium text-slate-700">Vendido hoy en terreno</p>
           <table className="mt-1 w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
@@ -402,7 +402,7 @@ export function FurgonPage() {
       )}
 
       {todaySales.length > 0 && (
-        <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
           <p className="px-4 pt-3 text-sm font-medium text-slate-700">Ventas de hoy en terreno</p>
           <table className="mt-1 w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
@@ -429,15 +429,15 @@ export function FurgonPage() {
       )}
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-4">
           <p className="text-xs uppercase text-slate-500">Fardos a bordo ({branch?.name ?? '—'})</p>
           <p className="mt-1 text-lg font-semibold text-slate-900">{loading ? '—' : totalFardos}</p>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-4">
           <p className="text-xs uppercase text-slate-500">Ventas en terreno (últimos 30 días)</p>
           <p className="mt-1 text-lg font-semibold text-slate-900">{loading ? '—' : `${sales.length} · ${formatCLP(salesTotal)}`}</p>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-4">
           <p className="text-xs uppercase text-slate-500">Comisión acumulada (30 días)</p>
           <p className="mt-1 text-lg font-semibold text-slate-900">
             {loading ? '—' : formatCLP(commissionRows.reduce((s, r) => s + r.commission, 0))}
@@ -446,7 +446,7 @@ export function FurgonPage() {
       </div>
 
       {commissionRows.length > 0 && (
-        <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
@@ -479,7 +479,7 @@ export function FurgonPage() {
         </label>
       </div>
 
-      <div className="mt-2 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="mt-2 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>

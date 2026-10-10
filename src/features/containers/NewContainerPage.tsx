@@ -247,7 +247,7 @@ export function NewContainerPage() {
       <p className="mt-1 text-sm text-slate-500">{t('newContainer.subtitle')}</p>
 
       {step === 'form' && (
-        <div className="mt-6 max-w-lg space-y-4 rounded-lg border border-slate-200 bg-white p-6">
+        <div className="mt-6 max-w-lg space-y-4 rounded-lg border border-slate-200 bg-white shadow-sm p-6">
           <Input
             label={t('newContainer.form.code')}
             value={code}
@@ -315,7 +315,7 @@ export function NewContainerPage() {
       {step === 'header-select' && (
         <div className="mt-6 space-y-4">
           <p className="text-sm text-slate-700">{t('newContainer.headerSelect.instructions')}</p>
-          <div className="max-h-96 overflow-auto rounded-lg border border-slate-200 bg-white">
+          <div className="max-h-96 overflow-auto rounded-lg border border-slate-200 bg-white shadow-sm">
             <table className="w-full text-left text-sm">
               <tbody className="divide-y divide-slate-100">
                 {allRows.slice(0, 15).map((row, i) => (
@@ -349,7 +349,7 @@ export function NewContainerPage() {
         <div className="mt-6 space-y-4">
           <p className="mb-2 text-sm font-medium text-slate-700">{t('newContainer.mapping.instructions', { count: rawRows.length })}</p>
           <p className="text-xs text-slate-500">{t('newContainer.mapping.codeOptionalHint')}</p>
-          <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+          <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
@@ -422,7 +422,7 @@ export function NewContainerPage() {
 
           {importError && <p className="text-sm text-red-600">{importError}</p>}
 
-          <div className="max-h-[28rem] overflow-auto rounded-lg border border-slate-200 bg-white">
+          <div className="max-h-[28rem] overflow-auto rounded-lg border border-slate-200 bg-white shadow-sm">
             <table className="w-full text-left text-sm">
               <thead className="sticky top-0 bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
@@ -509,7 +509,7 @@ export function NewContainerPage() {
       {step === 'importing' && <p className="mt-10 text-center text-sm text-slate-600">{t('newContainer.importing')}</p>}
 
       {step === 'done' && importResult && container && (
-        <div className="mt-6 rounded-lg border border-slate-200 bg-white p-6">
+        <div className="mt-6 rounded-lg border border-slate-200 bg-white shadow-sm p-6">
           <p className="flex items-center gap-2 text-base font-semibold text-green-700">
             <CheckCircle2 size={20} /> {t('newContainer.done.title')}
           </p>

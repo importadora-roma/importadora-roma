@@ -17,7 +17,7 @@ export function ContenedoresLandingPage() {
         {canManage && (
           <Link
             to="/contenedores/nuevo"
-            className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-5 hover:border-slate-300 hover:shadow-sm"
+            className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white shadow-sm p-5 hover:border-slate-300 hover:shadow-md"
           >
             <PackagePlus className="mt-0.5 text-slate-500" size={22} />
             <div>
@@ -28,7 +28,7 @@ export function ContenedoresLandingPage() {
         )}
         <Link
           to="/contenedores/activo"
-          className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-5 hover:border-slate-300 hover:shadow-sm"
+          className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white shadow-sm p-5 hover:border-slate-300 hover:shadow-md"
         >
           <ScanLine className="mt-0.5 text-slate-500" size={22} />
           <div>
@@ -39,7 +39,7 @@ export function ContenedoresLandingPage() {
         {canManage && (
           <Link
             to="/contenedores/historial"
-            className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-5 hover:border-slate-300 hover:shadow-sm"
+            className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white shadow-sm p-5 hover:border-slate-300 hover:shadow-md"
           >
             <History className="mt-0.5 text-slate-500" size={22} />
             <div>
@@ -51,7 +51,7 @@ export function ContenedoresLandingPage() {
         {canManage && (
           <Link
             to="/contenedores/desconocidos"
-            className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-5 hover:border-slate-300 hover:shadow-sm"
+            className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white shadow-sm p-5 hover:border-slate-300 hover:shadow-md"
           >
             <HelpCircle className="mt-0.5 text-slate-500" size={22} />
             <div>

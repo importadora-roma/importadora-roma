@@ -476,7 +476,7 @@ export function ImportPage() {
             Selecciona qué fila contiene los nombres de columna (Producto, Calidad, Kilo, etc.). Las filas anteriores
             se ignoran.
           </p>
-          <div className="max-h-96 overflow-auto rounded-lg border border-slate-200 bg-white">
+          <div className="max-h-96 overflow-auto rounded-lg border border-slate-200 bg-white shadow-sm">
             <table className="w-full text-left text-sm">
               <tbody className="divide-y divide-slate-100">
                 {allRows.slice(0, 15).map((row, i) => (
@@ -545,7 +545,7 @@ export function ImportPage() {
             <p className="mb-2 text-sm font-medium text-slate-700">
               Asigna cada columna detectada ({rawRows.length} filas de datos):
             </p>
-            <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+            <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                   <tr>
@@ -650,7 +650,7 @@ export function ImportPage() {
             </span>
           </div>
 
-          <div className="max-h-96 overflow-auto rounded-lg border border-slate-200 bg-white">
+          <div className="max-h-96 overflow-auto rounded-lg border border-slate-200 bg-white shadow-sm">
             <table className="w-full text-left text-sm">
               <thead className="sticky top-0 bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
@@ -707,7 +707,7 @@ export function ImportPage() {
       )}
 
       {step === 'done' && summary && (
-        <div className="mt-6 rounded-lg border border-slate-200 bg-white p-6">
+        <div className="mt-6 rounded-lg border border-slate-200 bg-white shadow-sm p-6">
           <p className="flex items-center gap-2 text-base font-semibold text-green-700">
             <CheckCircle2 size={20} /> Importación completada
           </p>

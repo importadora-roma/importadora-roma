@@ -102,7 +102,7 @@ export function CashPage() {
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
       {!loading && effectiveBranchId && !register && (
-        <div className="mt-6 rounded-lg border border-slate-200 bg-white p-8 text-center">
+        <div className="mt-6 rounded-lg border border-slate-200 bg-white shadow-sm p-8 text-center">
           <Wallet className="mx-auto text-slate-300" size={32} />
           <p className="mt-3 text-slate-600">La caja está cerrada en esta sucursal.</p>
           <Button className="mt-4" onClick={() => setOpenModal(true)}>
@@ -114,16 +114,16 @@ export function CashPage() {
       {register && (
         <div className="mt-6 space-y-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-4">
               <p className="text-xs uppercase text-slate-500">Apertura</p>
               <p className="mt-1 text-lg font-semibold text-slate-900">{formatCLP(register.opening_amount)}</p>
               <p className="text-xs text-slate-400">{formatDateTime(register.opened_at)}</p>
             </div>
-            <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-4">
               <p className="text-xs uppercase text-slate-500">Esperado ahora</p>
               <p className="mt-1 text-lg font-semibold text-slate-900">{formatCLP(expectedNow)}</p>
             </div>
-            <div className="flex items-center justify-end gap-2 rounded-lg border border-slate-200 bg-white p-4">
+            <div className="flex items-center justify-end gap-2 rounded-lg border border-slate-200 bg-white shadow-sm p-4">
               <Button variant="secondary" onClick={() => setMovementModal('manual_in')}>
                 <ArrowDownCircle size={16} />
                 Ingreso
@@ -138,7 +138,7 @@ export function CashPage() {
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+          <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>

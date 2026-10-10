@@ -135,7 +135,7 @@ export function NewTransferPage() {
         afecta el precio de venta ni el costo del producto. Puedes editarlo o dejarlo en 0.
       </p>
 
-      <div className="mt-2 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="mt-2 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>

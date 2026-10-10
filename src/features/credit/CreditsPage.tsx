@@ -147,7 +147,7 @@ export function CreditsPage() {
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
-        <div className="rounded-lg border border-slate-200 bg-white p-3">
+        <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-3">
           <p className="text-xs uppercase text-slate-400">Al día</p>
           <p className="mt-1 text-base font-semibold text-slate-900">{formatCLP(aging.current)}</p>
         </div>
@@ -169,7 +169,7 @@ export function CreditsPage() {
         </div>
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>

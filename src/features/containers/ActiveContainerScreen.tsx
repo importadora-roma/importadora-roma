@@ -304,7 +304,7 @@ export function ActiveContainerScreen() {
         <div className="mt-6 space-y-4">
           <UsbScannerInput active onScan={handleUsbScan} />
 
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
+          <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-4">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-slate-700">{t('activeScreen.scanTitle')}</p>
               <div className="flex gap-2">

@@ -239,7 +239,7 @@ export function NewSalePage() {
             </button>
           </div>
 
-          <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+          <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
@@ -329,7 +329,7 @@ export function NewSalePage() {
           </div>
         </div>
 
-        <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+        <div className="space-y-4 rounded-lg border border-slate-200 bg-white shadow-sm p-4">
           <CustomerSelect customerId={customerId} onChange={setCustomerId} />
 
           {canSeeCost && (

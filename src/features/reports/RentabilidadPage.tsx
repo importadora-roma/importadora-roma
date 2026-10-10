@@ -152,19 +152,19 @@ export function RentabilidadPage() {
       {backfillError && <p className="mt-2 text-sm text-red-600">{backfillError}</p>}
 
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-4">
           <p className="text-xs uppercase text-slate-500">Ingresos</p>
           <p className="mt-1 text-xl font-semibold text-slate-900">{loadingMargin ? '—' : formatCLP(revenue)}</p>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-4">
           <p className="text-xs uppercase text-slate-500">Costo (COGS)</p>
           <p className="mt-1 text-xl font-semibold text-slate-900">{loadingMargin ? '—' : formatCLP(cogs)}</p>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-4">
           <p className="text-xs uppercase text-slate-500">Margen bruto</p>
           <p className="mt-1 text-xl font-semibold text-slate-900">{loadingMargin ? '—' : formatCLP(grossMargin)}</p>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-4">
           <p className="text-xs uppercase text-slate-500">Gastos</p>
           <p className="mt-1 text-xl font-semibold text-slate-900">{loadingExpenses ? '—' : formatCLP(totalExpenses)}</p>
         </div>
@@ -193,7 +193,7 @@ export function RentabilidadPage() {
 
         {addedMessage && <p className="mt-2 text-sm text-amber-600">{addedMessage}</p>}
 
-        <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
@@ -240,7 +240,7 @@ export function RentabilidadPage() {
         <p className="text-sm font-medium text-slate-700">Rentabilidad por producto</p>
         <p className="mt-1 text-xs text-slate-400">Ordenado por ingresos. El costo usa el costo registrado en cada producto al momento de la venta.</p>
 
-        <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
@@ -289,7 +289,7 @@ export function RentabilidadPage() {
           Calculada sobre ingresos (no margen), usando el % de comisión de cada usuario en Configuración &gt; Usuarios.
         </p>
 
-        <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
