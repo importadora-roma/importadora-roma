@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Trash2 } from 'lucide-react'
+import { Badge, type BadgeTone } from '@/components/ui/Badge'
+import { Card } from '@/components/ui/Card'
 import { ReasonModal } from '@/components/ui/ReasonModal'
 import { useAuthStore } from '@/stores/authStore'
 import { supabase } from '@/lib/supabase'
@@ -18,13 +20,6 @@ const statusKey: Record<ContainerStatus, string> = {
   completed: 'status.completed',
 }
 
-const statusClass: Record<ContainerStatus, string> = {
-  draft: 'bg-slate-100 text-slate-600',
-  importing: 'bg-slate-100 text-slate-600',
-  counting: 'bg-amber-100 text-amber-700',
-  completed: 'bg-green-100 text-green-700',
-}
-
 type DisplayStatus = ContainerStatus | 'pending_approval' | 'in_stock'
 
 const displayKey: Record<DisplayStatus, string> = {
@@ -33,10 +28,13 @@ const displayKey: Record<DisplayStatus, string> = {
   in_stock: 'status.inStock',
 }
 
-const displayClass: Record<DisplayStatus, string> = {
-  ...statusClass,
-  pending_approval: 'bg-violet-100 text-violet-700',
-  in_stock: 'bg-green-100 text-green-700',
+const displayTone: Record<DisplayStatus, BadgeTone> = {
+  draft: 'neutral',
+  importing: 'neutral',
+  counting: 'warning',
+  completed: 'success',
+  pending_approval: 'gold',
+  in_stock: 'success',
 }
 
 // A completed container is only "en stock" once its scanned fardos were
@@ -118,7 +116,7 @@ export function ContainerHistoryPage() {
       {loading ? (
         <p className="mt-6 text-sm text-slate-400">{t('containerHistory.loading')}</p>
       ) : (
-        <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+        <Card className="mt-6 overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
@@ -161,7 +159,7 @@ export function ContainerHistoryPage() {
                     <td className="px-4 py-3">
                       {(() => {
                         const ds = displayStatus(c.status, s)
-                        return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${displayClass[ds]}`}>{t(displayKey[ds])}</span>
+                        return <Badge tone={displayTone[ds]}>{t(displayKey[ds])}</Badge>
                       })()}
                     </td>
                     {canManage && (
@@ -183,7 +181,7 @@ export function ContainerHistoryPage() {
               )}
             </tbody>
           </table>
-        </div>
+        </Card>
       )}
 
       <ReasonModal

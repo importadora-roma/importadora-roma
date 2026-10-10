@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { Badge, type BadgeTone } from '@/components/ui/Badge'
+import { Card } from '@/components/ui/Card'
 import { useTranslation } from '@/i18n/I18nProvider'
 import type { ItemProgressStatus, ItemWithProgress } from './types'
 
@@ -11,11 +13,11 @@ const statusKey: Record<ItemProgressStatus, string> = {
   over: 'itemStatus.over',
 }
 
-const statusClass: Record<ItemProgressStatus, string> = {
-  empty: 'bg-slate-100 text-slate-600',
-  partial: 'bg-amber-100 text-amber-700',
-  complete: 'bg-green-100 text-green-700',
-  over: 'bg-red-100 text-red-700',
+const statusTone: Record<ItemProgressStatus, BadgeTone> = {
+  empty: 'neutral',
+  partial: 'warning',
+  complete: 'success',
+  over: 'danger',
 }
 
 const filterKey: Record<Filter, string> = {
@@ -55,8 +57,8 @@ export function ItemComparisonTable({ items }: { items: ItemWithProgress[] }) {
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`rounded-full px-3 py-1 text-xs font-medium ${
-              filter === f ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              filter === f ? 'bg-brand-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
             {t(filterKey[f])}
@@ -84,7 +86,7 @@ export function ItemComparisonTable({ items }: { items: ItemWithProgress[] }) {
         />
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+      <Card className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>
@@ -109,9 +111,7 @@ export function ItemComparisonTable({ items }: { items: ItemWithProgress[] }) {
                 <td className="px-3 py-2 text-right">{item.scannedQty}</td>
                 <td className="px-3 py-2 text-right">{item.remaining}</td>
                 <td className="px-3 py-2">
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusClass[item.itemStatus]}`}>
-                    {t(statusKey[item.itemStatus])}
-                  </span>
+                  <Badge tone={statusTone[item.itemStatus]}>{t(statusKey[item.itemStatus])}</Badge>
                 </td>
               </tr>
             ))}
@@ -124,7 +124,7 @@ export function ItemComparisonTable({ items }: { items: ItemWithProgress[] }) {
             )}
           </tbody>
         </table>
-      </div>
+      </Card>
     </div>
   )
 }

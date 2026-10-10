@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Badge } from '@/components/ui/Badge'
+import { Card } from '@/components/ui/Card'
 import { supabase } from '@/lib/supabase'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useTranslation } from '@/i18n/I18nProvider'
@@ -34,7 +36,7 @@ export function UnknownCodesPage() {
       ) : items.length === 0 ? (
         <p className="mt-6 text-sm text-slate-400">{t('unknownPage.empty')}</p>
       ) : (
-        <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+        <Card className="mt-6 overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
@@ -56,9 +58,9 @@ export function UnknownCodesPage() {
                   </td>
                   <td className="px-4 py-3 text-right">{row.scan_count}</td>
                   <td className="px-4 py-3">
-                    <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">
+                    <Badge tone="warning">
                       {row.status === 'pending' ? t('unknownPage.status.pending') : t('unknownPage.status.reviewLater')}
-                    </span>
+                    </Badge>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button onClick={() => openResolve(row)} className="text-sm font-medium text-slate-700 hover:underline">
@@ -69,7 +71,7 @@ export function UnknownCodesPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </Card>
       )}
 
       <UnknownCodeResolveDialog

@@ -21,7 +21,7 @@ export function UpdatesBell() {
       >
         <Megaphone size={19} />
         {unseenCount > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-violet-600 px-1 text-[10px] font-semibold leading-none text-white">
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-gold-500 px-1 text-[10px] font-semibold leading-none text-white">
             {unseenCount > 99 ? '99+' : unseenCount}
           </span>
         )}
