@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { ClipboardCopy, Eye } from 'lucide-react'
+import { Badge, type BadgeTone } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { ReasonModal } from '@/components/ui/ReasonModal'
@@ -20,10 +22,10 @@ const statusLabels: Record<InvoiceQueueRow['status'], string> = {
   cancelled: 'CANCELADA',
 }
 
-const statusClass: Record<InvoiceQueueRow['status'], string> = {
-  pending: 'bg-amber-100 text-amber-700',
-  issued: 'bg-green-100 text-green-700',
-  cancelled: 'bg-slate-100 text-slate-500',
+const statusTone: Record<InvoiceQueueRow['status'], BadgeTone> = {
+  pending: 'warning',
+  issued: 'success',
+  cancelled: 'neutral',
 }
 
 interface InvoiceLine {
@@ -96,8 +98,8 @@ export function InvoicesPage() {
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`rounded-full px-3 py-1 text-xs font-medium ${
-              filter === f ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              filter === f ? 'bg-brand-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
             {f === 'pending' ? 'Pendientes' : f === 'issued' ? 'Emitidas' : f === 'cancelled' ? 'Canceladas' : 'Todas'}
@@ -108,7 +110,7 @@ export function InvoicesPage() {
       {loading ? (
         <p className="mt-6 text-sm text-slate-400">Cargando...</p>
       ) : (
-        <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+        <Card className="mt-6 overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
@@ -136,7 +138,7 @@ export function InvoicesPage() {
                   <td className="px-4 py-3 text-right">{formatCLP(inv.iva_total)}</td>
                   <td className="px-4 py-3 text-right font-medium text-slate-900">{formatCLP(inv.gross_total)}</td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusClass[inv.status]}`}>{statusLabels[inv.status]}</span>
+                    <Badge tone={statusTone[inv.status]}>{statusLabels[inv.status]}</Badge>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button onClick={() => openDetail(inv)} className="text-slate-400 hover:text-slate-700">
@@ -154,7 +156,7 @@ export function InvoicesPage() {
               )}
             </tbody>
           </table>
-        </div>
+        </Card>
       )}
 
       <Modal open={!!detail} onClose={() => setDetail(null)} title={`Factura ${detail?.internal_number ?? ''}`}>

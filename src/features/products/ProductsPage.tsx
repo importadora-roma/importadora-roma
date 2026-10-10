@@ -1,6 +1,8 @@
 import { Fragment, useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight, Plus, Pencil, Trash2 } from 'lucide-react'
+import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { ReasonModal } from '@/components/ui/ReasonModal'
@@ -256,7 +258,7 @@ export function ProductsPage() {
         />
       </div>
 
-      <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+      <Card className="mt-4 overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>
@@ -298,13 +300,7 @@ export function ProductsPage() {
                     <td className="px-4 py-3 text-slate-600">{product.category || '—'}</td>
                     <td className="px-4 py-3 text-slate-600">{productVariants.length}</td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`rounded-full px-2 py-1 text-xs font-medium ${
-                          product.active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
-                        }`}
-                      >
-                        {product.active ? 'Activo' : 'Inactivo'}
-                      </span>
+                      <Badge tone={product.active ? 'success' : 'neutral'}>{product.active ? 'Activo' : 'Inactivo'}</Badge>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-3">
@@ -359,13 +355,7 @@ export function ProductsPage() {
                                 <td className="py-2 pr-4">{formatCLP(variant.cost)}</td>
                                 <td className="py-2 pr-4">{formatCLP(variant.price)}</td>
                                 <td className="py-2 pr-4">
-                                  <span
-                                    className={`rounded-full px-2 py-1 text-xs font-medium ${
-                                      variant.active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
-                                    }`}
-                                  >
-                                    {variant.active ? 'Activa' : 'Inactiva'}
-                                  </span>
+                                  <Badge tone={variant.active ? 'success' : 'neutral'}>{variant.active ? 'Activa' : 'Inactiva'}</Badge>
                                 </td>
                                 <td className="py-2">
                                   <div className="flex justify-end gap-3">
@@ -392,7 +382,7 @@ export function ProductsPage() {
             })}
           </tbody>
         </table>
-      </div>
+      </Card>
 
       <Modal open={productModalOpen} onClose={() => setProductModalOpen(false)} title={editingProduct ? 'Editar producto' : 'Nuevo producto'}>
         <div className="space-y-4">

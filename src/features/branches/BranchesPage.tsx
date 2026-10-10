@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { Input, Select } from '@/components/ui/Input'
 import { ReasonModal } from '@/components/ui/ReasonModal'
@@ -81,7 +83,7 @@ export function BranchesPage() {
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
-      <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+      <Card className="mt-6 overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>
@@ -112,21 +114,15 @@ export function BranchesPage() {
               <tr key={branch.id}>
                 <td className="px-4 py-3 font-medium text-slate-900">{branch.name}</td>
                 <td className="px-4 py-3">
-                  <span
-                    className={`rounded-full px-2 py-1 text-xs font-medium ${
-                      branch.branch_type === 'importadora' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
-                    }`}
-                  >
-                    {typeLabels[branch.branch_type]}
-                  </span>
+                  <Badge tone={branch.branch_type === 'importadora' ? 'brand' : 'gold'}>{typeLabels[branch.branch_type]}</Badge>
                 </td>
                 <td className="px-4 py-3 text-slate-600">{branch.address || '—'}</td>
                 <td className="px-4 py-3 text-slate-600">{branch.phone || '—'}</td>
                 <td className="px-4 py-3">
                   <button
                     onClick={() => toggleActive(branch)}
-                    className={`rounded-full px-2 py-1 text-xs font-medium ${
-                      branch.active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                      branch.active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-700'
                     }`}
                   >
                     {branch.active ? 'Activa' : 'Inactiva'}
@@ -146,7 +142,7 @@ export function BranchesPage() {
             ))}
           </tbody>
         </table>
-      </div>
+      </Card>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Editar sucursal' : 'Nueva sucursal'}>
         <div className="space-y-4">

@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Eye, Printer } from 'lucide-react'
+import { Badge, type BadgeTone } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { formatCLP, formatDateTime, formatVariantSpec } from '@/lib/format'
 import { useBranches } from '@/features/branches/useBranches'
@@ -9,10 +11,10 @@ import { useTransfers, type Transfer, type TransferItem } from './useTransfers'
 import { generateTransferPdf } from './transferPdf'
 
 const statusLabels: Record<string, string> = { en_transito: 'En tránsito', recibido: 'Recibido', cancelado: 'Cancelado' }
-const statusColors: Record<string, string> = {
-  en_transito: 'bg-amber-100 text-amber-700',
-  recibido: 'bg-green-100 text-green-700',
-  cancelado: 'bg-slate-100 text-slate-500',
+const statusTone: Record<string, BadgeTone> = {
+  en_transito: 'warning',
+  recibido: 'success',
+  cancelado: 'neutral',
 }
 
 export function TransferHistoryPage() {
@@ -60,7 +62,7 @@ export function TransferHistoryPage() {
     <div>
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+      <Card className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>
@@ -94,7 +96,7 @@ export function TransferHistoryPage() {
                 <td className="px-4 py-3 text-slate-600">{branchNameById.get(t.origin_branch_id) ?? '—'}</td>
                 <td className="px-4 py-3 text-slate-600">{branchNameById.get(t.destination_branch_id) ?? '—'}</td>
                 <td className="px-4 py-3">
-                  <span className={`rounded-full px-2 py-1 text-xs font-medium ${statusColors[t.status]}`}>{statusLabels[t.status]}</span>
+                  <Badge tone={statusTone[t.status] ?? 'neutral'}>{statusLabels[t.status]}</Badge>
                 </td>
                 <td className="px-4 py-3 text-right">
                   <button onClick={() => openDetail(t)} className="text-slate-400 hover:text-slate-700">
@@ -105,7 +107,7 @@ export function TransferHistoryPage() {
             ))}
           </tbody>
         </table>
-      </div>
+      </Card>
 
       <Modal open={!!detail} onClose={() => setDetail(null)} title={`Traslado ${detail?.transfer_number ?? ''}`}>
         <div className="space-y-4">

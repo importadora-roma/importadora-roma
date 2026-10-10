@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Eye, Mail, MessageCircle, Printer } from 'lucide-react'
+import { Badge, type BadgeTone } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { Select } from '@/components/ui/Input'
 import { formatCLP, formatDate, formatDateTime, formatVariantSpec } from '@/lib/format'
@@ -14,11 +16,11 @@ import { PaymentSplit, type PaymentLine } from '@/features/sales/PaymentSplit'
 import { generateQuotationPdf } from './quotationPdf'
 
 const statusLabels: Record<string, string> = { pending: 'Pendiente', converted: 'Convertida', expired: 'Expirada', cancelled: 'Cancelada' }
-const statusColors: Record<string, string> = {
-  pending: 'bg-amber-100 text-amber-700',
-  converted: 'bg-green-100 text-green-700',
-  expired: 'bg-slate-100 text-slate-500',
-  cancelled: 'bg-red-100 text-red-700',
+const statusTone: Record<string, BadgeTone> = {
+  pending: 'warning',
+  converted: 'success',
+  expired: 'neutral',
+  cancelled: 'danger',
 }
 
 export function QuotationsHistoryPage() {
@@ -124,7 +126,7 @@ export function QuotationsHistoryPage() {
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+      <Card className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>
@@ -158,7 +160,7 @@ export function QuotationsHistoryPage() {
                 <td className="px-4 py-3 text-slate-600">{q.customer_id ? customerNameById.get(q.customer_id) ?? '—' : '—'}</td>
                 <td className="px-4 py-3 font-medium text-slate-900">{formatCLP(q.total)}</td>
                 <td className="px-4 py-3">
-                  <span className={`rounded-full px-2 py-1 text-xs font-medium ${statusColors[q.status]}`}>{statusLabels[q.status]}</span>
+                  <Badge tone={statusTone[q.status] ?? 'neutral'}>{statusLabels[q.status]}</Badge>
                 </td>
                 <td className="px-4 py-3 text-right">
                   <button onClick={() => openDetail(q)} className="text-slate-400 hover:text-slate-700">
@@ -169,7 +171,7 @@ export function QuotationsHistoryPage() {
             ))}
           </tbody>
         </table>
-      </div>
+      </Card>
 
       <Modal open={!!detail} onClose={() => setDetail(null)} title={`Cotización ${detail?.quotation_number ?? ''}`}>
         <div className="space-y-4">
