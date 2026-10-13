@@ -69,7 +69,9 @@ function LoadStockModal({
     setLines((prev) => {
       const existing = prev.find((l) => l.variantId === entry.variantId)
       if (existing) return prev.map((l) => (l.variantId === entry.variantId ? { ...l, quantity: l.quantity + 1 } : l))
-      return [...prev, { variantId: entry.variantId, productName: entry.productName, calidad: entry.calidad, kilo: entry.kilo, quantity: 1, unitPrice: String(entry.price) }]
+      // Transfers value stock at cost, same convention NewTransferPage uses —
+      // sale price doesn't belong on an internal stock-movement document.
+      return [...prev, { variantId: entry.variantId, productName: entry.productName, calidad: entry.calidad, kilo: entry.kilo, quantity: 1, unitPrice: String(entry.cost) }]
     })
   }
 

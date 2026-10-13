@@ -13,15 +13,21 @@ export function useEffectiveBranch() {
   const setStored = useActiveBranchStore((s) => s.setBranchId)
 
   const isAdmin = profile?.role === 'admin'
+  // The Furgón branch is managed entirely through its own tab (loading,
+  // selling, etc. all go through dedicated flows there) — it was never
+  // meant to be picked as "the branch I'm operating in" for Ventas/Caja/
+  // Créditos/etc., so it's excluded from the switcher and from the
+  // auto-pick-a-default-branch fallback below.
+  const selectableBranches = branches.filter((b) => !b.is_furgon)
 
   useEffect(() => {
-    if (!isAdmin || loading || branches.length === 0) return
-    const stillValid = branches.some((b) => b.id === stored)
-    if (!stillValid) setStored(branches[0].id)
-  }, [isAdmin, loading, branches, stored, setStored])
+    if (!isAdmin || loading || selectableBranches.length === 0) return
+    const stillValid = selectableBranches.some((b) => b.id === stored)
+    if (!stillValid) setStored(selectableBranches[0].id)
+  }, [isAdmin, loading, selectableBranches, stored, setStored])
 
   const branchId = isAdmin ? stored : profile?.branch_id ?? ''
   const branch = branches.find((b) => b.id === branchId) ?? null
 
-  return { branchId, branch, setBranchId: setStored, isAdmin, branches, loading }
+  return { branchId, branch, setBranchId: setStored, isAdmin, branches: selectableBranches, loading }
 }
