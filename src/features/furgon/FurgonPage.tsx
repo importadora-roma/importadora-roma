@@ -1,16 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ShoppingCart, ArrowLeftRight, Wallet, Users, MapPin, Trash2 } from 'lucide-react'
+import { MapPin, PackagePlus, PackageMinus, FileDown, Trash2 } from 'lucide-react'
+import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { Select } from '@/components/ui/Input'
+import { Card } from '@/components/ui/Card'
+import { Input, Select } from '@/components/ui/Input'
+import { Modal } from '@/components/ui/Modal'
 import { addDaysCL, formatCLP, formatKilo, formatTimeCL, todayCL } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
-import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
+import { useBranches } from '@/features/branches/useBranches'
 import { useProducts } from '@/features/products/useProducts'
 import { useInventory } from '@/features/inventory/useInventory'
-import { useUsers } from '@/features/users/useUsers'
 import { useSaleCatalog, type CatalogEntry } from '@/features/sales/useSaleCatalog'
 import { ProductSearch } from '@/features/sales/ProductSearch'
+import { useTransfers, type Transfer, type TransferItem } from '@/features/transfers/useTransfers'
+import { generateTransferPdf } from '@/features/transfers/transferPdf'
 import { useTerrenoSales } from './useTerrenoSales'
 import type { SalePaymentMethod } from '@/types/database'
 
@@ -19,6 +23,332 @@ const paymentLabels: Record<SalePaymentMethod, string> = {
   tarjeta: 'Tarjeta',
   transferencia: 'Transferencia',
   credito: 'Crédito',
+}
+
+const DRIVER_NAME_KEY = 'furgon_driver_name'
+
+interface MoveLine {
+  variantId: string
+  productName: string
+  calidad: string
+  kilo: number
+  quantity: number
+  unitPrice: string
+}
+
+// Loading the van: moves stock OUT of a real branch and INTO the Furgón
+// branch via furgon_load_stock, a one-step transfer that's also recorded
+// in Transferencias like any other (auditable, and the existing "Guía de
+// traslado" PDF works for it unmodified — just relabeled here).
+function LoadStockModal({
+  open,
+  onClose,
+  branches,
+  onDone,
+}: {
+  open: boolean
+  onClose: () => void
+  branches: { id: string; name: string; address: string | null }[]
+  onDone: () => void
+}) {
+  const [originBranchId, setOriginBranchId] = useState(branches[0]?.id ?? '')
+  const { catalog } = useSaleCatalog(originBranchId)
+  const [lines, setLines] = useState<MoveLine[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      setOriginBranchId(branches[0]?.id ?? '')
+      setLines([])
+      setError(null)
+    }
+  }, [open, branches])
+
+  function addLine(entry: CatalogEntry) {
+    setLines((prev) => {
+      const existing = prev.find((l) => l.variantId === entry.variantId)
+      if (existing) return prev.map((l) => (l.variantId === entry.variantId ? { ...l, quantity: l.quantity + 1 } : l))
+      return [...prev, { variantId: entry.variantId, productName: entry.productName, calidad: entry.calidad, kilo: entry.kilo, quantity: 1, unitPrice: String(entry.price) }]
+    })
+  }
+
+  function updateLine(variantId: string, patch: Partial<MoveLine>) {
+    setLines((prev) => prev.map((l) => (l.variantId === variantId ? { ...l, ...patch } : l)))
+  }
+
+  function removeLine(variantId: string) {
+    setLines((prev) => prev.filter((l) => l.variantId !== variantId))
+  }
+
+  async function handleSubmit() {
+    setError(null)
+    if (!originBranchId) {
+      setError('Selecciona la sucursal de origen')
+      return
+    }
+    if (lines.length === 0) {
+      setError('Agrega al menos un producto')
+      return
+    }
+    setSaving(true)
+    const { data, error: rpcError } = await supabase.rpc('furgon_load_stock', {
+      p_origin_branch_id: originBranchId,
+      p_items: lines.map((l) => ({ variant_id: l.variantId, quantity: l.quantity, unit_price: Number(l.unitPrice) || null })),
+      p_notes: null,
+    })
+    if (rpcError) {
+      setSaving(false)
+      setError(rpcError.message)
+      return
+    }
+
+    const transferId = data as string
+    const origin = branches.find((b) => b.id === originBranchId)
+    const { data: transferRow } = await supabase.from('transfers').select('*').eq('id', transferId).single()
+    const { data: itemRows } = await supabase.from('transfer_items').select('*').eq('transfer_id', transferId)
+    setSaving(false)
+
+    if (transferRow && origin) {
+      // variantLabel is built from the lines just submitted — cheap, no refetch needed.
+      const labelByVariant = new Map(lines.map((l) => [l.variantId, `${l.productName} — ${l.calidad}${l.kilo ? ` ${formatKilo(l.kilo)}` : ''}`]))
+      await generateTransferPdf(transferRow as unknown as Transfer, (itemRows ?? []) as unknown as TransferItem[], {
+        originName: origin.name,
+        originAddress: origin.address,
+        destinationName: 'Furgón',
+        variantLabel: (variantId) => labelByVariant.get(variantId) ?? '—',
+        title: 'Guía de despacho',
+      })
+    }
+
+    onDone()
+    onClose()
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Cargar stock al furgón">
+      <div className="space-y-4">
+        <div>
+          <label className="block text-xs font-medium text-slate-600">Sucursal de origen</label>
+          <Select value={originBranchId} onChange={(e) => setOriginBranchId(e.target.value)} className="mt-1">
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+
+        <ProductSearch catalog={catalog} onSelect={addLine} branchId={originBranchId} />
+
+        {lines.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="text-xs uppercase text-slate-400">
+                <tr>
+                  <th className="py-1 pr-2">Producto</th>
+                  <th className="py-1 pr-2">Cant.</th>
+                  <th className="py-1 pr-2">Precio</th>
+                  <th className="py-1" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {lines.map((l) => (
+                  <tr key={l.variantId}>
+                    <td className="py-1.5 pr-2">
+                      <span className="font-medium text-slate-900">{l.productName}</span>
+                      <span className="text-slate-500"> — {l.calidad} {formatKilo(l.kilo)}</span>
+                    </td>
+                    <td className="py-1.5 pr-2">
+                      <input
+                        type="number"
+                        min={1}
+                        value={l.quantity}
+                        onChange={(e) => updateLine(l.variantId, { quantity: Math.max(1, Number(e.target.value)) })}
+                        className="w-16 rounded-md border border-slate-300 px-2 py-1 text-sm"
+                      />
+                    </td>
+                    <td className="py-1.5 pr-2">
+                      <input
+                        type="number"
+                        value={l.unitPrice}
+                        onChange={(e) => updateLine(l.variantId, { unitPrice: e.target.value })}
+                        className="w-24 rounded-md border border-slate-300 px-2 py-1 text-sm"
+                      />
+                    </td>
+                    <td className="py-1.5">
+                      <button onClick={() => removeLine(l.variantId)} className="text-slate-400 hover:text-red-600">
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {error && <p className="text-sm text-red-600">{error}</p>}
+
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSubmit} disabled={saving || lines.length === 0}>
+            {saving ? 'Cargando...' : 'Cargar y generar guía'}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
+// Unloading the van: the reverse — fardos the vendedor didn't sell going
+// back into a real branch's stock. Capped to what's actually on the van.
+function UnloadStockModal({
+  open,
+  onClose,
+  branches,
+  furgonBranchId,
+  onDone,
+}: {
+  open: boolean
+  onClose: () => void
+  branches: { id: string; name: string; address: string | null }[]
+  furgonBranchId: string
+  onDone: () => void
+}) {
+  const [destinationBranchId, setDestinationBranchId] = useState(branches[0]?.id ?? '')
+  const { catalog } = useSaleCatalog(furgonBranchId)
+  const [lines, setLines] = useState<MoveLine[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      setDestinationBranchId(branches[0]?.id ?? '')
+      setLines([])
+      setError(null)
+    }
+  }, [open, branches])
+
+  function addLine(entry: CatalogEntry) {
+    if (entry.stock <= 0) return
+    setLines((prev) => {
+      const existing = prev.find((l) => l.variantId === entry.variantId)
+      if (existing) {
+        if (existing.quantity >= entry.stock) return prev
+        return prev.map((l) => (l.variantId === entry.variantId ? { ...l, quantity: l.quantity + 1 } : l))
+      }
+      return [...prev, { variantId: entry.variantId, productName: entry.productName, calidad: entry.calidad, kilo: entry.kilo, quantity: 1, unitPrice: String(entry.price) }]
+    })
+  }
+
+  function updateLineQty(variantId: string, quantity: number, max: number) {
+    setLines((prev) => prev.map((l) => (l.variantId === variantId ? { ...l, quantity: Math.min(Math.max(1, quantity), max) } : l)))
+  }
+
+  function removeLine(variantId: string) {
+    setLines((prev) => prev.filter((l) => l.variantId !== variantId))
+  }
+
+  async function handleSubmit() {
+    setError(null)
+    if (!destinationBranchId) {
+      setError('Selecciona la sucursal de destino')
+      return
+    }
+    if (lines.length === 0) {
+      setError('Agrega al menos un producto')
+      return
+    }
+    setSaving(true)
+    const { error: rpcError } = await supabase.rpc('furgon_unload_stock', {
+      p_destination_branch_id: destinationBranchId,
+      p_items: lines.map((l) => ({ variant_id: l.variantId, quantity: l.quantity })),
+      p_notes: null,
+    })
+    setSaving(false)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    onDone()
+    onClose()
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Descargar stock del furgón">
+      <div className="space-y-4">
+        <div>
+          <label className="block text-xs font-medium text-slate-600">Sucursal de destino</label>
+          <Select value={destinationBranchId} onChange={(e) => setDestinationBranchId(e.target.value)} className="mt-1">
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+
+        <ProductSearch catalog={catalog} onSelect={addLine} branchId={furgonBranchId} />
+
+        {lines.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="text-xs uppercase text-slate-400">
+                <tr>
+                  <th className="py-1 pr-2">Producto</th>
+                  <th className="py-1 pr-2">Cant.</th>
+                  <th className="py-1" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {lines.map((l) => {
+                  const max = catalog.find((c) => c.variantId === l.variantId)?.stock ?? l.quantity
+                  return (
+                    <tr key={l.variantId}>
+                      <td className="py-1.5 pr-2">
+                        <span className="font-medium text-slate-900">{l.productName}</span>
+                        <span className="text-slate-500"> — {l.calidad} {formatKilo(l.kilo)}</span>
+                      </td>
+                      <td className="py-1.5 pr-2">
+                        <input
+                          type="number"
+                          min={1}
+                          max={max}
+                          value={l.quantity}
+                          onChange={(e) => updateLineQty(l.variantId, Number(e.target.value), max)}
+                          className="w-16 rounded-md border border-slate-300 px-2 py-1 text-sm"
+                        />
+                        <span className="ml-1 text-xs text-slate-400">/ {max}</span>
+                      </td>
+                      <td className="py-1.5">
+                        <button onClick={() => removeLine(l.variantId)} className="text-slate-400 hover:text-red-600">
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {error && <p className="text-sm text-red-600">{error}</p>}
+
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSubmit} disabled={saving || lines.length === 0}>
+            {saving ? 'Descargando...' : 'Descargar del furgón'}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  )
 }
 
 interface QuickSaleLine {
@@ -36,57 +366,108 @@ interface TodayItemSummary {
   quantity: number
 }
 
-// A focused dashboard for route/field sales ("Furgón"): load what a rep took
-// out, enter what they sold when they report back, and see stock, today's
-// tally and commission owed. Sales here (and anything checked "Vendido en
-// terreno" from the regular Ventas screen) are tracked by that flag, not by
-// branch — a sale still depletes and pays against whatever branch's stock/
-// till it actually used, it's just also tagged for this page's own feed, so
-// a regular in-store sale can never show up here just because the topbar
-// branch switcher happened to be left on the wrong branch.
+// The Furgón tab: a dedicated branch's worth of stock (what's physically
+// loaded on the van right now, nothing else — not a store's full catalog),
+// a simple way to load/unload it, and a quick form for entering what the
+// driver reports selling. Sales here are tagged is_terreno — same flag a
+// regular Ventas-screen "Vendido en terreno" checkbox sets — so this feed
+// and the Furgón's own branch stay in sync with the rest of the system
+// regardless of which screen a terreno sale was entered from.
 export function FurgonPage() {
   const navigate = useNavigate()
-  const { branchId, branch, setBranchId, isAdmin, branches } = useEffectiveBranch()
+  const { branches, loading: loadingBranches } = useBranches()
+  const furgonBranch = branches.find((b) => b.is_furgon) ?? null
+  const furgonBranchId = furgonBranch?.id ?? ''
+  const otherBranches = useMemo(() => branches.filter((b) => !b.is_furgon && b.active), [branches])
+
   const { products, variants, loading: loadingProducts } = useProducts()
+  const productNameById = useMemo(() => new Map(products.map((p) => [p.id, p.name])), [products])
   const { inventory, loading: loadingInventory, reload: reloadInventory } = useInventory()
-  const { users } = useUsers()
-  const { catalog } = useSaleCatalog(branchId)
-  const [showAll, setShowAll] = useState(false)
+  const { catalog } = useSaleCatalog(furgonBranchId)
+  const { loadTransferItems } = useTransfers()
 
   const from30 = addDaysCL(-30)
   const today = todayCL()
   const { sales, loading: loadingSales, reload: reloadSales } = useTerrenoSales(from30, today)
 
-  // Quick sale entry — same create_sale RPC the full Ventas screen uses
-  // (so stock, cash register and commission all stay consistent), just a
-  // shorter form: no customer, one payment method for the whole sale, and a
-  // "Vendedor" picker since the person entering this often isn't the one
-  // who actually made the sale in the field. Always tagged terreno.
+  const [driverName, setDriverName] = useState('')
+  useEffect(() => {
+    setDriverName(localStorage.getItem(DRIVER_NAME_KEY) ?? '')
+  }, [])
+  useEffect(() => {
+    try {
+      if (driverName) localStorage.setItem(DRIVER_NAME_KEY, driverName)
+    } catch {
+      // ignore — purely a convenience default, not critical state
+    }
+  }, [driverName])
+
   const [cart, setCart] = useState<QuickSaleLine[]>([])
   const [paymentMethod, setPaymentMethod] = useState<SalePaymentMethod>('efectivo')
-  const [sellerId, setSellerId] = useState('')
   const [saleError, setSaleError] = useState<string | null>(null)
   const [saleSaving, setSaleSaving] = useState(false)
   const [saleSuccess, setSaleSuccess] = useState<string | null>(null)
 
-  const sellers = useMemo(
-    () =>
-      users
-        .filter((u) => u.active && u.role !== 'admin')
-        .sort((a, b) => (b.branch_id === branchId ? 1 : 0) - (a.branch_id === branchId ? 1 : 0)),
-    [users, branchId]
-  )
+  const [loadOpen, setLoadOpen] = useState(false)
+  const [unloadOpen, setUnloadOpen] = useState(false)
 
-  // Re-pick a default seller whenever the stock branch changes, so it never
-  // leaves a stale seller from a previous branch selected.
-  useEffect(() => {
-    setSellerId('')
-  }, [branchId])
+  interface MovementRow {
+    id: string
+    transfer_number: string | null
+    kind: 'load' | 'unload'
+    otherBranchName: string
+    sent_at: string
+  }
+  const [movements, setMovements] = useState<MovementRow[]>([])
+  const [loadingMovements, setLoadingMovements] = useState(false)
+
+  async function reloadMovements() {
+    if (!furgonBranchId) return
+    setLoadingMovements(true)
+    const { data } = await supabase
+      .from('transfers')
+      .select('id, transfer_number, origin_branch_id, destination_branch_id, sent_at')
+      .or(`origin_branch_id.eq.${furgonBranchId},destination_branch_id.eq.${furgonBranchId}`)
+      .order('sent_at', { ascending: false })
+      .limit(10)
+    const branchNameById = new Map(branches.map((b) => [b.id, b.name]))
+    setMovements(
+      (data ?? []).map((t) => ({
+        id: t.id as string,
+        transfer_number: t.transfer_number as string | null,
+        kind: (t.destination_branch_id as string) === furgonBranchId ? 'load' : 'unload',
+        otherBranchName:
+          branchNameById.get((t.destination_branch_id as string) === furgonBranchId ? (t.origin_branch_id as string) : (t.destination_branch_id as string)) ?? '—',
+        sent_at: t.sent_at as string,
+      }))
+    )
+    setLoadingMovements(false)
+  }
 
   useEffect(() => {
-    if (sellerId || sellers.length === 0) return
-    setSellerId(sellers[0].id)
-  }, [sellers, sellerId])
+    reloadMovements()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [furgonBranchId])
+
+  async function reprintGuide(movementId: string) {
+    const { items, error } = await loadTransferItems(movementId)
+    if (error) return
+    const { data: transferRow } = await supabase.from('transfers').select('*').eq('id', movementId).single()
+    if (!transferRow) return
+    const t = transferRow as unknown as Transfer
+    const origin = branches.find((b) => b.id === t.origin_branch_id)
+    const destination = branches.find((b) => b.id === t.destination_branch_id)
+    const variantLabelById = new Map(
+      variants.map((v) => [v.id, `${productNameById.get(v.product_id) ?? '—'} — ${v.calidad}${v.kilo ? ` ${formatKilo(v.kilo)}` : ''}`])
+    )
+    await generateTransferPdf(t, items, {
+      originName: origin?.name ?? '—',
+      originAddress: origin?.address ?? null,
+      destinationName: destination?.name ?? '—',
+      variantLabel: (variantId) => variantLabelById.get(variantId) ?? '—',
+      title: 'Guía de despacho',
+    })
+  }
 
   function addToCart(entry: CatalogEntry) {
     setCart((prev) => {
@@ -120,20 +501,20 @@ export function FurgonPage() {
       setSaleError('Ingresa precios válidos')
       return
     }
-    if (!branchId) {
-      setSaleError('Selecciona una sucursal arriba primero')
+    if (!furgonBranchId) {
+      setSaleError('No existe la sucursal del furgón todavía')
       return
     }
     setSaleSaving(true)
     const { error } = await supabase.rpc('create_sale', {
-      p_branch_id: branchId,
+      p_branch_id: furgonBranchId,
       p_customer_id: null,
       p_items: cart.map((i) => ({ variant_id: i.variantId, quantity: i.quantity, sold_price: Number(i.price) })),
       p_payments: [{ payment_method: paymentMethod, amount: cartTotal }],
       p_notes: null,
       p_sale_date: todayCL(),
-      p_user_id: sellerId || null,
       p_is_terreno: true,
+      p_driver_name: driverName.trim() || null,
     })
     setSaleSaving(false)
     if (error) {
@@ -148,10 +529,6 @@ export function FurgonPage() {
   const todaySales = useMemo(() => sales.filter((s) => s.sale_date === today), [sales, today])
   const todaySaleIds = useMemo(() => todaySales.map((s) => s.id), [todaySales])
 
-  const productNameById = useMemo(() => new Map(products.map((p) => [p.id, p.name])), [products])
-
-  // Aggregate what's actually been sold today across every terreno sale
-  // (any branch), for the "2 Fashion Verano, 3 Ropa de Casa" running tally.
   const [todayItems, setTodayItems] = useState<TodayItemSummary[]>([])
   const [loadingTodayItems, setLoadingTodayItems] = useState(false)
 
@@ -190,102 +567,172 @@ export function FurgonPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todaySaleIds.join(','), variants])
 
-  // Commission on terreno sales specifically (any branch), not the
-  // branch-scoped commission report the Reportes screen uses.
-  const commissionRows = useMemo(() => {
-    const userById = new Map(users.map((u) => [u.id, u]))
-    const byUser = new Map<string, { salesCount: number; revenue: number }>()
-    for (const sale of sales) {
-      const entry = byUser.get(sale.user_id) ?? { salesCount: 0, revenue: 0 }
-      entry.salesCount += 1
-      entry.revenue += sale.total
-      byUser.set(sale.user_id, entry)
-    }
-    return Array.from(byUser.entries())
-      .map(([userId, agg]) => {
-        const user = userById.get(userId)
-        const commissionPct = user?.commission_pct ?? 0
-        return {
-          userId,
-          userName: user?.full_name ?? 'Usuario eliminado',
-          commissionPct,
-          salesCount: agg.salesCount,
-          revenue: agg.revenue,
-          commission: agg.revenue * (commissionPct / 100),
-        }
-      })
-      .sort((a, b) => b.revenue - a.revenue)
-  }, [sales, users])
-
   const stockRows = useMemo(() => {
+    if (!furgonBranchId) return []
     return variants
       .filter((v) => v.active)
       .map((v) => ({
         variant: v,
         productName: productNameById.get(v.product_id) ?? '—',
-        stock: inventory.find((i) => i.variant_id === v.id && i.branch_id === branchId)?.quantity ?? 0,
+        stock: inventory.find((i) => i.variant_id === v.id && i.branch_id === furgonBranchId)?.quantity ?? 0,
       }))
-      .filter((r) => showAll || r.stock > 0)
+      .filter((r) => r.stock > 0)
       .sort((a, b) => b.stock - a.stock)
-  }, [variants, inventory, branchId, productNameById, showAll])
+  }, [variants, inventory, furgonBranchId, productNameById])
 
-  const totalFardos = stockRows.reduce((s, r) => s + Math.max(r.stock, 0), 0)
+  const totalFardos = stockRows.reduce((s, r) => s + r.stock, 0)
+  const totalStockValue = stockRows.reduce((s, r) => s + r.stock * r.variant.price, 0)
   const salesTotal = sales.reduce((s, sale) => s + sale.total, 0)
-  const loading = loadingProducts || loadingInventory || loadingSales
+  const loading = loadingProducts || loadingInventory || loadingSales || loadingBranches
+
+  if (!loadingBranches && !furgonBranch) {
+    return (
+      <div>
+        <h1 className="text-2xl font-semibold text-slate-900">Furgón</h1>
+        <p className="mt-2 text-sm text-red-600">
+          No existe todavía la sucursal del furgón. Aplica la migración 0060 en Supabase y recarga esta página.
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div>
       <div className="flex items-center gap-2">
         <MapPin className="text-slate-400" size={20} />
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Furgón · Venta en terreno</h1>
-          <p className="text-sm text-slate-500">Ventas marcadas "Vendido en terreno", de cualquier sucursal.</p>
+          <h1 className="text-2xl font-semibold text-slate-900">Furgón</h1>
+          <p className="text-sm text-slate-500">Lo que está cargado en el furgón en este momento.</p>
         </div>
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <Card className="p-4">
+          <p className="text-xs uppercase text-slate-500">Fardos a bordo</p>
+          <p className="mt-1 text-lg font-semibold text-slate-900">{loading ? '—' : totalFardos}</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs uppercase text-slate-500">Valor del stock a bordo</p>
+          <p className="mt-1 text-lg font-semibold text-slate-900">{loading ? '—' : formatCLP(totalStockValue)}</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs uppercase text-slate-500">Vendido en terreno (30 días)</p>
+          <p className="mt-1 text-lg font-semibold text-slate-900">{loading ? '—' : `${sales.length} · ${formatCLP(salesTotal)}`}</p>
+        </Card>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
+        <Button variant="secondary" onClick={() => setLoadOpen(true)} disabled={!furgonBranchId}>
+          <PackagePlus size={16} />
+          Cargar stock
+        </Button>
+        <Button variant="secondary" onClick={() => setUnloadOpen(true)} disabled={!furgonBranchId || stockRows.length === 0}>
+          <PackageMinus size={16} />
+          Descargar stock
+        </Button>
         <Button variant="secondary" onClick={() => navigate('/ventas')}>
-          <ShoppingCart size={16} />
           Pantalla completa de ventas
-        </Button>
-        <Button variant="secondary" onClick={() => navigate('/transferencias')}>
-          <ArrowLeftRight size={16} />
-          Cargar stock (traslado)
-        </Button>
-        <Button variant="secondary" onClick={() => navigate('/caja')}>
-          <Wallet size={16} />
-          Caja
-        </Button>
-        <Button variant="secondary" onClick={() => navigate('/configuracion')}>
-          <Users size={16} />
-          Vendedores y comisión
         </Button>
       </div>
 
-      <div className="mt-6 rounded-lg border border-slate-200 bg-white shadow-sm p-4">
+      <Card className="mt-4 overflow-x-auto">
+        <p className="px-4 pt-3 text-sm font-medium text-slate-700">Fardos a bordo del furgón</p>
+        <table className="mt-1 w-full text-left text-sm">
+          <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+            <tr>
+              <th className="px-4 py-3">Producto</th>
+              <th className="px-4 py-3">Calidad</th>
+              <th className="px-4 py-3">Kilo</th>
+              <th className="px-4 py-3 text-right">Cantidad</th>
+              <th className="px-4 py-3 text-right">Valor</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {loading && (
+              <tr>
+                <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                  Cargando...
+                </td>
+              </tr>
+            )}
+            {!loading && stockRows.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                  El furgón no tiene fardos cargados todavía. Usa "Cargar stock" para traer fardos desde una sucursal.
+                </td>
+              </tr>
+            )}
+            {stockRows.map((r) => (
+              <tr key={r.variant.id}>
+                <td className="px-4 py-3 font-medium text-slate-900">{r.productName}</td>
+                <td className="px-4 py-3 text-slate-600">{r.variant.calidad}</td>
+                <td className="px-4 py-3 text-slate-600">{formatKilo(r.variant.kilo)}</td>
+                <td className="px-4 py-3 text-right text-slate-900">{r.stock}</td>
+                <td className="px-4 py-3 text-right text-slate-600">{formatCLP(r.stock * r.variant.price)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+
+      {movements.length > 0 && (
+        <Card className="mt-4 overflow-x-auto">
+          <p className="px-4 pt-3 text-sm font-medium text-slate-700">Movimientos recientes</p>
+          <table className="mt-1 w-full text-left text-sm">
+            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+              <tr>
+                <th className="px-4 py-3">Fecha</th>
+                <th className="px-4 py-3">Tipo</th>
+                <th className="px-4 py-3">Sucursal</th>
+                <th className="px-4 py-3" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {loadingMovements && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-4 text-center text-slate-400">
+                    Cargando...
+                  </td>
+                </tr>
+              )}
+              {!loadingMovements &&
+                movements.map((m) => (
+                  <tr key={m.id}>
+                    <td className="px-4 py-2.5 text-slate-500">{formatTimeCL(m.sent_at)}</td>
+                    <td className="px-4 py-2.5">
+                      <Badge tone={m.kind === 'load' ? 'brand' : 'gold'}>{m.kind === 'load' ? 'Carga' : 'Descarga'}</Badge>
+                    </td>
+                    <td className="px-4 py-2.5 text-slate-700">{m.otherBranchName}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      <button onClick={() => reprintGuide(m.id)} className="text-slate-400 hover:text-slate-700" title="Imprimir guía">
+                        <FileDown size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+
+      <Card className="mt-6 p-4">
         <p className="text-sm font-medium text-slate-700">Registrar lo vendido</p>
         <p className="mt-0.5 text-xs text-slate-400">
           Ej: el vendedor volvió y reportó que vendió 2 Fashion Verano y 3 Ropa de Casa — agrégalos aquí y queda contabilizado
-          (se marca automáticamente como "Vendido en terreno").
+          (se marca automáticamente como "Vendido en terreno" y descuenta del stock del furgón).
         </p>
 
-        <div className="mt-3">
-          <label className="block text-xs font-medium text-slate-600">Stock a descontar de</label>
-          {isAdmin ? (
-            <Select value={branchId} onChange={(e) => setBranchId(e.target.value)} className="mt-1 max-w-xs">
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </Select>
-          ) : (
-            <p className="mt-1 text-sm text-slate-900">{branch?.name ?? 'Sin sucursal asignada'}</p>
-          )}
+        <div className="mt-3 max-w-xs">
+          <Input
+            label="Vendedor del furgón"
+            value={driverName}
+            onChange={(e) => setDriverName(e.target.value)}
+            placeholder="Nombre de quien vende"
+          />
         </div>
 
         <div className="mt-3">
-          <ProductSearch catalog={catalog} onSelect={addToCart} branchId={branchId} />
+          <ProductSearch catalog={catalog} onSelect={addToCart} branchId={furgonBranchId} />
         </div>
 
         {cart.length > 0 && (
@@ -339,17 +786,6 @@ export function FurgonPage() {
 
         <div className="mt-3 flex flex-wrap items-end gap-3">
           <div>
-            <label className="block text-xs font-medium text-slate-600">Vendedor</label>
-            <Select value={sellerId} onChange={(e) => setSellerId(e.target.value)} className="mt-1">
-              {sellers.length === 0 && <option value="">Sin vendedores registrados</option>}
-              {sellers.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.full_name}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
             <label className="block text-xs font-medium text-slate-600">Método de pago</label>
             <Select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as SalePaymentMethod)} className="mt-1">
               {(['efectivo', 'tarjeta', 'transferencia'] as SalePaymentMethod[]).map((m) => (
@@ -369,11 +805,11 @@ export function FurgonPage() {
 
         {saleError && <p className="mt-2 text-sm text-red-600">{saleError}</p>}
         {saleSuccess && <p className="mt-2 text-sm text-emerald-600">{saleSuccess}</p>}
-      </div>
+      </Card>
 
       {(loadingTodayItems || todayItems.length > 0) && (
-        <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
-          <p className="px-4 pt-3 text-sm font-medium text-slate-700">Vendido hoy en terreno</p>
+        <Card className="mt-6 overflow-x-auto">
+          <p className="px-4 pt-3 text-sm font-medium text-slate-700">Vendido hoy</p>
           <table className="mt-1 w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
@@ -398,12 +834,12 @@ export function FurgonPage() {
                 ))}
             </tbody>
           </table>
-        </div>
+        </Card>
       )}
 
       {todaySales.length > 0 && (
-        <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
-          <p className="px-4 pt-3 text-sm font-medium text-slate-700">Ventas de hoy en terreno</p>
+        <Card className="mt-4 overflow-x-auto">
+          <p className="px-4 pt-3 text-sm font-medium text-slate-700">Ventas de hoy</p>
           <table className="mt-1 w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
@@ -425,96 +861,32 @@ export function FurgonPage() {
                 ))}
             </tbody>
           </table>
-        </div>
+        </Card>
       )}
 
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-4">
-          <p className="text-xs uppercase text-slate-500">Fardos a bordo ({branch?.name ?? '—'})</p>
-          <p className="mt-1 text-lg font-semibold text-slate-900">{loading ? '—' : totalFardos}</p>
-        </div>
-        <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-4">
-          <p className="text-xs uppercase text-slate-500">Ventas en terreno (últimos 30 días)</p>
-          <p className="mt-1 text-lg font-semibold text-slate-900">{loading ? '—' : `${sales.length} · ${formatCLP(salesTotal)}`}</p>
-        </div>
-        <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-4">
-          <p className="text-xs uppercase text-slate-500">Comisión acumulada (30 días)</p>
-          <p className="mt-1 text-lg font-semibold text-slate-900">
-            {loading ? '—' : formatCLP(commissionRows.reduce((s, r) => s + r.commission, 0))}
-          </p>
-        </div>
-      </div>
-
-      {commissionRows.length > 0 && (
-        <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-              <tr>
-                <th className="px-4 py-3">Vendedor</th>
-                <th className="px-4 py-3 text-right"># Ventas</th>
-                <th className="px-4 py-3 text-right">Ingresos</th>
-                <th className="px-4 py-3 text-right">% Comisión</th>
-                <th className="px-4 py-3 text-right">Comisión</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {commissionRows.map((r) => (
-                <tr key={r.userId}>
-                  <td className="px-4 py-3 font-medium text-slate-900">{r.userName}</td>
-                  <td className="px-4 py-3 text-right text-slate-600">{r.salesCount}</td>
-                  <td className="px-4 py-3 text-right text-slate-600">{formatCLP(r.revenue)}</td>
-                  <td className="px-4 py-3 text-right text-slate-600">{r.commissionPct}%</td>
-                  <td className="px-4 py-3 text-right font-medium text-slate-900">{formatCLP(r.commission)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {furgonBranchId && (
+        <>
+          <LoadStockModal
+            open={loadOpen}
+            onClose={() => setLoadOpen(false)}
+            branches={otherBranches}
+            onDone={() => {
+              reloadInventory()
+              reloadMovements()
+            }}
+          />
+          <UnloadStockModal
+            open={unloadOpen}
+            onClose={() => setUnloadOpen(false)}
+            branches={otherBranches}
+            furgonBranchId={furgonBranchId}
+            onDone={() => {
+              reloadInventory()
+              reloadMovements()
+            }}
+          />
+        </>
       )}
-
-      <div className="mt-6">
-        <label className="flex items-center gap-2 text-sm text-slate-600">
-          <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />
-          Mostrar también fardos sin stock
-        </label>
-      </div>
-
-      <div className="mt-2 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-            <tr>
-              <th className="px-4 py-3">Producto</th>
-              <th className="px-4 py-3">Calidad</th>
-              <th className="px-4 py-3">Kilo</th>
-              <th className="px-4 py-3 text-right">Stock</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {loading && (
-              <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
-                  Cargando...
-                </td>
-              </tr>
-            )}
-            {!loading && stockRows.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
-                  Sin fardos cargados en esta sucursal todavía. Usa "Cargar stock" para traer fardos desde un depósito.
-                </td>
-              </tr>
-            )}
-            {stockRows.map((r) => (
-              <tr key={r.variant.id}>
-                <td className="px-4 py-3 font-medium text-slate-900">{r.productName}</td>
-                <td className="px-4 py-3 text-slate-600">{r.variant.calidad}</td>
-                <td className="px-4 py-3 text-slate-600">{formatKilo(r.variant.kilo)}</td>
-                <td className={`px-4 py-3 text-right ${r.stock <= 0 ? 'text-red-600' : 'text-slate-900'}`}>{r.stock}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
     </div>
   )
 }

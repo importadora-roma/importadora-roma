@@ -18,6 +18,7 @@ export interface Branch {
   phone: string | null
   branch_type: BranchType
   active: boolean
+  is_furgon: boolean
 }
 
 export interface Product {

@@ -45,6 +45,7 @@ export interface Database {
           phone: string | null
           branch_type: BranchType
           active: boolean
+          is_furgon: boolean
           deleted_at: string | null
           deleted_by: string | null
           delete_reason: string | null
@@ -58,6 +59,7 @@ export interface Database {
           phone?: string | null
           branch_type?: BranchType
           active?: boolean
+          is_furgon?: boolean
           deleted_at?: string | null
           deleted_by?: string | null
           delete_reason?: string | null
@@ -274,6 +276,7 @@ export interface Database {
           due_date: string | null
           sale_date: string
           is_terreno: boolean
+          driver_name: string | null
           created_at: string
           updated_at: string
         }
@@ -294,6 +297,7 @@ export interface Database {
           due_date?: string | null
           sale_date?: string
           is_terreno?: boolean
+          driver_name?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -1019,6 +1023,23 @@ export interface Database {
           p_sale_date?: string | null
           p_user_id?: string | null
           p_is_terreno?: boolean
+          p_driver_name?: string | null
+        }
+        Returns: string
+      }
+      furgon_load_stock: {
+        Args: {
+          p_origin_branch_id: string
+          p_items: { variant_id: string; quantity: number; unit_price?: number | null }[]
+          p_notes?: string | null
+        }
+        Returns: string
+      }
+      furgon_unload_stock: {
+        Args: {
+          p_destination_branch_id: string
+          p_items: { variant_id: string; quantity: number }[]
+          p_notes?: string | null
         }
         Returns: string
       }

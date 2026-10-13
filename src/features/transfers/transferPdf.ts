@@ -10,11 +10,12 @@ export async function generateTransferPdf(
     originAddress: string | null
     destinationName: string
     variantLabel: (variantId: string) => string
+    title?: string
   }
 ) {
   const logoDataUrl = await getLogoDataUrl()
   const { doc, contentY } = createPdfDoc(
-    `Guía de traslado ${transfer.transfer_number ?? ''}`,
+    `${context.title ?? 'Guía de traslado'} ${transfer.transfer_number ?? ''}`,
     `${context.originName} → ${context.destinationName} · ${formatDateTime(transfer.sent_at)}`,
     { logoDataUrl, branchName: context.originName, branchAddress: context.originAddress }
   )
@@ -52,5 +53,6 @@ export async function generateTransferPdf(
   doc.line(120, signatureY, 190, signatureY)
   doc.text('Firma recibe', 120, signatureY + 5)
 
-  doc.save(`traslado-${transfer.transfer_number ?? transfer.id}.pdf`)
+  const slug = context.title ? context.title.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '-') : 'traslado'
+  doc.save(`${slug}-${transfer.transfer_number ?? transfer.id}.pdf`)
 }
