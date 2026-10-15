@@ -19,7 +19,19 @@ interface TransferCartItem {
 }
 
 export function NewTransferPage() {
-  const { branchId: effectiveOrigin, branches } = useEffectiveBranch()
+  const { branchId: effectiveOrigin, branches, isAdmin } = useEffectiveBranch()
+  // Origin used to silently follow the topbar's global branch switcher
+  // instead of being chosen on this form — if an admin had switched to
+  // checking a different branch's reports earlier and forgot to switch
+  // back, a transfer they meant to send from branch A was silently sent
+  // from whatever branch B the switcher still happened to be on: stock
+  // came out of B's inventory, not A's, and the transfer's history shows
+  // B as the origin. Admins now pick it explicitly here (defaulting to
+  // the current effective branch for convenience, but independent of
+  // it); a supervisor can still only ever send from their own branch
+  // (create_transfer enforces this server-side too), so for them it
+  // stays fixed, just shown explicitly rather than inherited silently.
+  const [originBranchId, setOriginBranchId] = useState(effectiveOrigin)
   const [destinationBranchId, setDestinationBranchId] = useState('')
   const [notes, setNotes] = useState('')
   const [items, setItems] = useState<TransferCartItem[]>([])
@@ -27,7 +39,7 @@ export function NewTransferPage() {
   const [submitting, setSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  const { catalog } = useSaleCatalog(effectiveOrigin)
+  const { catalog } = useSaleCatalog(originBranchId)
   const { createTransfer } = useTransfers()
 
   function addItem(entry: CatalogEntry) {
@@ -70,11 +82,15 @@ export function NewTransferPage() {
 
   async function handleSubmit() {
     setError(null)
+    if (!originBranchId) {
+      setError('Selecciona la sucursal de origen')
+      return
+    }
     if (!destinationBranchId) {
       setError('Selecciona la sucursal destino')
       return
     }
-    if (destinationBranchId === effectiveOrigin) {
+    if (destinationBranchId === originBranchId) {
       setError('La sucursal destino debe ser distinta a la de origen')
       return
     }
@@ -84,7 +100,7 @@ export function NewTransferPage() {
     }
     setSubmitting(true)
     const result = await createTransfer(
-      effectiveOrigin,
+      originBranchId,
       destinationBranchId,
       items.map((i) => ({ variant_id: i.variantId, quantity: i.quantity, unit_price: i.unitPrice ? Number(i.unitPrice) : null })),
       notes.trim() || null
@@ -110,15 +126,32 @@ export function NewTransferPage() {
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <p className="block text-sm font-medium text-slate-700">Sucursal origen</p>
-          <p className="mt-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-            {branches.find((b) => b.id === effectiveOrigin)?.name}
-          </p>
-        </div>
+        {isAdmin ? (
+          <Select
+            label="Sucursal origen"
+            value={originBranchId}
+            onChange={(e) => {
+              setOriginBranchId(e.target.value)
+              setItems([])
+            }}
+          >
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </Select>
+        ) : (
+          <div>
+            <p className="block text-sm font-medium text-slate-700">Sucursal origen</p>
+            <p className="mt-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+              {branches.find((b) => b.id === originBranchId)?.name}
+            </p>
+          </div>
+        )}
         <Select label="Sucursal destino" value={destinationBranchId} onChange={(e) => setDestinationBranchId(e.target.value)}>
           <option value="">Selecciona...</option>
-          {branches.filter((b) => b.id !== effectiveOrigin).map((b) => (
+          {branches.filter((b) => b.id !== originBranchId).map((b) => (
             <option key={b.id} value={b.id}>
               {b.name}
             </option>
@@ -127,7 +160,7 @@ export function NewTransferPage() {
       </div>
 
       <div className="mt-4">
-        <ProductSearch catalog={catalog} onSelect={addItem} branchId={effectiveOrigin} />
+        <ProductSearch catalog={catalog} onSelect={addItem} branchId={originBranchId} />
       </div>
 
       <p className="mt-3 text-xs text-slate-400">
