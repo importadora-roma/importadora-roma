@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
-import { Trash2, CheckCircle2 } from 'lucide-react'
+import { Trash2, CheckCircle2, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Select, Textarea } from '@/components/ui/Input'
 import { formatCLP, formatKilo } from '@/lib/format'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useSaleCatalog, type CatalogEntry } from '@/features/sales/useSaleCatalog'
 import { ProductSearch } from '@/features/sales/ProductSearch'
+import { BulkAddItemsModal } from './BulkAddItemsModal'
 import { useTransfers } from './useTransfers'
 
 interface TransferCartItem {
@@ -38,29 +39,40 @@ export function NewTransferPage() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [bulkOpen, setBulkOpen] = useState(false)
 
   const { catalog } = useSaleCatalog(originBranchId)
   const { createTransfer } = useTransfers()
 
+  function mergeLine(prev: TransferCartItem[], entry: CatalogEntry, quantity: number, unitPrice: string): TransferCartItem[] {
+    const existing = prev.find((i) => i.variantId === entry.variantId)
+    if (existing) {
+      return prev.map((i) => (i.variantId === entry.variantId ? { ...i, quantity: i.quantity + quantity } : i))
+    }
+    return [
+      ...prev,
+      {
+        variantId: entry.variantId,
+        productName: entry.productName,
+        calidad: entry.calidad,
+        kilo: entry.kilo,
+        quantity,
+        availableStock: entry.stock,
+        unitPrice,
+      },
+    ]
+  }
+
   function addItem(entry: CatalogEntry) {
-    setItems((prev) => {
-      const existing = prev.find((i) => i.variantId === entry.variantId)
-      if (existing) {
-        return prev.map((i) => (i.variantId === entry.variantId ? { ...i, quantity: i.quantity + 1 } : i))
-      }
-      return [
-        ...prev,
-        {
-          variantId: entry.variantId,
-          productName: entry.productName,
-          calidad: entry.calidad,
-          kilo: entry.kilo,
-          quantity: 1,
-          availableStock: entry.stock,
-          unitPrice: entry.cost ? String(entry.cost) : '',
-        },
-      ]
-    })
+    setItems((prev) => mergeLine(prev, entry, 1, entry.cost ? String(entry.cost) : ''))
+  }
+
+  // Hundreds of fardos going out at once shouldn't need to be searched and
+  // clicked one by one — BulkAddItemsModal matches each spreadsheet row
+  // against this same origin-branch catalog and hands back ready lines,
+  // merged into the cart the same way a manual add is.
+  function handleBulkAdd(lines: { entry: CatalogEntry; quantity: number; unitPrice: string }[]) {
+    setItems((prev) => lines.reduce((acc, l) => mergeLine(acc, l.entry, l.quantity, l.unitPrice), prev))
   }
 
   function updateQuantity(variantId: string, quantity: number) {
@@ -159,8 +171,14 @@ export function NewTransferPage() {
         </Select>
       </div>
 
-      <div className="mt-4">
-        <ProductSearch catalog={catalog} onSelect={addItem} branchId={originBranchId} />
+      <div className="mt-4 flex flex-wrap items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <ProductSearch catalog={catalog} onSelect={addItem} branchId={originBranchId} />
+        </div>
+        <Button variant="secondary" onClick={() => setBulkOpen(true)} disabled={!originBranchId}>
+          <FileSpreadsheet size={16} />
+          Agregar desde Excel
+        </Button>
       </div>
 
       <p className="mt-3 text-xs text-slate-400">
@@ -247,6 +265,8 @@ export function NewTransferPage() {
       <Button className="mt-4" onClick={handleSubmit} disabled={submitting || items.length === 0}>
         {submitting ? 'Enviando...' : 'Confirmar traslado'}
       </Button>
+
+      <BulkAddItemsModal open={bulkOpen} onClose={() => setBulkOpen(false)} catalog={catalog} onAdd={handleBulkAdd} />
     </div>
   )
 }
