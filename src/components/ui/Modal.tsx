@@ -39,7 +39,13 @@ export function Modal({
             <X size={18} />
           </button>
         </div>
-        <div className="overflow-y-auto px-5 py-4">{children}</div>
+        {/* min-h-0 overrides the flex item's default min-height:auto, which
+            otherwise refuses to let this child shrink below its content's
+            natural size — without it, overflowing content (e.g. an
+            absolutely-positioned dropdown from ProductSearch) can get
+            clipped right at the edge instead of this div actually scrolling
+            to reveal it. */}
+        <div className="min-h-0 overflow-y-auto px-5 py-4">{children}</div>
       </div>
     </div>,
     document.body

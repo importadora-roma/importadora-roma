@@ -163,7 +163,7 @@ function LoadStockModal({
           </Select>
         </div>
 
-        <ProductSearch catalog={catalog} onSelect={addLine} branchId={originBranchId} resultsMaxHeight="max-h-[28rem]" />
+        <ProductSearch catalog={catalog} onSelect={addLine} branchId={originBranchId} resultsMaxHeight="28rem" />
 
         {lines.length > 0 && (
           <div className="overflow-x-auto">
@@ -315,7 +315,7 @@ function UnloadStockModal({
           </Select>
         </div>
 
-        <ProductSearch catalog={catalog} onSelect={addLine} branchId={furgonBranchId} resultsMaxHeight="max-h-[28rem]" />
+        <ProductSearch catalog={catalog} onSelect={addLine} branchId={furgonBranchId} resultsMaxHeight="28rem" />
 
         {lines.length > 0 && (
           <div className="overflow-x-auto">

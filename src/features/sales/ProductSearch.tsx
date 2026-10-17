@@ -12,15 +12,18 @@ export function ProductSearch({
   catalog,
   onSelect,
   branchId,
-  resultsMaxHeight = 'max-h-80',
+  resultsMaxHeight = '20rem',
 }: {
   catalog: CatalogEntry[]
   onSelect: (entry: CatalogEntry) => void
   branchId: string
-  // Tailwind max-height class for the results dropdown. Default (20rem)
-  // only shows a handful of rows — fine inline on a page, but cramped
-  // inside a modal like Furgón's "Cargar stock" where picking from a long
-  // list is the whole point, so callers there pass something taller.
+  // CSS length for the results dropdown's max-height, applied as an inline
+  // style (not a Tailwind class — a class built from a prop value isn't a
+  // literal string in this file, so there's no guarantee the build's CSS
+  // scanner picks it up). Default only shows a handful of rows — fine
+  // inline on a page, but cramped inside a modal like Furgón's "Cargar
+  // stock" where picking from a long list is the whole point, so callers
+  // there pass something taller.
   resultsMaxHeight?: string
 }) {
   const [term, setTerm] = useState('')
@@ -159,7 +162,10 @@ export function ProductSearch({
       {open && (
         <>
           <button aria-label="Cerrar búsqueda" onClick={() => setOpen(false)} className="fixed inset-0 z-0 cursor-default" />
-          <div className={`absolute z-10 mt-1 ${resultsMaxHeight} w-full overflow-auto rounded-md border border-slate-200 bg-white shadow-lg`}>
+          <div
+            className="absolute z-10 mt-1 w-full overflow-auto rounded-md border border-slate-200 bg-white shadow-lg"
+            style={{ maxHeight: resultsMaxHeight }}
+          >
           {isDefaultView && (
             <p className="border-b border-slate-100 bg-slate-50 px-4 py-1.5 text-[11px] font-medium uppercase tracking-wide text-slate-400">
               Más vendidos
