@@ -186,7 +186,7 @@ function App() {
               <Route
                 path="furgon"
                 element={
-                  <RoleGate roles={['admin', 'supervisor']}>
+                  <RoleGate roles={['admin', 'supervisor', 'vendedor']}>
                     <FurgonPage />
                   </RoleGate>
                 }

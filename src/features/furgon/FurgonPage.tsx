@@ -8,22 +8,16 @@ import { Input, Select } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { addDaysCL, formatCLP, formatKilo, formatTimeCL, todayCL } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
+import { useAuthStore } from '@/stores/authStore'
 import { useBranches } from '@/features/branches/useBranches'
 import { useProducts } from '@/features/products/useProducts'
 import { useInventory } from '@/features/inventory/useInventory'
 import { useSaleCatalog, type CatalogEntry } from '@/features/sales/useSaleCatalog'
 import { ProductSearch } from '@/features/sales/ProductSearch'
+import { PaymentSplit, type PaymentLine } from '@/features/sales/PaymentSplit'
 import { useTransfers, type Transfer, type TransferItem } from '@/features/transfers/useTransfers'
 import { generateTransferPdf } from '@/features/transfers/transferPdf'
 import { useTerrenoSales } from './useTerrenoSales'
-import type { SalePaymentMethod } from '@/types/database'
-
-const paymentLabels: Record<SalePaymentMethod, string> = {
-  efectivo: 'Efectivo',
-  tarjeta: 'Tarjeta',
-  transferencia: 'Transferencia',
-  credito: 'Crédito',
-}
 
 const DRIVER_NAME_KEY = 'furgon_driver_name'
 
@@ -377,6 +371,11 @@ interface TodayItemSummary {
 // regardless of which screen a terreno sale was entered from.
 export function FurgonPage() {
   const navigate = useNavigate()
+  const profile = useAuthStore((s) => s.profile)
+  // Moving real stock between branches (load/unload) stays admin/supervisor-only,
+  // same as Transferencias/Inventario — but any vendedor can now reach this tab
+  // and register what the driver sold, same as the normal Ventas screen.
+  const canManageStock = profile?.role === 'admin' || profile?.role === 'supervisor'
   const { branches, loading: loadingBranches } = useBranches()
   const furgonBranch = branches.find((b) => b.is_furgon) ?? null
   const furgonBranchId = furgonBranch?.id ?? ''
@@ -405,7 +404,7 @@ export function FurgonPage() {
   }, [driverName])
 
   const [cart, setCart] = useState<QuickSaleLine[]>([])
-  const [paymentMethod, setPaymentMethod] = useState<SalePaymentMethod>('efectivo')
+  const [payments, setPayments] = useState<PaymentLine[]>([{ method: 'efectivo', amount: '' }])
   const [saleError, setSaleError] = useState<string | null>(null)
   const [saleSaving, setSaleSaving] = useState(false)
   const [saleSuccess, setSaleSuccess] = useState<string | null>(null)
@@ -507,12 +506,31 @@ export function FurgonPage() {
       setSaleError('No existe la sucursal del furgón todavía')
       return
     }
+
+    // Same split-payment validation as la pantalla de Ventas: each line's
+    // amount is trusted, but the lines together must add up to exactly the
+    // cart total — this is what lets efectivo + tarjeta + "lo que falta" en
+    // transferencia work without ever mis-registering the sale.
+    const paymentsPayload = payments
+      .filter((p) => Number(p.amount) > 0)
+      .map((p) => ({ payment_method: p.method, amount: Number(p.amount) }))
+
+    if (paymentsPayload.length === 0) {
+      setSaleError('Registra al menos un pago')
+      return
+    }
+    const paymentsTotal = paymentsPayload.reduce((s, p) => s + p.amount, 0)
+    if (Math.round(paymentsTotal) !== Math.round(cartTotal)) {
+      setSaleError(`El total de pagos (${formatCLP(paymentsTotal)}) no coincide con el total de la venta (${formatCLP(cartTotal)})`)
+      return
+    }
+
     setSaleSaving(true)
     const { error } = await supabase.rpc('create_sale', {
       p_branch_id: furgonBranchId,
       p_customer_id: null,
       p_items: cart.map((i) => ({ variant_id: i.variantId, quantity: i.quantity, sold_price: Number(i.price) })),
-      p_payments: [{ payment_method: paymentMethod, amount: cartTotal }],
+      p_payments: paymentsPayload,
       p_notes: null,
       p_sale_date: todayCL(),
       p_is_terreno: true,
@@ -524,6 +542,7 @@ export function FurgonPage() {
       return
     }
     setCart([])
+    setPayments([{ method: 'efectivo', amount: '' }])
     setSaleSuccess('Venta registrada.')
     await Promise.all([reloadInventory(), reloadSales()])
   }
@@ -624,14 +643,18 @@ export function FurgonPage() {
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button variant="secondary" onClick={() => setLoadOpen(true)} disabled={!furgonBranchId}>
-          <PackagePlus size={16} />
-          Cargar stock
-        </Button>
-        <Button variant="secondary" onClick={() => setUnloadOpen(true)} disabled={!furgonBranchId || stockRows.length === 0}>
-          <PackageMinus size={16} />
-          Descargar stock
-        </Button>
+        {canManageStock && (
+          <>
+            <Button variant="secondary" onClick={() => setLoadOpen(true)} disabled={!furgonBranchId}>
+              <PackagePlus size={16} />
+              Cargar stock
+            </Button>
+            <Button variant="secondary" onClick={() => setUnloadOpen(true)} disabled={!furgonBranchId || stockRows.length === 0}>
+              <PackageMinus size={16} />
+              Descargar stock
+            </Button>
+          </>
+        )}
         <Button variant="secondary" onClick={() => navigate('/ventas')}>
           Pantalla completa de ventas
         </Button>
@@ -786,20 +809,19 @@ export function FurgonPage() {
           </div>
         )}
 
-        <div className="mt-3 flex flex-wrap items-end gap-3">
-          <div>
-            <label className="block text-xs font-medium text-slate-600">Método de pago</label>
-            <Select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as SalePaymentMethod)} className="mt-1">
-              {(['efectivo', 'tarjeta', 'transferencia'] as SalePaymentMethod[]).map((m) => (
-                <option key={m} value={m}>
-                  {paymentLabels[m]}
-                </option>
-              ))}
-            </Select>
+        {cart.length > 0 && (
+          <div className="mt-3 max-w-sm">
+            <div className="flex justify-between text-sm font-semibold text-slate-900">
+              <span>Total</span>
+              <span>{formatCLP(cartTotal)}</span>
+            </div>
+            <div className="mt-2">
+              <PaymentSplit payments={payments} total={cartTotal} onChange={setPayments} />
+            </div>
           </div>
-          <div className="text-sm text-slate-600">
-            Total: <span className="font-semibold text-slate-900">{formatCLP(cartTotal)}</span>
-          </div>
+        )}
+
+        <div className="mt-3 flex flex-wrap items-center gap-3">
           <Button onClick={handleRegisterSale} disabled={saleSaving || cart.length === 0}>
             {saleSaving ? 'Registrando...' : 'Registrar venta'}
           </Button>
@@ -866,7 +888,7 @@ export function FurgonPage() {
         </Card>
       )}
 
-      {furgonBranchId && (
+      {furgonBranchId && canManageStock && (
         <>
           <LoadStockModal
             open={loadOpen}
