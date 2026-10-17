@@ -16,6 +16,8 @@ export interface Sale {
   requires_invoice: boolean
   sale_date: string
   created_at: string
+  is_terreno: boolean
+  driver_name: string | null
 }
 
 export interface SaleItem {

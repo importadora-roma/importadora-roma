@@ -415,7 +415,7 @@ export function SalesHistoryPage() {
   )
 }
 
-function ExchangeModal({
+export function ExchangeModal({
   item,
   branchId,
   onClose,
@@ -513,7 +513,7 @@ function ExchangeModal({
   )
 }
 
-function ReturnModal({
+export function ReturnModal({
   item,
   onClose,
   onConfirm,

@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MapPin, PackagePlus, PackageMinus, FileDown, Trash2 } from 'lucide-react'
+import { MapPin, PackagePlus, PackageMinus, FileDown, Trash2, Eye } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input, Select } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
+import { ReasonModal } from '@/components/ui/ReasonModal'
 import { addDaysCL, formatCLP, formatKilo, formatTimeCL, todayCL } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
@@ -15,11 +16,26 @@ import { useInventory } from '@/features/inventory/useInventory'
 import { useSaleCatalog, type CatalogEntry } from '@/features/sales/useSaleCatalog'
 import { ProductSearch } from '@/features/sales/ProductSearch'
 import { PaymentSplit, type PaymentLine } from '@/features/sales/PaymentSplit'
+import { useSales, type Sale, type SaleItem, type SalePayment } from '@/features/sales/useSales'
+import { ExchangeModal, ReturnModal } from '@/features/sales/SalesHistoryPage'
 import { useTransfers, type Transfer, type TransferItem } from '@/features/transfers/useTransfers'
 import { generateTransferPdf } from '@/features/transfers/transferPdf'
-import { useTerrenoSales } from './useTerrenoSales'
+import type { SalePaymentMethod } from '@/types/database'
 
 const DRIVER_NAME_KEY = 'furgon_driver_name'
+// sales/sale_items/sale_payments RLS and useSales both key off branch_id —
+// before furgonBranchId has loaded, fall back to an id that matches no
+// real branch so the query returns nothing instead of silently running
+// unscoped (useSales treats an empty branchId as "all branches", correct
+// for the admin-wide Historial screen but wrong here).
+const NO_BRANCH_ID = '00000000-0000-0000-0000-000000000000'
+
+const paymentLabels: Record<SalePaymentMethod, string> = {
+  efectivo: 'Efectivo',
+  tarjeta: 'Tarjeta',
+  transferencia: 'Transferencia',
+  credito: 'Crédito',
+}
 
 interface MoveLine {
   variantId: string
@@ -383,13 +399,52 @@ export function FurgonPage() {
 
   const { products, variants, loading: loadingProducts } = useProducts()
   const productNameById = useMemo(() => new Map(products.map((p) => [p.id, p.name])), [products])
+  const variantById = useMemo(() => new Map(variants.map((v) => [v.id, v])), [variants])
   const { inventory, loading: loadingInventory, reload: reloadInventory } = useInventory()
   const { catalog } = useSaleCatalog(furgonBranchId)
   const { loadTransferItems } = useTransfers()
 
   const from30 = addDaysCL(-30)
   const today = todayCL()
-  const { sales, loading: loadingSales, reload: reloadSales } = useTerrenoSales(from30, today)
+  const {
+    sales,
+    loading: loadingSales,
+    reload: reloadSales,
+    loadSaleDetail,
+    cancelSale,
+    exchangeSaleItem,
+    returnSaleItem,
+  } = useSales(furgonBranchId || NO_BRANCH_ID, { from: from30, to: today })
+  // The 30-day card and "Vendido en terreno" totals only count completed
+  // sales — an anulled one shouldn't still look like it happened.
+  const completedSales = useMemo(() => sales.filter((s) => s.status === 'completed'), [sales])
+
+  function variantLabel(variantId: string): string {
+    const variant = variantById.get(variantId)
+    if (!variant) return '—'
+    return `${productNameById.get(variant.product_id) ?? '—'} — ${variant.calidad} ${formatKilo(variant.kilo)}`
+  }
+
+  const [detailSale, setDetailSale] = useState<Sale | null>(null)
+  const [detailItems, setDetailItems] = useState<SaleItem[]>([])
+  const [detailPayments, setDetailPayments] = useState<SalePayment[]>([])
+  const [cancelTarget, setCancelTarget] = useState<Sale | null>(null)
+  const [exchangeTarget, setExchangeTarget] = useState<SaleItem | null>(null)
+  const [returnTarget, setReturnTarget] = useState<SaleItem | null>(null)
+
+  async function openSaleDetail(sale: Sale) {
+    setDetailSale(sale)
+    const { items, payments } = await loadSaleDetail(sale.id)
+    setDetailItems(items)
+    setDetailPayments(payments)
+  }
+
+  async function refreshSaleDetail() {
+    if (!detailSale) return
+    const { items, payments } = await loadSaleDetail(detailSale.id)
+    setDetailItems(items)
+    setDetailPayments(payments)
+  }
 
   const [driverName, setDriverName] = useState('')
   useEffect(() => {
@@ -603,7 +658,7 @@ export function FurgonPage() {
 
   const totalFardos = stockRows.reduce((s, r) => s + r.stock, 0)
   const totalStockValue = stockRows.reduce((s, r) => s + r.stock * r.variant.price, 0)
-  const salesTotal = sales.reduce((s, sale) => s + sale.total, 0)
+  const salesTotal = completedSales.reduce((s, sale) => s + sale.total, 0)
   const loading = loadingProducts || loadingInventory || loadingSales || loadingBranches
 
   if (!loadingBranches && !furgonBranch) {
@@ -638,7 +693,7 @@ export function FurgonPage() {
         </Card>
         <Card className="p-4">
           <p className="text-xs uppercase text-slate-500">Vendido en terreno (30 días)</p>
-          <p className="mt-1 text-lg font-semibold text-slate-900">{loading ? '—' : `${sales.length} · ${formatCLP(salesTotal)}`}</p>
+          <p className="mt-1 text-lg font-semibold text-slate-900">{loading ? '—' : `${completedSales.length} · ${formatCLP(salesTotal)}`}</p>
         </Card>
       </div>
 
@@ -870,6 +925,8 @@ export function FurgonPage() {
                 <th className="px-4 py-3">Hora</th>
                 <th className="px-4 py-3">Folio</th>
                 <th className="px-4 py-3 text-right">Total</th>
+                <th className="px-4 py-3">Estado</th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -881,6 +938,16 @@ export function FurgonPage() {
                     <td className="px-4 py-2.5 text-slate-600">{formatTimeCL(s.created_at)}</td>
                     <td className="px-4 py-2.5 text-slate-900">{s.sale_number ?? '—'}</td>
                     <td className="px-4 py-2.5 text-right font-medium text-slate-900">{formatCLP(s.total)}</td>
+                    <td className="px-4 py-2.5">
+                      <Badge tone={s.status === 'completed' ? 'success' : 'danger'}>
+                        {s.status === 'completed' ? 'Completada' : 'Anulada'}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <button onClick={() => openSaleDetail(s)} className="text-slate-400 hover:text-slate-700" title="Ver / editar">
+                        <Eye size={16} />
+                      </button>
+                    </td>
                   </tr>
                 ))}
             </tbody>
@@ -910,6 +977,121 @@ export function FurgonPage() {
             }}
           />
         </>
+      )}
+
+      <Modal open={!!detailSale} onClose={() => setDetailSale(null)} title={`Venta ${detailSale?.sale_number ?? ''}`}>
+        <div className="space-y-4">
+          <table className="w-full text-left text-sm">
+            <thead className="text-xs uppercase text-slate-400">
+              <tr>
+                <th className="py-1 pr-2">Producto</th>
+                <th className="py-1 pr-2">Cant.</th>
+                <th className="py-1 pr-2">Precio</th>
+                <th className="py-1 pr-2">Estado</th>
+                <th className="py-1" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {detailItems.map((item) => (
+                <tr key={item.id}>
+                  <td className="py-1.5 pr-2">
+                    {item.custom_name ?? variantLabel(item.variant_id!)}
+                    {item.notes && <div className="text-[11px] italic text-slate-400">{item.notes}</div>}
+                  </td>
+                  <td className="py-1.5 pr-2">{item.quantity}</td>
+                  <td className="py-1.5 pr-2">{formatCLP(item.sold_price)}</td>
+                  <td className="py-1.5 pr-2 text-xs text-slate-500">{item.status}</td>
+                  <td className="py-1.5 space-x-2">
+                    {canManageStock && item.status === 'active' && detailSale?.status === 'completed' && (
+                      <>
+                        {item.variant_id && (
+                          <button onClick={() => setExchangeTarget(item)} className="text-xs text-slate-500 underline hover:text-slate-800">
+                            Cambiar
+                          </button>
+                        )}
+                        <button onClick={() => setReturnTarget(item)} className="text-xs text-slate-500 underline hover:text-slate-800">
+                          Devolver
+                        </button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="border-t border-slate-200 pt-2 text-sm">
+            <p className="font-medium text-slate-700">Pagos</p>
+            {detailPayments.map((p) => (
+              <div key={p.id} className="flex justify-between text-slate-600">
+                <span>{paymentLabels[p.payment_method]}</span>
+                <span>{formatCLP(p.amount)}</span>
+              </div>
+            ))}
+          </div>
+
+          {detailSale?.driver_name && (
+            <p className="border-t border-slate-200 pt-2 text-sm text-slate-600">Vendedor: {detailSale.driver_name}</p>
+          )}
+
+          {detailSale?.status === 'cancelled' && detailSale.cancel_reason && (
+            <p className="text-sm text-red-600">Motivo de anulación: {detailSale.cancel_reason}</p>
+          )}
+
+          {canManageStock && detailSale?.status === 'completed' && (
+            <div className="flex justify-end">
+              <Button variant="danger" onClick={() => setCancelTarget(detailSale)}>
+                Anular venta
+              </Button>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      <ReasonModal
+        open={!!cancelTarget}
+        onClose={() => setCancelTarget(null)}
+        title={`Anular venta ${cancelTarget?.sale_number ?? ''}`}
+        confirmLabel="Anular"
+        onConfirm={async (reason) => {
+          const result = await cancelSale(cancelTarget!.id, reason)
+          if (!result.error) {
+            setDetailSale(null)
+            await Promise.all([reloadInventory(), reloadSales()])
+          }
+          return result
+        }}
+      />
+
+      {exchangeTarget && detailSale && (
+        <ExchangeModal
+          item={exchangeTarget}
+          branchId={detailSale.branch_id}
+          onClose={() => setExchangeTarget(null)}
+          onConfirm={async (newVariantId, newQuantity, reason, additionalPayments) => {
+            const result = await exchangeSaleItem(exchangeTarget.id, newVariantId, newQuantity, reason, additionalPayments)
+            if (!result.error) {
+              setExchangeTarget(null)
+              await Promise.all([refreshSaleDetail(), reloadInventory()])
+            }
+            return result
+          }}
+        />
+      )}
+
+      {returnTarget && (
+        <ReturnModal
+          item={returnTarget}
+          onClose={() => setReturnTarget(null)}
+          onConfirm={async (quantity, reason, refundMethod) => {
+            const result = await returnSaleItem(returnTarget.id, quantity, reason, refundMethod)
+            if (!result.error) {
+              setReturnTarget(null)
+              await Promise.all([refreshSaleDetail(), reloadInventory()])
+            }
+            return result
+          }}
+        />
       )}
     </div>
   )
