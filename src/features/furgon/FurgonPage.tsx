@@ -10,6 +10,7 @@ import { ReasonModal } from '@/components/ui/ReasonModal'
 import { addDaysCL, formatCLP, formatKilo, formatTimeCL, todayCL } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
+import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useBranches } from '@/features/branches/useBranches'
 import { useProducts } from '@/features/products/useProducts'
 import { useInventory } from '@/features/inventory/useInventory'
@@ -54,14 +55,24 @@ function LoadStockModal({
   open,
   onClose,
   branches,
+  defaultBranchId,
   onDone,
 }: {
   open: boolean
   onClose: () => void
   branches: { id: string; name: string; address: string | null }[]
+  defaultBranchId: string
   onDone: () => void
 }) {
-  const [originBranchId, setOriginBranchId] = useState(branches[0]?.id ?? '')
+  function pickDefault(list: { id: string }[]) {
+    // Default to whatever branch the user is currently operating in (e.g.
+    // Zenteno) — almost always the branch they actually want to load fardos
+    // from — but fall back to the first one if that branch isn't in the list
+    // (admin viewing a branch that's inactive, or not loaded yet).
+    if (defaultBranchId && list.some((b) => b.id === defaultBranchId)) return defaultBranchId
+    return list[0]?.id ?? ''
+  }
+  const [originBranchId, setOriginBranchId] = useState(pickDefault(branches))
   const { catalog } = useSaleCatalog(originBranchId)
   const [lines, setLines] = useState<MoveLine[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -69,11 +80,12 @@ function LoadStockModal({
 
   useEffect(() => {
     if (open) {
-      setOriginBranchId(branches[0]?.id ?? '')
+      setOriginBranchId(pickDefault(branches))
       setLines([])
       setError(null)
     }
-  }, [open, branches])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, branches, defaultBranchId])
 
   function addLine(entry: CatalogEntry) {
     setLines((prev) => {
@@ -138,7 +150,7 @@ function LoadStockModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Cargar stock al furgón">
+    <Modal open={open} onClose={onClose} title="Cargar stock al furgón" size="lg">
       <div className="space-y-4">
         <div>
           <label className="block text-xs font-medium text-slate-600">Sucursal de origen</label>
@@ -290,7 +302,7 @@ function UnloadStockModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Descargar stock del furgón">
+    <Modal open={open} onClose={onClose} title="Descargar stock del furgón" size="lg">
       <div className="space-y-4">
         <div>
           <label className="block text-xs font-medium text-slate-600">Sucursal de destino</label>
@@ -392,6 +404,10 @@ export function FurgonPage() {
   // same as Transferencias/Inventario — but any vendedor can now reach this tab
   // and register what the driver sold, same as the normal Ventas screen.
   const canManageStock = profile?.role === 'admin' || profile?.role === 'supervisor'
+  // Whatever branch the user is currently operating in (topbar switcher for
+  // admins, their own home branch otherwise) — the sensible default for
+  // "which branch am I loading fardos from" on the Cargar stock modal.
+  const { branchId: effectiveBranchId } = useEffectiveBranch()
   const { branches, loading: loadingBranches } = useBranches()
   const furgonBranch = branches.find((b) => b.is_furgon) ?? null
   const furgonBranchId = furgonBranch?.id ?? ''
@@ -961,6 +977,7 @@ export function FurgonPage() {
             open={loadOpen}
             onClose={() => setLoadOpen(false)}
             branches={otherBranches}
+            defaultBranchId={effectiveBranchId}
             onDone={() => {
               reloadInventory()
               reloadMovements()
