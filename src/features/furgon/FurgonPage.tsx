@@ -150,7 +150,7 @@ function LoadStockModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Cargar stock al furgón" size="lg">
+    <Modal open={open} onClose={onClose} title="Cargar stock al furgón" size="xl">
       <div className="space-y-4">
         <div>
           <label className="block text-xs font-medium text-slate-600">Sucursal de origen</label>
@@ -163,7 +163,7 @@ function LoadStockModal({
           </Select>
         </div>
 
-        <ProductSearch catalog={catalog} onSelect={addLine} branchId={originBranchId} resultsMaxHeight="28rem" />
+        <ProductSearch catalog={catalog} onSelect={addLine} branchId={originBranchId} resultsMaxHeight="24rem" alwaysOpen />
 
         {lines.length > 0 && (
           <div className="overflow-x-auto">
@@ -302,7 +302,7 @@ function UnloadStockModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Descargar stock del furgón" size="lg">
+    <Modal open={open} onClose={onClose} title="Descargar stock del furgón" size="xl">
       <div className="space-y-4">
         <div>
           <label className="block text-xs font-medium text-slate-600">Sucursal de destino</label>
@@ -315,7 +315,7 @@ function UnloadStockModal({
           </Select>
         </div>
 
-        <ProductSearch catalog={catalog} onSelect={addLine} branchId={furgonBranchId} resultsMaxHeight="28rem" />
+        <ProductSearch catalog={catalog} onSelect={addLine} branchId={furgonBranchId} resultsMaxHeight="24rem" alwaysOpen />
 
         {lines.length > 0 && (
           <div className="overflow-x-auto">

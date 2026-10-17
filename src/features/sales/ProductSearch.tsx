@@ -13,11 +13,12 @@ export function ProductSearch({
   onSelect,
   branchId,
   resultsMaxHeight = '20rem',
+  alwaysOpen = false,
 }: {
   catalog: CatalogEntry[]
   onSelect: (entry: CatalogEntry) => void
   branchId: string
-  // CSS length for the results dropdown's max-height, applied as an inline
+  // CSS length for the results list's max-height, applied as an inline
   // style (not a Tailwind class — a class built from a prop value isn't a
   // literal string in this file, so there's no guarantee the build's CSS
   // scanner picks it up). Default only shows a handful of rows — fine
@@ -25,6 +26,12 @@ export function ProductSearch({
   // stock" where picking from a long list is the whole point, so callers
   // there pass something taller.
   resultsMaxHeight?: string
+  // Show the results list right away, laid out in normal flow (not as a
+  // floating overlay that only appears on focus/typing and has to be
+  // positioned/clipped correctly against whatever scroll container it's
+  // in — exactly what broke inside Furgón's modals). Use this when the
+  // whole point of the screen is browsing a list, not a quick type-ahead.
+  alwaysOpen?: boolean
 }) {
   const [term, setTerm] = useState('')
   const [open, setOpen] = useState(false)
@@ -159,11 +166,17 @@ export function ProductSearch({
 
       <CameraScanModal open={scannerOpen} onClose={() => setScannerOpen(false)} onDetect={handleCameraDetect} />
 
-      {open && (
+      {(alwaysOpen || open) && (
         <>
-          <button aria-label="Cerrar búsqueda" onClick={() => setOpen(false)} className="fixed inset-0 z-0 cursor-default" />
+          {!alwaysOpen && (
+            <button aria-label="Cerrar búsqueda" onClick={() => setOpen(false)} className="fixed inset-0 z-0 cursor-default" />
+          )}
           <div
-            className="absolute z-10 mt-1 w-full overflow-auto rounded-md border border-slate-200 bg-white shadow-lg"
+            className={
+              alwaysOpen
+                ? 'relative mt-2 w-full overflow-auto rounded-md border border-slate-200 bg-white shadow-sm'
+                : 'absolute z-10 mt-1 w-full overflow-auto rounded-md border border-slate-200 bg-white shadow-lg'
+            }
             style={{ maxHeight: resultsMaxHeight }}
           >
           {isDefaultView && (
