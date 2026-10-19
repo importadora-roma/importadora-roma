@@ -105,6 +105,10 @@ function LoadStockModal({
     setLines((prev) => prev.filter((l) => l.variantId !== variantId))
   }
 
+  function availableStock(variantId: string): number {
+    return catalog.find((c) => c.variantId === variantId)?.stock ?? 0
+  }
+
   async function handleSubmit() {
     setError(null)
     if (!originBranchId) {
@@ -113,6 +117,19 @@ function LoadStockModal({
     }
     if (lines.length === 0) {
       setError('Agrega al menos un producto')
+      return
+    }
+    // Loading physically moves stock out of the origin branch — unlike a
+    // sale, it can't go negative, so furgon_load_stock rejects any line
+    // that exceeds what's actually there. Catching that here, before the
+    // round trip, names the exact product(s) instead of surfacing the
+    // RPC's generic "variante <uuid>" error after assembling a whole batch.
+    const short = lines.filter((l) => l.quantity > availableStock(l.variantId))
+    if (short.length > 0) {
+      setError(
+        `Stock insuficiente en ${branches.find((b) => b.id === originBranchId)?.name ?? 'la sucursal de origen'} para: ` +
+          short.map((l) => `${l.productName} — ${l.calidad} ${formatKilo(l.kilo)} (disponible ${availableStock(l.variantId)})`).join(', ')
+      )
       return
     }
     setSaving(true)
@@ -163,56 +180,65 @@ function LoadStockModal({
           </Select>
         </div>
 
-        <ProductSearch catalog={catalog} onSelect={addLine} branchId={originBranchId} resultsMaxHeight="24rem" alwaysOpen />
-
         {lines.length > 0 && (
-          <div className="overflow-x-auto">
+          // Kept above the product picker: with the list below now always
+          // visible and tall, items already added would otherwise scroll out
+          // of view every time — staff lost track of what they'd picked.
+          <div className="overflow-x-auto rounded-md border border-slate-200">
             <table className="w-full text-left text-sm">
-              <thead className="text-xs uppercase text-slate-400">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-400">
                 <tr>
-                  <th className="py-1 pr-2">Producto</th>
-                  <th className="py-1 pr-2">Cant.</th>
-                  <th className="py-1 pr-2">Precio</th>
-                  <th className="py-1" />
+                  <th className="py-1.5 px-2">Producto</th>
+                  <th className="py-1.5 px-2">Cant.</th>
+                  <th className="py-1.5 px-2">Disponible</th>
+                  <th className="py-1.5 px-2">Precio</th>
+                  <th className="py-1.5 px-2" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {lines.map((l) => (
-                  <tr key={l.variantId}>
-                    <td className="py-1.5 pr-2">
-                      <span className="font-medium text-slate-900">{l.productName}</span>
-                      <span className="text-slate-500"> — {l.calidad} {formatKilo(l.kilo)}</span>
-                    </td>
-                    <td className="py-1.5 pr-2">
-                      <input
-                        type="number"
-                        min={1}
-                        value={l.quantity}
-                        onChange={(e) => updateLine(l.variantId, { quantity: Math.max(1, Number(e.target.value)) })}
-                        className="w-16 rounded-md border border-slate-300 px-2 py-1 text-sm"
-                      />
-                    </td>
-                    <td className="py-1.5 pr-2">
-                      <input
-                        type="number"
-                        value={l.unitPrice}
-                        onChange={(e) => updateLine(l.variantId, { unitPrice: e.target.value })}
-                        className="w-24 rounded-md border border-slate-300 px-2 py-1 text-sm"
-                      />
-                    </td>
-                    <td className="py-1.5">
-                      <button onClick={() => removeLine(l.variantId)} className="text-slate-400 hover:text-red-600">
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {lines.map((l) => {
+                  const available = availableStock(l.variantId)
+                  const short = l.quantity > available
+                  return (
+                    <tr key={l.variantId} className={short ? 'bg-red-50' : undefined}>
+                      <td className="py-1.5 px-2">
+                        <span className="font-medium text-slate-900">{l.productName}</span>
+                        <span className="text-slate-500"> — {l.calidad} {formatKilo(l.kilo)}</span>
+                      </td>
+                      <td className="py-1.5 px-2">
+                        <input
+                          type="number"
+                          min={1}
+                          value={l.quantity}
+                          onChange={(e) => updateLine(l.variantId, { quantity: Math.max(1, Number(e.target.value)) })}
+                          className={`w-16 rounded-md border px-2 py-1 text-sm ${short ? 'border-red-400' : 'border-slate-300'}`}
+                        />
+                      </td>
+                      <td className={`py-1.5 px-2 ${short ? 'font-medium text-red-600' : 'text-slate-500'}`}>{available}</td>
+                      <td className="py-1.5 px-2">
+                        <input
+                          type="number"
+                          value={l.unitPrice}
+                          onChange={(e) => updateLine(l.variantId, { unitPrice: e.target.value })}
+                          className="w-24 rounded-md border border-slate-300 px-2 py-1 text-sm"
+                        />
+                      </td>
+                      <td className="py-1.5 px-2">
+                        <button onClick={() => removeLine(l.variantId)} className="text-slate-400 hover:text-red-600">
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
         )}
 
         {error && <p className="text-sm text-red-600">{error}</p>}
+
+        <ProductSearch catalog={catalog} onSelect={addLine} branchId={originBranchId} resultsMaxHeight="22rem" alwaysOpen />
 
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>
@@ -315,16 +341,17 @@ function UnloadStockModal({
           </Select>
         </div>
 
-        <ProductSearch catalog={catalog} onSelect={addLine} branchId={furgonBranchId} resultsMaxHeight="24rem" alwaysOpen />
-
         {lines.length > 0 && (
-          <div className="overflow-x-auto">
+          // Kept above the product picker — see the same comment in
+          // LoadStockModal: otherwise already-added items scroll out of
+          // view behind the (now tall, always-visible) product list.
+          <div className="overflow-x-auto rounded-md border border-slate-200">
             <table className="w-full text-left text-sm">
-              <thead className="text-xs uppercase text-slate-400">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-400">
                 <tr>
-                  <th className="py-1 pr-2">Producto</th>
-                  <th className="py-1 pr-2">Cant.</th>
-                  <th className="py-1" />
+                  <th className="py-1.5 px-2">Producto</th>
+                  <th className="py-1.5 px-2">Cant.</th>
+                  <th className="py-1.5 px-2" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -332,11 +359,11 @@ function UnloadStockModal({
                   const max = catalog.find((c) => c.variantId === l.variantId)?.stock ?? l.quantity
                   return (
                     <tr key={l.variantId}>
-                      <td className="py-1.5 pr-2">
+                      <td className="py-1.5 px-2">
                         <span className="font-medium text-slate-900">{l.productName}</span>
                         <span className="text-slate-500"> — {l.calidad} {formatKilo(l.kilo)}</span>
                       </td>
-                      <td className="py-1.5 pr-2">
+                      <td className="py-1.5 px-2">
                         <input
                           type="number"
                           min={1}
@@ -347,7 +374,7 @@ function UnloadStockModal({
                         />
                         <span className="ml-1 text-xs text-slate-400">/ {max}</span>
                       </td>
-                      <td className="py-1.5">
+                      <td className="py-1.5 px-2">
                         <button onClick={() => removeLine(l.variantId)} className="text-slate-400 hover:text-red-600">
                           <Trash2 size={16} />
                         </button>
@@ -361,6 +388,8 @@ function UnloadStockModal({
         )}
 
         {error && <p className="text-sm text-red-600">{error}</p>}
+
+        <ProductSearch catalog={catalog} onSelect={addLine} branchId={furgonBranchId} resultsMaxHeight="22rem" alwaysOpen />
 
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>
