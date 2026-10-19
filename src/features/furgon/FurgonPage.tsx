@@ -56,12 +56,14 @@ function LoadStockModal({
   onClose,
   branches,
   defaultBranchId,
+  reloadInventory,
   onDone,
 }: {
   open: boolean
   onClose: () => void
   branches: { id: string; name: string; address: string | null }[]
   defaultBranchId: string
+  reloadInventory: () => void
   onDone: () => void
 }) {
   function pickDefault(list: { id: string }[]) {
@@ -73,7 +75,13 @@ function LoadStockModal({
     return list[0]?.id ?? ''
   }
   const [originBranchId, setOriginBranchId] = useState(pickDefault(branches))
-  const { catalog } = useSaleCatalog(originBranchId)
+  // useSaleCatalog calls useInventory() itself — a separate instance from
+  // FurgonPage's own, fetched once on mount and never polled. Reloading the
+  // page-level inventory does NOT refresh the stock numbers this modal
+  // reads, so its own reloadInventory must be called too, or "disponible"
+  // (and the insufficient-stock check below) stays frozen at whatever it
+  // was when the page first loaded, however many loads/unloads happen.
+  const { catalog, reloadInventory: reloadCatalogInventory } = useSaleCatalog(originBranchId)
   const [lines, setLines] = useState<MoveLine[]>([])
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -83,6 +91,8 @@ function LoadStockModal({
       setOriginBranchId(pickDefault(branches))
       setLines([])
       setError(null)
+      reloadCatalogInventory()
+      reloadInventory()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, branches, defaultBranchId])
@@ -260,36 +270,63 @@ function UnloadStockModal({
   onClose,
   branches,
   furgonBranchId,
+  defaultBranchId,
+  reloadInventory,
   onDone,
 }: {
   open: boolean
   onClose: () => void
   branches: { id: string; name: string; address: string | null }[]
   furgonBranchId: string
+  defaultBranchId: string
+  reloadInventory: () => void
   onDone: () => void
 }) {
-  const [destinationBranchId, setDestinationBranchId] = useState(branches[0]?.id ?? '')
-  const { catalog } = useSaleCatalog(furgonBranchId)
+  function pickDefault(list: { id: string }[]) {
+    // Same reasoning as LoadStockModal: default to the branch the user is
+    // currently operating in — almost always where the van's unsold fardos
+    // should go back to.
+    if (defaultBranchId && list.some((b) => b.id === defaultBranchId)) return defaultBranchId
+    return list[0]?.id ?? ''
+  }
+  const [destinationBranchId, setDestinationBranchId] = useState(pickDefault(branches))
+  // See the comment in LoadStockModal: useSaleCatalog's own useInventory()
+  // instance is independent of the page-level one, so it needs its own reload.
+  const { catalog, reloadInventory: reloadCatalogInventory } = useSaleCatalog(furgonBranchId)
   const [lines, setLines] = useState<MoveLine[]>([])
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (open) {
-      setDestinationBranchId(branches[0]?.id ?? '')
+      setDestinationBranchId(pickDefault(branches))
       setLines([])
       setError(null)
+      reloadCatalogInventory()
+      reloadInventory()
     }
-  }, [open, branches])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, branches, defaultBranchId])
 
   function addLine(entry: CatalogEntry) {
-    if (entry.stock <= 0) return
+    if (entry.stock <= 0) {
+      // Clicking used to just silently do nothing here — looked like the
+      // screen wasn't responding at all, especially right after the stock
+      // snapshot had gone stale (see reloadInventory above).
+      setError(`${entry.productName} — ${entry.calidad} ${formatKilo(entry.kilo)} no tiene stock en el furgón.`)
+      return
+    }
     setLines((prev) => {
       const existing = prev.find((l) => l.variantId === entry.variantId)
       if (existing) {
-        if (existing.quantity >= entry.stock) return prev
+        if (existing.quantity >= entry.stock) {
+          setError(`Ya agregaste todo el stock disponible de ${entry.productName} — ${entry.calidad} ${formatKilo(entry.kilo)} (${entry.stock}).`)
+          return prev
+        }
+        setError(null)
         return prev.map((l) => (l.variantId === entry.variantId ? { ...l, quantity: l.quantity + 1 } : l))
       }
+      setError(null)
       return [...prev, { variantId: entry.variantId, productName: entry.productName, calidad: entry.calidad, kilo: entry.kilo, quantity: 1, unitPrice: String(entry.price) }]
     })
   }
@@ -1007,6 +1044,7 @@ export function FurgonPage() {
             onClose={() => setLoadOpen(false)}
             branches={otherBranches}
             defaultBranchId={effectiveBranchId}
+            reloadInventory={reloadInventory}
             onDone={() => {
               reloadInventory()
               reloadMovements()
@@ -1017,6 +1055,8 @@ export function FurgonPage() {
             onClose={() => setUnloadOpen(false)}
             branches={otherBranches}
             furgonBranchId={furgonBranchId}
+            defaultBranchId={effectiveBranchId}
+            reloadInventory={reloadInventory}
             onDone={() => {
               reloadInventory()
               reloadMovements()
