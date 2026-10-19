@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/Card'
 import { Input, Select } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { ReasonModal } from '@/components/ui/ReasonModal'
-import { addDaysCL, dateCL, formatCLP, formatKilo, formatTimeCL, todayCL } from '@/lib/format'
+import { addDaysCL, formatCLP, formatKilo, formatTimeCL, todayCL } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
@@ -21,7 +21,7 @@ import { useSales, type Sale, type SaleItem, type SalePayment } from '@/features
 import { ExchangeModal, ReturnModal } from '@/features/sales/SalesHistoryPage'
 import { useTransfers, type Transfer, type TransferItem } from '@/features/transfers/useTransfers'
 import { generateTransferPdf } from '@/features/transfers/transferPdf'
-import { generateFurgonLoadsReportPdf, type FurgonLoadEntry } from './furgonLoadsPdf'
+import { generateFurgonStockReportPdf } from './furgonStockPdf'
 import type { SalePaymentMethod } from '@/types/database'
 
 const DRIVER_NAME_KEY = 'furgon_driver_name'
@@ -645,75 +645,22 @@ export function FurgonPage() {
     })
   }
 
-  const [reportFrom, setReportFrom] = useState(addDaysCL(-30))
-  const [reportTo, setReportTo] = useState(todayCL())
-  const [reportLoading, setReportLoading] = useState(false)
-  const [reportError, setReportError] = useState<string | null>(null)
+  const [stockReportLoading, setStockReportLoading] = useState(false)
 
-  function shiftDate(dateStr: string, days: number): string {
-    const [y, m, d] = dateStr.split('-').map(Number)
-    return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10)
-  }
-
-  async function handlePrintLoadsReport() {
-    if (!furgonBranchId) return
-    setReportError(null)
-    setReportLoading(true)
-    // sent_at is a UTC instant, reportFrom/reportTo are Chile-local calendar
-    // dates — same buffered-fetch-then-filter approach as useTransferValue,
-    // to avoid the day-boundary bug that approach was built to fix.
-    const { data: rawTransfers, error: transfersError } = await supabase
-      .from('transfers')
-      .select('*')
-      .eq('destination_branch_id', furgonBranchId)
-      .gte('sent_at', `${shiftDate(reportFrom, -1)}T00:00:00Z`)
-      .lte('sent_at', `${shiftDate(reportTo, 1)}T23:59:59Z`)
-      .order('sent_at', { ascending: true })
-    if (transfersError) {
-      setReportError(transfersError.message)
-      setReportLoading(false)
-      return
-    }
-    const transfers = ((rawTransfers ?? []) as unknown as Transfer[]).filter((t) => {
-      const d = dateCL(t.sent_at)
-      return d >= reportFrom && d <= reportTo
-    })
-
-    const variantLabelById = new Map(
-      variants.map((v) => [v.id, `${productNameById.get(v.product_id) ?? '—'} — ${v.calidad}${v.kilo ? ` ${formatKilo(v.kilo)}` : ''}`])
+  // Simple snapshot — what's physically on the van right now, same rows as
+  // the "Fardos a bordo" table, as a downloadable PDF.
+  async function handlePrintStockReport() {
+    setStockReportLoading(true)
+    await generateFurgonStockReportPdf(
+      stockRows.map((r) => ({
+        productName: r.productName,
+        calidad: r.variant.calidad,
+        kilo: r.variant.kilo,
+        quantity: r.stock,
+        price: r.variant.price,
+      }))
     )
-
-    if (transfers.length === 0) {
-      await generateFurgonLoadsReportPdf([], { from: reportFrom, to: reportTo, variantLabel: (id) => variantLabelById.get(id) ?? '—' })
-      setReportLoading(false)
-      return
-    }
-
-    const transferIds = transfers.map((t) => t.id)
-    const { data: itemRows, error: itemsError } = await supabase.from('transfer_items').select('*').in('transfer_id', transferIds)
-    if (itemsError) {
-      setReportError(itemsError.message)
-      setReportLoading(false)
-      return
-    }
-    const itemsByTransfer = new Map<string, TransferItem[]>()
-    for (const item of (itemRows ?? []) as unknown as TransferItem[]) {
-      const list = itemsByTransfer.get(item.transfer_id) ?? []
-      list.push(item)
-      itemsByTransfer.set(item.transfer_id, list)
-    }
-    const branchNameById = new Map(branches.map((b) => [b.id, b.name]))
-    const loads: FurgonLoadEntry[] = transfers.map((t) => ({
-      transfer: t,
-      items: itemsByTransfer.get(t.id) ?? [],
-      originName: branchNameById.get(t.origin_branch_id) ?? '—',
-    }))
-    await generateFurgonLoadsReportPdf(loads, {
-      from: reportFrom,
-      to: reportTo,
-      variantLabel: (variantId) => variantLabelById.get(variantId) ?? '—',
-    })
-    setReportLoading(false)
+    setStockReportLoading(false)
   }
 
   function addToCart(entry: CatalogEntry) {
@@ -909,7 +856,17 @@ export function FurgonPage() {
       </div>
 
       <Card className="mt-4 overflow-x-auto">
-        <p className="px-4 pt-3 text-sm font-medium text-slate-700">Fardos a bordo del furgón</p>
+        <div className="flex items-center justify-between px-4 pt-3">
+          <p className="text-sm font-medium text-slate-700">Fardos a bordo del furgón</p>
+          <button
+            onClick={handlePrintStockReport}
+            disabled={stockReportLoading || stockRows.length === 0}
+            className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 disabled:opacity-40"
+          >
+            <Printer size={14} />
+            {stockReportLoading ? 'Generando...' : 'Imprimir'}
+          </button>
+        </div>
         <table className="mt-1 w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>
@@ -946,20 +903,6 @@ export function FurgonPage() {
             ))}
           </tbody>
         </table>
-      </Card>
-
-      <Card className="mt-4 p-4">
-        <p className="text-sm font-medium text-slate-700">Reporte de cargas al furgón</p>
-        <p className="mt-0.5 text-xs text-slate-400">Descarga un PDF con todo lo cargado al furgón en el período elegido.</p>
-        <div className="mt-3 flex flex-wrap items-end gap-3">
-          <Input label="Desde" type="date" value={reportFrom} onChange={(e) => setReportFrom(e.target.value)} className="max-w-[10rem]" />
-          <Input label="Hasta" type="date" value={reportTo} onChange={(e) => setReportTo(e.target.value)} className="max-w-[10rem]" />
-          <Button variant="secondary" onClick={handlePrintLoadsReport} disabled={reportLoading || !furgonBranchId}>
-            <Printer size={16} />
-            {reportLoading ? 'Generando...' : 'Imprimir reporte'}
-          </Button>
-        </div>
-        {reportError && <p className="mt-2 text-sm text-red-600">{reportError}</p>}
       </Card>
 
       {movements.length > 0 && (
