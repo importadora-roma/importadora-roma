@@ -129,19 +129,11 @@ function LoadStockModal({
       setError('Agrega al menos un producto')
       return
     }
-    // Loading physically moves stock out of the origin branch — unlike a
-    // sale, it can't go negative, so furgon_load_stock rejects any line
-    // that exceeds what's actually there. Catching that here, before the
-    // round trip, names the exact product(s) instead of surfacing the
-    // RPC's generic "variante <uuid>" error after assembling a whole batch.
-    const short = lines.filter((l) => l.quantity > availableStock(l.variantId))
-    if (short.length > 0) {
-      setError(
-        `Stock insuficiente en ${branches.find((b) => b.id === originBranchId)?.name ?? 'la sucursal de origen'} para: ` +
-          short.map((l) => `${l.productName} — ${l.calidad} ${formatKilo(l.kilo)} (disponible ${availableStock(l.variantId)})`).join(', ')
-      )
-      return
-    }
+    // Branch stock counts are known to be stale/unreliable, same reasoning
+    // sales already follow (create_sale, migration 0006): loading never
+    // blocks on "insufficient" stock — furgon_load_stock lets it go
+    // negative rather than reject the whole batch over a number nobody
+    // trusts anyway. "Disponible" below is shown for reference only.
     setSaving(true)
     const { data, error: rpcError } = await supabase.rpc('furgon_load_stock', {
       p_origin_branch_id: originBranchId,
@@ -426,7 +418,48 @@ function UnloadStockModal({
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
-        <ProductSearch catalog={catalog} onSelect={addLine} branchId={furgonBranchId} resultsMaxHeight="22rem" alwaysOpen />
+        {/* No search box here on purpose — descargar only ever deals with
+            what's physically on the van, so the list below IS the furgón's
+            own stock (what the "Fardos a bordo" table on the main page
+            shows); click a fardo to move it into "a descargar" above. */}
+        <div>
+          <p className="text-xs font-medium text-slate-600">Fardos en el furgón — toca uno para agregarlo</p>
+          <div className="mt-1 max-h-[22rem] overflow-auto rounded-md border border-slate-200">
+            <table className="w-full text-left text-sm">
+              <thead className="sticky top-0 bg-slate-50 text-xs uppercase text-slate-400">
+                <tr>
+                  <th className="py-1.5 px-2">Producto</th>
+                  <th className="py-1.5 px-2 text-right">Stock</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {catalog.filter((c) => c.stock > 0).length === 0 && (
+                  <tr>
+                    <td colSpan={2} className="px-2 py-4 text-center text-slate-400">
+                      El furgón no tiene fardos cargados.
+                    </td>
+                  </tr>
+                )}
+                {catalog
+                  .filter((c) => c.stock > 0)
+                  .sort((a, b) => b.stock - a.stock)
+                  .map((c) => {
+                    const added = lines.find((l) => l.variantId === c.variantId)?.quantity ?? 0
+                    return (
+                      <tr key={c.variantId} className="cursor-pointer hover:bg-slate-50" onClick={() => addLine(c)}>
+                        <td className="py-1.5 px-2">
+                          <span className="font-medium text-slate-900">{c.productName}</span>
+                          <span className="text-slate-500"> — {c.calidad} {formatKilo(c.kilo)}</span>
+                          {added > 0 && <span className="ml-1.5 text-xs text-emerald-600">({added} agregado{added === 1 ? '' : 's'})</span>}
+                        </td>
+                        <td className="py-1.5 px-2 text-right text-slate-600">{c.stock}</td>
+                      </tr>
+                    )
+                  })}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>
