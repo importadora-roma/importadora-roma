@@ -30,6 +30,9 @@ const DRIVER_NAME_KEY = 'furgon_driver_name'
 // unscoped (useSales treats an empty branchId as "all branches", correct
 // for the admin-wide Historial screen but wrong here).
 const NO_BRANCH_ID = '00000000-0000-0000-0000-000000000000'
+// Fardos sold off the van default to catalog price + this markup — a
+// Furgón-only surcharge, still editable per line before confirming the sale.
+const FURGON_PRICE_MARKUP = 5000
 
 const paymentLabels: Record<SalePaymentMethod, string> = {
   efectivo: 'Efectivo',
@@ -644,9 +647,11 @@ export function FurgonPage() {
     setCart((prev) => {
       const existing = prev.find((i) => i.variantId === entry.variantId)
       if (existing) return prev.map((i) => (i.variantId === entry.variantId ? { ...i, quantity: i.quantity + 1 } : i))
+      // Furgón-only markup: the van's default sold price starts FURGON_PRICE_MARKUP
+      // above the catalog price — still editable per line afterward.
       return [
         ...prev,
-        { variantId: entry.variantId, productName: entry.productName, calidad: entry.calidad, kilo: entry.kilo, price: String(entry.price), quantity: 1 },
+        { variantId: entry.variantId, productName: entry.productName, calidad: entry.calidad, kilo: entry.kilo, price: String(entry.price + FURGON_PRICE_MARKUP), quantity: 1 },
       ]
     })
   }
