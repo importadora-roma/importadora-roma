@@ -104,9 +104,10 @@ function LoadStockModal({
     setLines((prev) => {
       const existing = prev.find((l) => l.variantId === entry.variantId)
       if (existing) return prev.map((l) => (l.variantId === entry.variantId ? { ...l, quantity: l.quantity + 1 } : l))
-      // Transfers value stock at cost, same convention NewTransferPage uses —
-      // sale price doesn't belong on an internal stock-movement document.
-      return [...prev, { variantId: entry.variantId, productName: entry.productName, calidad: entry.calidad, kilo: entry.kilo, quantity: 1, unitPrice: String(entry.cost) }]
+      // Furgón-only: unlike NewTransferPage (which values stock movements at
+      // cost), the guía for loading the van defaults to catalog price + the
+      // same Furgón markup as a sale — editable per line before submitting.
+      return [...prev, { variantId: entry.variantId, productName: entry.productName, calidad: entry.calidad, kilo: entry.kilo, quantity: 1, unitPrice: String(entry.price + FURGON_PRICE_MARKUP) }]
     })
   }
 
