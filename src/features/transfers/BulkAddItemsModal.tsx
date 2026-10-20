@@ -193,7 +193,7 @@ export function BulkAddItemsModal({
       validRows.map((r) => ({
         entry: r.match!,
         quantity: r.cantidad!,
-        unitPrice: r.precio !== null ? String(r.precio) : String(r.match!.cost),
+        unitPrice: r.precio !== null ? String(r.precio) : String(r.match!.price),
       }))
     )
     close()

@@ -64,7 +64,7 @@ export function NewTransferPage() {
   }
 
   function addItem(entry: CatalogEntry) {
-    setItems((prev) => mergeLine(prev, entry, 1, entry.cost ? String(entry.cost) : ''))
+    setItems((prev) => mergeLine(prev, entry, 1, entry.price ? String(entry.price) : ''))
   }
 
   // Hundreds of fardos going out at once shouldn't need to be searched and
@@ -182,8 +182,8 @@ export function NewTransferPage() {
       </div>
 
       <p className="mt-3 text-xs text-slate-400">
-        El precio unitario se prellena con el costo del producto y queda registrado como el valor del traslado — no
-        afecta el precio de venta ni el costo del producto. Puedes editarlo o dejarlo en 0.
+        El precio unitario se prellena con el precio de venta del producto y queda registrado como el valor del
+        traslado — no afecta el precio de venta ni el costo del producto. Puedes editarlo o dejarlo en 0.
       </p>
 
       <div className="mt-2 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
