@@ -4,7 +4,9 @@ import { Badge, type BadgeTone } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
+import { ReasonModal } from '@/components/ui/ReasonModal'
 import { formatCLP, formatDateTime, formatVariantSpec } from '@/lib/format'
+import { useAuthStore } from '@/stores/authStore'
 import { useBranches } from '@/features/branches/useBranches'
 import { useProducts } from '@/features/products/useProducts'
 import { useTransfers, type Transfer, type TransferItem } from './useTransfers'
@@ -18,9 +20,11 @@ const statusTone: Record<string, BadgeTone> = {
 }
 
 export function TransferHistoryPage() {
+  const profile = useAuthStore((s) => s.profile)
+  const canManage = profile?.role === 'admin' || profile?.role === 'supervisor'
   const { branches } = useBranches()
   const { products, variants } = useProducts()
-  const { transfers, loading, error, loadTransferItems, receiveTransfer } = useTransfers()
+  const { transfers, loading, error, loadTransferItems, receiveTransfer, cancelTransfer } = useTransfers()
 
   const branchNameById = useMemo(() => new Map(branches.map((b) => [b.id, b.name])), [branches])
   const branchAddressById = useMemo(() => new Map(branches.map((b) => [b.id, b.address])), [branches])
@@ -38,6 +42,7 @@ export function TransferHistoryPage() {
   const [detailItems, setDetailItems] = useState<TransferItem[]>([])
   const [receiving, setReceiving] = useState(false)
   const [receiveError, setReceiveError] = useState<string | null>(null)
+  const [cancelTarget, setCancelTarget] = useState<Transfer | null>(null)
 
   async function openDetail(transfer: Transfer) {
     setDetail(transfer)
@@ -154,6 +159,9 @@ export function TransferHistoryPage() {
           </table>
 
           {detail?.notes && <p className="text-sm text-slate-500">Notas: {detail.notes}</p>}
+          {detail?.status === 'cancelado' && detail.cancel_reason && (
+            <p className="text-sm text-red-600">Motivo de anulación: {detail.cancel_reason}</p>
+          )}
           {receiveError && <p className="text-sm text-red-600">{receiveError}</p>}
 
           <div className="flex gap-2">
@@ -177,9 +185,28 @@ export function TransferHistoryPage() {
                 {receiving ? 'Confirmando...' : 'Marcar como recibido'}
               </Button>
             )}
+            {canManage && detail?.status !== 'cancelado' && (
+              <Button variant="danger" onClick={() => setCancelTarget(detail)}>
+                Anular traslado
+              </Button>
+            )}
           </div>
         </div>
       </Modal>
+
+      <ReasonModal
+        open={!!cancelTarget}
+        onClose={() => setCancelTarget(null)}
+        title={`Anular traslado ${cancelTarget?.transfer_number ?? ''}`}
+        confirmLabel="Anular"
+        onConfirm={async (reason) => {
+          const result = await cancelTransfer(cancelTarget!.id, reason)
+          if (!result.error) {
+            setDetail(null)
+          }
+          return result
+        }}
+      />
     </div>
   )
 }

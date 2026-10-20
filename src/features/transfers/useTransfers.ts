@@ -13,6 +13,9 @@ export interface Transfer {
   received_by: string | null
   received_at: string | null
   notes: string | null
+  cancel_reason: string | null
+  cancelled_by: string | null
+  cancelled_at: string | null
 }
 
 export interface TransferItem {
@@ -73,5 +76,12 @@ export function useTransfers() {
     return { error: null }
   }
 
-  return { transfers, loading, error, reload, loadTransferItems, createTransfer, receiveTransfer }
+  async function cancelTransfer(transferId: string, reason: string) {
+    const { error } = await supabase.rpc('cancel_transfer', { p_transfer_id: transferId, p_reason: reason })
+    if (error) return { error: error.message }
+    await reload()
+    return { error: null }
+  }
+
+  return { transfers, loading, error, reload, loadTransferItems, createTransfer, receiveTransfer, cancelTransfer }
 }

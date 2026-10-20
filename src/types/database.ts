@@ -1088,6 +1088,10 @@ export interface Database {
         Args: { p_transfer_id: string }
         Returns: undefined
       }
+      cancel_transfer: {
+        Args: { p_transfer_id: string; p_reason: string }
+        Returns: undefined
+      }
       convert_quotation_to_sale: {
         Args: { p_quotation_id: string; p_payments: { payment_method: SalePaymentMethod; amount: number }[] }
         Returns: string
