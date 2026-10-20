@@ -53,7 +53,11 @@ function guessField(header: string): FieldTarget {
   if (h.includes('kilo') || h === 'kg') return 'kilo'
   if (h.includes('sku') || h.includes('codigo') || h.includes('código') || h.includes('barcode')) return 'sku'
   if (h.includes('cantidad') || h.includes('stock') || h.includes('qty') || h.includes('quant')) return 'cantidad'
-  if (h.includes('precio') || h.includes('price') || h.includes('costo') || h.includes('cost')) return 'precio'
+  // "costo"/"cost" intentionally NOT auto-mapped here: guías record sale
+  // price, and a sheet column literally named "Costo" almost always holds
+  // actual cost data — auto-guessing it as the price source silently
+  // recorded cost on the guía. Still selectable by hand in the mapping step.
+  if (h.includes('precio') || h.includes('price')) return 'precio'
   return 'ignore'
 }
 
