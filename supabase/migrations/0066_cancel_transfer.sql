@@ -9,6 +9,13 @@ alter table public.transfers add column if not exists cancel_reason text;
 alter table public.transfers add column if not exists cancelled_by uuid references public.users (id);
 alter table public.transfers add column if not exists cancelled_at timestamptz;
 
+-- inventory_movements.movement_type only allowed a fixed set of values and
+-- 'transfer_cancel' (used below) wasn't one of them — cancel_transfer would
+-- have failed at call time with a check-constraint violation.
+alter table public.inventory_movements drop constraint if exists inventory_movements_movement_type_check;
+alter table public.inventory_movements add constraint inventory_movements_movement_type_check
+  check (movement_type in ('sale', 'sale_cancel', 'purchase', 'transfer_out', 'transfer_in', 'transfer_cancel', 'adjustment', 'initial'));
+
 create or replace function public.cancel_transfer(p_transfer_id uuid, p_reason text)
 returns void
 language plpgsql
