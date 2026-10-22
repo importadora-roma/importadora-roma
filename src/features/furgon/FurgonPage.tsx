@@ -489,10 +489,17 @@ interface QuickSaleLine {
   quantity: number
 }
 
-interface TodayItemSummary {
+interface ItemSummary {
   key: string
   label: string
   quantity: number
+}
+
+interface DailySalesSummary {
+  date: string
+  saleCount: number
+  fardoCount: number
+  total: number
 }
 
 // The Furgón tab: a dedicated branch's worth of stock (what's physically
@@ -525,8 +532,11 @@ export function FurgonPage() {
   const { catalog } = useSaleCatalog(furgonBranchId)
   const { loadTransferItems } = useTransfers()
 
-  const from30 = addDaysCL(-30)
-  const today = todayCL()
+  // Period for every sales figure on this page (card, daily breakdown,
+  // product breakdown, recent-sales list) — staff can widen or narrow it
+  // instead of always being stuck with a fixed last-30-days window.
+  const [salesFrom, setSalesFrom] = useState(addDaysCL(-30))
+  const [salesTo, setSalesTo] = useState(todayCL())
   const {
     sales,
     loading: loadingSales,
@@ -535,9 +545,9 @@ export function FurgonPage() {
     cancelSale,
     exchangeSaleItem,
     returnSaleItem,
-  } = useSales(furgonBranchId || NO_BRANCH_ID, { from: from30, to: today })
-  // The 30-day card and "Vendido en terreno" totals only count completed
-  // sales — an anulled one shouldn't still look like it happened.
+  } = useSales(furgonBranchId || NO_BRANCH_ID, { from: salesFrom, to: salesTo })
+  // The card and breakdown totals only count completed sales — an anulled
+  // one shouldn't still look like it happened.
   const completedSales = useMemo(() => sales.filter((s) => s.status === 'completed'), [sales])
 
   function variantLabel(variantId: string): string {
@@ -685,6 +695,10 @@ export function FurgonPage() {
       .from('transfers')
       .select('*')
       .eq('destination_branch_id', furgonBranchId)
+      // A cancelled load didn't actually put anything on the van — excluding
+      // it keeps the report matching what's really there, not what was
+      // later undone (e.g. via "Anular traslado").
+      .neq('status', 'cancelado')
       .gte('sent_at', `${shiftDate(reportFrom, -1)}T00:00:00Z`)
       .lte('sent_at', `${shiftDate(reportTo, 1)}T23:59:59Z`)
       .order('sent_at', { ascending: true })
@@ -811,46 +825,65 @@ export function FurgonPage() {
     await Promise.all([reloadInventory(), reloadSales()])
   }
 
-  const todaySales = useMemo(() => sales.filter((s) => s.sale_date === today), [sales, today])
-  const todaySaleIds = useMemo(() => todaySales.map((s) => s.id), [todaySales])
+  const periodSaleIds = useMemo(() => completedSales.map((s) => s.id), [completedSales])
+  const saleDateById = useMemo(() => new Map(completedSales.map((s) => [s.id, s.sale_date])), [completedSales])
 
-  const [todayItems, setTodayItems] = useState<TodayItemSummary[]>([])
-  const [loadingTodayItems, setLoadingTodayItems] = useState(false)
+  const [periodItems, setPeriodItems] = useState<ItemSummary[]>([])
+  const [dailySales, setDailySales] = useState<DailySalesSummary[]>([])
+  const [loadingPeriodItems, setLoadingPeriodItems] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     async function load() {
-      if (todaySaleIds.length === 0) {
-        setTodayItems([])
+      if (periodSaleIds.length === 0) {
+        setPeriodItems([])
+        setDailySales([])
         return
       }
-      setLoadingTodayItems(true)
+      setLoadingPeriodItems(true)
       const { data } = await supabase
         .from('sale_items')
-        .select('variant_id, custom_name, quantity')
-        .in('sale_id', todaySaleIds)
+        .select('sale_id, variant_id, custom_name, quantity')
+        .in('sale_id', periodSaleIds)
         .eq('status', 'active')
       if (cancelled) return
-      const byKey = new Map<string, TodayItemSummary>()
-      for (const row of (data ?? []) as { variant_id: string | null; custom_name: string | null; quantity: number }[]) {
+
+      const byProduct = new Map<string, ItemSummary>()
+      const fardoCountByDate = new Map<string, number>()
+      for (const row of (data ?? []) as { sale_id: string; variant_id: string | null; custom_name: string | null; quantity: number }[]) {
         const variant = row.variant_id ? variants.find((v) => v.id === row.variant_id) : null
         const key = row.variant_id ?? `custom:${row.custom_name}`
         const label = variant
           ? `${productNameById.get(variant.product_id) ?? '—'} — ${variant.calidad} ${formatKilo(variant.kilo)}`
           : row.custom_name ?? '—'
-        const entry = byKey.get(key) ?? { key, label, quantity: 0 }
+        const entry = byProduct.get(key) ?? { key, label, quantity: 0 }
         entry.quantity += row.quantity
-        byKey.set(key, entry)
+        byProduct.set(key, entry)
+
+        const date = saleDateById.get(row.sale_id)
+        if (date) fardoCountByDate.set(date, (fardoCountByDate.get(date) ?? 0) + row.quantity)
       }
-      setTodayItems(Array.from(byKey.values()).sort((a, b) => b.quantity - a.quantity))
-      setLoadingTodayItems(false)
+      setPeriodItems(Array.from(byProduct.values()).sort((a, b) => b.quantity - a.quantity))
+
+      // Fardo counts come from items (above); sale count and $ total come
+      // straight from completedSales — no need to re-derive those from items.
+      const byDate = new Map<string, DailySalesSummary>()
+      for (const s of completedSales) {
+        const entry = byDate.get(s.sale_date) ?? { date: s.sale_date, saleCount: 0, fardoCount: 0, total: 0 }
+        entry.saleCount += 1
+        entry.total += s.total
+        entry.fardoCount = fardoCountByDate.get(s.sale_date) ?? 0
+        byDate.set(s.sale_date, entry)
+      }
+      setDailySales(Array.from(byDate.values()).sort((a, b) => b.date.localeCompare(a.date)))
+      setLoadingPeriodItems(false)
     }
     load()
     return () => {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [todaySaleIds.join(','), variants])
+  }, [periodSaleIds.join(','), variants])
 
   const stockRows = useMemo(() => {
     if (!furgonBranchId) return []
@@ -901,9 +934,15 @@ export function FurgonPage() {
           <p className="mt-1 text-lg font-semibold text-slate-900">{loading ? '—' : formatCLP(totalStockValue)}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs uppercase text-slate-500">Vendido en terreno (30 días)</p>
+          <p className="text-xs uppercase text-slate-500">Vendido en terreno</p>
           <p className="mt-1 text-lg font-semibold text-slate-900">{loading ? '—' : `${completedSales.length} · ${formatCLP(salesTotal)}`}</p>
         </Card>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-end gap-3">
+        <Input label="Ventas desde" type="date" value={salesFrom} onChange={(e) => setSalesFrom(e.target.value)} className="max-w-[10rem]" />
+        <Input label="Ventas hasta" type="date" value={salesTo} onChange={(e) => setSalesTo(e.target.value)} className="max-w-[10rem]" />
+        <p className="pb-2 text-xs text-slate-400">Controla la tarjeta "Vendido en terreno" y las tablas de ventas de abajo.</p>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
@@ -1119,9 +1158,45 @@ export function FurgonPage() {
         {saleSuccess && <p className="mt-2 text-sm text-emerald-600">{saleSuccess}</p>}
       </Card>
 
-      {(loadingTodayItems || todayItems.length > 0) && (
+      {(loadingPeriodItems || dailySales.length > 0) && (
         <Card className="mt-6 overflow-x-auto">
-          <p className="px-4 pt-3 text-sm font-medium text-slate-700">Vendido hoy</p>
+          <p className="px-4 pt-3 text-sm font-medium text-slate-700">Ventas por día</p>
+          <p className="px-4 text-xs text-slate-400">Cuántos fardos se vendieron cada día y por cuánto, dentro del período elegido arriba.</p>
+          <table className="mt-1 w-full text-left text-sm">
+            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+              <tr>
+                <th className="px-4 py-3">Fecha</th>
+                <th className="px-4 py-3 text-right">Ventas</th>
+                <th className="px-4 py-3 text-right">Fardos</th>
+                <th className="px-4 py-3 text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {loadingPeriodItems && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-4 text-center text-slate-400">
+                    Cargando...
+                  </td>
+                </tr>
+              )}
+              {!loadingPeriodItems &&
+                dailySales.map((d) => (
+                  <tr key={d.date}>
+                    <td className="px-4 py-2.5 text-slate-900">{formatDate(`${d.date}T00:00:00`)}</td>
+                    <td className="px-4 py-2.5 text-right text-slate-600">{d.saleCount}</td>
+                    <td className="px-4 py-2.5 text-right text-slate-600">{d.fardoCount}</td>
+                    <td className="px-4 py-2.5 text-right font-medium text-slate-900">{formatCLP(d.total)}</td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+
+      {(loadingPeriodItems || periodItems.length > 0) && (
+        <Card className="mt-4 overflow-x-auto">
+          <p className="px-4 pt-3 text-sm font-medium text-slate-700">Vendido por producto</p>
+          <p className="px-4 text-xs text-slate-400">Qué fardos se vendieron, sumados en todo el período elegido arriba.</p>
           <table className="mt-1 w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
@@ -1130,15 +1205,15 @@ export function FurgonPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {loadingTodayItems && (
+              {loadingPeriodItems && (
                 <tr>
                   <td colSpan={2} className="px-4 py-4 text-center text-slate-400">
                     Cargando...
                   </td>
                 </tr>
               )}
-              {!loadingTodayItems &&
-                todayItems.map((item) => (
+              {!loadingPeriodItems &&
+                periodItems.map((item) => (
                   <tr key={item.key}>
                     <td className="px-4 py-2.5 text-slate-900">{item.label}</td>
                     <td className="px-4 py-2.5 text-right font-medium text-slate-900">{item.quantity}</td>
@@ -1151,7 +1226,7 @@ export function FurgonPage() {
 
       {sales.length > 0 && (
         <Card className="mt-4 overflow-x-auto">
-          <p className="px-4 pt-3 text-sm font-medium text-slate-700">Ventas recientes (30 días)</p>
+          <p className="px-4 pt-3 text-sm font-medium text-slate-700">Ventas recientes</p>
           <p className="px-4 text-xs text-slate-400">Detalle de lo que compone "Vendido en terreno" arriba — fecha, hora y estado de cada venta.</p>
           <table className="mt-1 w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
