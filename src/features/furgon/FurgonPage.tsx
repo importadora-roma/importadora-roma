@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/Card'
 import { Input, Select } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { ReasonModal } from '@/components/ui/ReasonModal'
-import { addDaysCL, dateCL, formatCLP, formatKilo, formatTimeCL, todayCL } from '@/lib/format'
+import { addDaysCL, dateCL, formatCLP, formatDate, formatKilo, formatTimeCL, todayCL } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
@@ -721,11 +721,8 @@ export function FurgonPage() {
       list.push(item)
       itemsByTransfer.set(item.transfer_id, list)
     }
-    const branchNameById = new Map(branches.map((b) => [b.id, b.name]))
     const loads: FurgonLoadEntry[] = transfers.map((t) => ({
-      transfer: t,
       items: itemsByTransfer.get(t.id) ?? [],
-      originName: branchNameById.get(t.origin_branch_id) ?? '—',
     }))
     await generateFurgonLoadsReportPdf(loads, {
       from: reportFrom,
@@ -1152,12 +1149,14 @@ export function FurgonPage() {
         </Card>
       )}
 
-      {todaySales.length > 0 && (
+      {sales.length > 0 && (
         <Card className="mt-4 overflow-x-auto">
-          <p className="px-4 pt-3 text-sm font-medium text-slate-700">Ventas de hoy</p>
+          <p className="px-4 pt-3 text-sm font-medium text-slate-700">Ventas recientes (30 días)</p>
+          <p className="px-4 text-xs text-slate-400">Detalle de lo que compone "Vendido en terreno" arriba — fecha, hora y estado de cada venta.</p>
           <table className="mt-1 w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
+                <th className="px-4 py-3">Fecha</th>
                 <th className="px-4 py-3">Hora</th>
                 <th className="px-4 py-3">Folio</th>
                 <th className="px-4 py-3 text-right">Total</th>
@@ -1166,12 +1165,13 @@ export function FurgonPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {todaySales
+              {sales
                 .slice()
                 .sort((a, b) => b.created_at.localeCompare(a.created_at))
                 .map((s) => (
                   <tr key={s.id}>
-                    <td className="px-4 py-2.5 text-slate-600">{formatTimeCL(s.created_at)}</td>
+                    <td className="px-4 py-2.5 text-slate-600">{formatDate(`${s.sale_date}T00:00:00`)}</td>
+                    <td className="px-4 py-2.5 text-slate-500">{formatTimeCL(s.created_at)}</td>
                     <td className="px-4 py-2.5 text-slate-900">{s.sale_number ?? '—'}</td>
                     <td className="px-4 py-2.5 text-right font-medium text-slate-900">{formatCLP(s.total)}</td>
                     <td className="px-4 py-2.5">
