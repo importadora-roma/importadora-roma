@@ -179,11 +179,13 @@ export function BulkAddItemsModal({
 
       const { entry: match, ambiguous } = matchCatalogEntry(catalog, producto, calidad, kilo, sku)
 
+      // Branch stock counts are known to be stale/unreliable (same reasoning
+      // as create_transfer/furgon_load_stock) — a row is never rejected just
+      // because it asks for more than the system currently shows as stock.
       const errors: string[] = []
       if (cantidad === null || cantidad <= 0) errors.push('Cantidad inválida')
       if (!match && !ambiguous) errors.push('Producto no encontrado en el catálogo')
       if (ambiguous) errors.push('Hay varios kilos para este producto/calidad — agrega la columna Kilo')
-      if (match && cantidad !== null && cantidad > match.stock) errors.push(`Stock disponible: ${match.stock}`)
 
       return { rowIndex, producto, calidad, sku, cantidad, precio, match, ambiguous, errors }
     })
