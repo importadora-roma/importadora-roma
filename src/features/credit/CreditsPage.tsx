@@ -202,7 +202,14 @@ export function CreditsPage() {
             )}
             {displayRows.map((row) => (
               <tr key={row.saleId}>
-                <td className="px-4 py-3 font-medium text-slate-900">{row.saleNumber}</td>
+                <td className="px-4 py-3 font-medium text-slate-900">
+                  {row.saleNumber}
+                  {row.saleStatus !== 'completed' && (
+                    <Badge tone="neutral" className="ml-1.5">
+                      Anulada
+                    </Badge>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-slate-500">{formatDateTime(row.createdAt)}</td>
                 <td className="px-4 py-3 text-slate-600">{row.customerId ? customerNameById.get(row.customerId) ?? '—' : '—'}</td>
                 <td className="px-4 py-3">{formatCLP(row.creditAmount)}</td>

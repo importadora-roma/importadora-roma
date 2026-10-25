@@ -88,7 +88,10 @@ export function useCreditSales(branchId: string) {
           createdAt: s.created_at as string,
           creditAmount,
           paidAmount,
-          remaining: creditAmount - paidAmount,
+          // cancel_sale never touches sale_payments/sale_credit_payments, so
+          // a cancelled sale's credit line would otherwise still compute a
+          // nonzero balance here — the sale itself no longer owes anything.
+          remaining: s.status === 'completed' ? creditAmount - paidAmount : 0,
           dueDate: (s.due_date as string | null) ?? null,
         }
       })

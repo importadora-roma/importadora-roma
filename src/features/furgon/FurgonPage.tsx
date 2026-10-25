@@ -894,7 +894,10 @@ export function FurgonPage() {
         productName: productNameById.get(v.product_id) ?? '—',
         stock: inventory.find((i) => i.variant_id === v.id && i.branch_id === furgonBranchId)?.quantity ?? 0,
       }))
-      .filter((r) => r.stock > 0)
+      // stock !== 0, not > 0: a negative count (an overdraw — e.g. sold more
+      // than was ever loaded) needs to stay visible to investigate, not
+      // silently disappear from the board, the totals, and the PDF snapshot.
+      .filter((r) => r.stock !== 0)
       .sort((a, b) => b.stock - a.stock)
   }, [variants, inventory, furgonBranchId, productNameById])
 
@@ -1005,7 +1008,7 @@ export function FurgonPage() {
                 <td className="px-4 py-3 font-medium text-slate-900">{r.productName}</td>
                 <td className="px-4 py-3 text-slate-600">{r.variant.calidad}</td>
                 <td className="px-4 py-3 text-slate-600">{formatKilo(r.variant.kilo)}</td>
-                <td className="px-4 py-3 text-right text-slate-900">{r.stock}</td>
+                <td className={`px-4 py-3 text-right ${r.stock < 0 ? 'font-medium text-red-600' : 'text-slate-900'}`}>{r.stock}</td>
                 <td className="px-4 py-3 text-right text-slate-600">{formatCLP(r.stock * r.variant.price)}</td>
               </tr>
             ))}
