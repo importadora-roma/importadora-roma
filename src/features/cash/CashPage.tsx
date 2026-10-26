@@ -8,6 +8,8 @@ import { Modal } from '@/components/ui/Modal'
 import { formatCLP, formatDateTime } from '@/lib/format'
 import { useCash } from './useCash'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
+import { createApprovalRequest } from '@/features/approvals/useApprovalRequests'
+import { useAuthStore } from '@/stores/authStore'
 
 const movementLabels: Record<string, string> = {
   sale_payment: 'Pago de venta',
@@ -25,8 +27,11 @@ const movementTone: Record<string, 'brand' | 'success' | 'warning' | 'danger'> =
 
 export function CashPage() {
   const { branchId: effectiveBranchId, branches } = useEffectiveBranch()
+  const profile = useAuthStore((s) => s.profile)
+  const isAdmin = profile?.role === 'admin'
 
   const { register, movements, loading, error, expectedNow, openRegister, closeRegister, addManualMovement } = useCash(effectiveBranchId)
+  const [infoMessage, setInfoMessage] = useState<string | null>(null)
 
   const [openModal, setOpenModal] = useState(false)
   const [openingAmount, setOpeningAmount] = useState('')
@@ -85,7 +90,37 @@ export function CashPage() {
       setFormError('Indica una categoría (ej: retiro, pago proveedor)')
       return
     }
+    if (!register) {
+      setFormError('No hay caja abierta')
+      return
+    }
     setSaving(true)
+    setInfoMessage(null)
+
+    if (!isAdmin) {
+      const branchName = branches.find((b) => b.id === effectiveBranchId)?.name ?? 'la sucursal'
+      const description = `${movementModal === 'manual_in' ? 'Ingreso' : 'Retiro'} manual de caja en ${branchName}: ${formatCLP(amount)} (${movementCategory.trim()}).`
+      const { error } = await createApprovalRequest('cash_adjustment', description, {
+        cash_register_id: register.id,
+        movement_type: movementModal,
+        category: movementCategory.trim(),
+        amount,
+        description: movementDescription.trim() || null,
+      })
+      setSaving(false)
+      if (error) {
+        setFormError(error)
+        return
+      }
+      setMovementModal(null)
+      setMovementCategory('')
+      setMovementAmount('')
+      setMovementDescription('')
+      setFormError(null)
+      setInfoMessage('Movimiento enviado para aprobación del administrador.')
+      return
+    }
+
     const { error } = await addManualMovement(movementModal!, movementCategory.trim(), amount, movementDescription.trim())
     setSaving(false)
     if (error) {
@@ -114,6 +149,7 @@ export function CashPage() {
       <p className="mt-1 text-sm text-slate-500">{branches.find((b) => b.id === effectiveBranchId)?.name}</p>
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+      {infoMessage && <p className="mt-4 text-sm text-emerald-600">{infoMessage}</p>}
 
       {!loading && effectiveBranchId && !register && (
         <Card className="mt-6 p-8 text-center">

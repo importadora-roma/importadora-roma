@@ -612,6 +612,36 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['invoices']['Insert']>
         Relationships: []
       }
+      approval_requests: {
+        Row: {
+          id: string
+          request_type: 'price_change' | 'product_delete' | 'cash_adjustment'
+          status: 'pending' | 'approved' | 'rejected'
+          requested_by: string
+          branch_id: string | null
+          description: string
+          payload: Record<string, unknown>
+          reviewed_by: string | null
+          reviewed_at: string | null
+          review_note: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          request_type: 'price_change' | 'product_delete' | 'cash_adjustment'
+          status?: 'pending' | 'approved' | 'rejected'
+          requested_by: string
+          branch_id?: string | null
+          description: string
+          payload?: Record<string, unknown>
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          review_note?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['approval_requests']['Insert']>
+        Relationships: []
+      }
       containers: {
         Row: {
           id: string
@@ -1113,6 +1143,22 @@ export interface Database {
           p_description?: string | null
         }
         Returns: string
+      }
+      create_approval_request: {
+        Args: {
+          p_request_type: 'price_change' | 'product_delete' | 'cash_adjustment'
+          p_description: string
+          p_payload: Record<string, unknown>
+        }
+        Returns: string
+      }
+      approve_approval_request: {
+        Args: { p_request_id: string; p_note?: string | null }
+        Returns: undefined
+      }
+      reject_approval_request: {
+        Args: { p_request_id: string; p_note?: string | null }
+        Returns: undefined
       }
       adjust_inventory: {
         Args: {

@@ -9,6 +9,8 @@ import { ReasonModal } from '@/components/ui/ReasonModal'
 import { formatCLP, formatKilo, formatVariantSpec } from '@/lib/format'
 import { useProducts } from './useProducts'
 import { useCalidadCostDefaults } from './useCalidadCostDefaults'
+import { createApprovalRequest } from '@/features/approvals/useApprovalRequests'
+import { useAuthStore } from '@/stores/authStore'
 import type { Product, ProductVariant } from '@/types/models'
 
 const CALIDAD_OPTIONS = ['Primera', 'Segunda', 'Tercera', 'A', 'B', 'E']
@@ -50,6 +52,8 @@ export function ProductsPage() {
     softDeleteVariant,
   } = useProducts()
   const { defaults: calidadDefaults } = useCalidadCostDefaults()
+  const profile = useAuthStore((s) => s.profile)
+  const isAdmin = profile?.role === 'admin'
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [productModalOpen, setProductModalOpen] = useState(false)
@@ -68,6 +72,7 @@ export function ProductsPage() {
   const [deleteVariantTarget, setDeleteVariantTarget] = useState<ProductVariant | null>(null)
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
+  const [infoMessage, setInfoMessage] = useState<string | null>(null)
 
   const isSearching = search.trim() !== ''
   const filteredProducts = useMemo(() => {
@@ -186,6 +191,7 @@ export function ProductsPage() {
     }
 
     setSaving(true)
+    setInfoMessage(null)
     const payload = {
       calidad: variantForm.calidad.trim(),
       kilo,
@@ -196,6 +202,33 @@ export function ProductsPage() {
     const nextSku = variantForm.sku.trim() || null
     let variantId: string
     if (editingVariant) {
+      const priceChanged = price !== editingVariant.price
+      if (!isAdmin && priceChanged) {
+        // Apply every other field right away; only the price change itself
+        // is gated — it's requested, not applied, until an admin approves it.
+        const { error } = await updateVariant(editingVariant.id, { ...payload, price: editingVariant.price })
+        if (error) {
+          setSaving(false)
+          setVariantFormError(error)
+          return
+        }
+        const productName = products.find((p) => p.id === variantProductId)?.name ?? ''
+        const spec = formatVariantSpec(variantForm.calidad.trim(), kilo)
+        const description = `Cambio de precio en "${productName}" (${spec}): de ${formatCLP(editingVariant.price)} a ${formatCLP(price)}.`
+        const { error: requestError } = await createApprovalRequest('price_change', description, {
+          variant_id: editingVariant.id,
+          old_price: editingVariant.price,
+          new_price: price,
+        })
+        setSaving(false)
+        if (requestError) {
+          setVariantFormError(requestError)
+          return
+        }
+        setInfoMessage('Cambio de precio enviado para aprobación del administrador. Los demás cambios ya se guardaron.')
+        setVariantModalOpen(false)
+        return
+      }
       const { error } = await updateVariant(editingVariant.id, payload)
       if (error) {
         setSaving(false)
@@ -248,6 +281,7 @@ export function ProductsPage() {
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
       {variantMergeInfo && <p className="mt-4 text-sm text-emerald-600">{variantMergeInfo}</p>}
+      {infoMessage && <p className="mt-4 text-sm text-emerald-600">{infoMessage}</p>}
 
       <div className="mt-4">
         <Input
@@ -479,14 +513,39 @@ export function ProductsPage() {
         onClose={() => setDeleteProductTarget(null)}
         title={`Eliminar "${deleteProductTarget?.name}"`}
         confirmLabel="Eliminar"
-        onConfirm={(reason) => softDeleteProduct(deleteProductTarget!.id, reason)}
+        onConfirm={async (reason) => {
+          const target = deleteProductTarget!
+          if (!isAdmin) {
+            const { error } = await createApprovalRequest(
+              'product_delete',
+              `Eliminación de producto "${target.name}". Motivo: ${reason}`,
+              { target: 'product', target_id: target.id, reason }
+            )
+            if (!error) setInfoMessage('Solicitud de eliminación enviada para aprobación del administrador.')
+            return { error }
+          }
+          return softDeleteProduct(target.id, reason)
+        }}
       />
       <ReasonModal
         open={!!deleteVariantTarget}
         onClose={() => setDeleteVariantTarget(null)}
         title={`Eliminar variante "${deleteVariantTarget ? formatVariantSpec(deleteVariantTarget.calidad, deleteVariantTarget.kilo) : ''}"`}
         confirmLabel="Eliminar"
-        onConfirm={(reason) => softDeleteVariant(deleteVariantTarget!.id, reason)}
+        onConfirm={async (reason) => {
+          const target = deleteVariantTarget!
+          if (!isAdmin) {
+            const spec = formatVariantSpec(target.calidad, target.kilo)
+            const { error } = await createApprovalRequest(
+              'product_delete',
+              `Eliminación de variante "${spec}". Motivo: ${reason}`,
+              { target: 'variant', target_id: target.id, reason }
+            )
+            if (!error) setInfoMessage('Solicitud de eliminación enviada para aprobación del administrador.')
+            return { error }
+          }
+          return softDeleteVariant(target.id, reason)
+        }}
       />
     </div>
   )

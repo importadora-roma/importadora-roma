@@ -1,8 +1,9 @@
-import { lazy, Suspense, useMemo } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Wallet, AlertTriangle, FileText, Boxes, Receipt, Banknote, ArrowRight } from 'lucide-react'
+import { Wallet, AlertTriangle, FileText, Boxes, Receipt, Banknote, ArrowRight, ShieldAlert } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
-import { formatCLP, todayCL } from '@/lib/format'
+import { Button } from '@/components/ui/Button'
+import { formatCLP, formatDateTime, todayCL } from '@/lib/format'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useReports } from '@/features/reports/useReports'
@@ -11,7 +12,14 @@ import { useInventory } from '@/features/inventory/useInventory'
 import { useProducts } from '@/features/products/useProducts'
 import { useContainers } from '@/features/containers/useContainers'
 import { useInvoices } from '@/features/invoices/useInvoices'
+import { usePendingApprovals } from '@/features/approvals/useApprovalRequests'
 import type { PaymentMethod } from '@/types/database'
+
+const approvalTypeLabels: Record<string, string> = {
+  price_change: 'Cambio de precio',
+  product_delete: 'Eliminación de producto/variante',
+  cash_adjustment: 'Movimiento de caja',
+}
 
 // Dashboard is loaded eagerly (see App.tsx) — this chart section pulls in
 // recharts, so it's lazy-loaded on its own to keep that out of the main
@@ -74,6 +82,25 @@ export function DashboardPage() {
   const { invoices } = useInvoices(effectiveBranchId)
   const pendingInvoices = invoices.filter((i) => i.status === 'pending').length
 
+  const isAdmin = profile?.role === 'admin'
+  const { requests: pendingApprovals, approve, reject } = usePendingApprovals()
+  const [processingApprovalId, setProcessingApprovalId] = useState<string | null>(null)
+  const [approvalError, setApprovalError] = useState<string | null>(null)
+
+  async function handleApprove(id: string) {
+    setProcessingApprovalId(id)
+    const { error } = await approve(id)
+    setProcessingApprovalId(null)
+    setApprovalError(error)
+  }
+
+  async function handleReject(id: string) {
+    setProcessingApprovalId(id)
+    const { error } = await reject(id)
+    setProcessingApprovalId(null)
+    setApprovalError(error)
+  }
+
   return (
     <div>
       <h1 className="text-2xl font-semibold text-slate-900">Panel</h1>
@@ -81,6 +108,43 @@ export function DashboardPage() {
         Bienvenido{profile?.full_name ? `, ${profile.full_name}` : ''}.
         {isTienda && ' Esta sucursal es una tienda: solo recibe stock por traslado, no tiene ventas ni caja en este sistema.'}
       </p>
+
+      {isAdmin && pendingApprovals.length > 0 && (
+        <Card className="mt-6 border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-center gap-2">
+            <ShieldAlert size={18} className="text-amber-600" />
+            <h2 className="text-sm font-semibold text-amber-900">
+              Solicitudes pendientes de aprobación ({pendingApprovals.length})
+            </h2>
+          </div>
+          {approvalError && <p className="mt-2 text-sm text-red-600">{approvalError}</p>}
+          <div className="mt-3 space-y-3">
+            {pendingApprovals.map((req) => (
+              <div key={req.id} className="rounded-lg border border-amber-200 bg-white p-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-amber-700">
+                  {approvalTypeLabels[req.request_type] ?? req.request_type}
+                </p>
+                <p className="mt-1 text-sm text-slate-700">{req.description}</p>
+                <p className="mt-1 text-xs text-slate-400">
+                  {req.requesterName ?? 'Usuario'} · {req.branchName ?? 'Sucursal'} · {formatDateTime(req.created_at)}
+                </p>
+                <div className="mt-2 flex justify-end gap-2">
+                  <Button
+                    variant="secondary"
+                    disabled={processingApprovalId === req.id}
+                    onClick={() => handleReject(req.id)}
+                  >
+                    Rechazar
+                  </Button>
+                  <Button disabled={processingApprovalId === req.id} onClick={() => handleApprove(req.id)}>
+                    Aprobar
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {!isTienda && (
