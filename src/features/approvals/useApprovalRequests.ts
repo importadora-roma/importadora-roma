@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-export type ApprovalRequestType = 'price_change' | 'product_delete' | 'cash_adjustment'
+export type ApprovalRequestType = 'price_change' | 'product_delete' | 'cash_adjustment' | 'sale_item_exchange' | 'sale_item_return'
 
 export interface ApprovalRequest {
   id: string

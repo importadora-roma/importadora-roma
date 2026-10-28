@@ -8,6 +8,7 @@ import { Select, Input } from '@/components/ui/Input'
 import { ReasonModal } from '@/components/ui/ReasonModal'
 import { formatCLP, formatDate, formatDateTime, formatTimeCL, formatVariantSpec } from '@/lib/format'
 import { whatsappUrl, mailtoUrl } from '@/lib/share'
+import { createApprovalRequest } from '@/features/approvals/useApprovalRequests'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useProducts } from '@/features/products/useProducts'
@@ -74,6 +75,8 @@ export function SalesHistoryPage() {
   const [costError, setCostError] = useState<{ itemId: string; message: string } | null>(null)
 
   const canManage = profile?.role === 'admin' || profile?.role === 'supervisor'
+  const isAdmin = profile?.role === 'admin'
+  const [infoMessage, setInfoMessage] = useState<string | null>(null)
 
   async function openDetail(sale: Sale) {
     setDetailSale(sale)
@@ -138,6 +141,7 @@ export function SalesHistoryPage() {
       </div>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+      {infoMessage && <p className="mb-4 text-sm text-emerald-600">{infoMessage}</p>}
 
       <Card className="overflow-x-auto">
         <table className="w-full text-left text-sm">
@@ -387,6 +391,21 @@ export function SalesHistoryPage() {
           branchId={detailSale.branch_id}
           onClose={() => setExchangeTarget(null)}
           onConfirm={async (newVariantId, newQuantity, reason, additionalPayments) => {
+            if (!isAdmin) {
+              const description = `Cambio de producto en venta ${detailSale.sale_number}: "${itemLabel(exchangeTarget)}" por "${variantLabel(newVariantId)}" (cant. ${newQuantity}). Motivo: ${reason}`
+              const { error } = await createApprovalRequest('sale_item_exchange', description, {
+                sale_item_id: exchangeTarget.id,
+                new_variant_id: newVariantId,
+                new_quantity: newQuantity,
+                reason,
+                additional_payments: additionalPayments,
+              })
+              if (!error) {
+                setExchangeTarget(null)
+                setInfoMessage('Cambio de producto enviado para aprobación del administrador.')
+              }
+              return { error }
+            }
             const result = await exchangeSaleItem(exchangeTarget.id, newVariantId, newQuantity, reason, additionalPayments)
             if (!result.error) {
               setExchangeTarget(null)
@@ -402,6 +421,20 @@ export function SalesHistoryPage() {
           item={returnTarget}
           onClose={() => setReturnTarget(null)}
           onConfirm={async (quantity, reason, refundMethod) => {
+            if (!isAdmin) {
+              const description = `Devolución en venta ${detailSale?.sale_number ?? ''}: ${quantity} x "${itemLabel(returnTarget)}". Motivo: ${reason}`
+              const { error } = await createApprovalRequest('sale_item_return', description, {
+                sale_item_id: returnTarget.id,
+                quantity,
+                reason,
+                refund_method: refundMethod,
+              })
+              if (!error) {
+                setReturnTarget(null)
+                setInfoMessage('Devolución enviada para aprobación del administrador.')
+              }
+              return { error }
+            }
             const result = await returnSaleItem(returnTarget.id, quantity, reason, refundMethod)
             if (!result.error) {
               setReturnTarget(null)

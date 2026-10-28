@@ -615,7 +615,7 @@ export interface Database {
       approval_requests: {
         Row: {
           id: string
-          request_type: 'price_change' | 'product_delete' | 'cash_adjustment'
+          request_type: 'price_change' | 'product_delete' | 'cash_adjustment' | 'sale_item_exchange' | 'sale_item_return'
           status: 'pending' | 'approved' | 'rejected'
           requested_by: string
           branch_id: string | null
@@ -628,7 +628,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          request_type: 'price_change' | 'product_delete' | 'cash_adjustment'
+          request_type: 'price_change' | 'product_delete' | 'cash_adjustment' | 'sale_item_exchange' | 'sale_item_return'
           status?: 'pending' | 'approved' | 'rejected'
           requested_by: string
           branch_id?: string | null
@@ -1146,7 +1146,7 @@ export interface Database {
       }
       create_approval_request: {
         Args: {
-          p_request_type: 'price_change' | 'product_delete' | 'cash_adjustment'
+          p_request_type: 'price_change' | 'product_delete' | 'cash_adjustment' | 'sale_item_exchange' | 'sale_item_return'
           p_description: string
           p_payload: Record<string, unknown>
         }

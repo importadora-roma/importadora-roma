@@ -1,9 +1,10 @@
-import { lazy, Suspense, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Wallet, AlertTriangle, FileText, Boxes, Receipt, Banknote, ArrowRight, ShieldAlert } from 'lucide-react'
+import { Wallet, AlertTriangle, FileText, Boxes, Receipt, Banknote, ArrowRight, ShieldAlert, Truck } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { formatCLP, formatDateTime, todayCL } from '@/lib/format'
+import { ReasonModal } from '@/components/ui/ReasonModal'
+import { formatCLP, formatDateTime, formatVariantSpec, todayCL } from '@/lib/format'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { useReports } from '@/features/reports/useReports'
@@ -13,12 +14,16 @@ import { useProducts } from '@/features/products/useProducts'
 import { useContainers } from '@/features/containers/useContainers'
 import { useInvoices } from '@/features/invoices/useInvoices'
 import { usePendingApprovals } from '@/features/approvals/useApprovalRequests'
+import { useTransfers, type Transfer, type TransferItem } from '@/features/transfers/useTransfers'
+import { useBranches } from '@/features/branches/useBranches'
 import type { PaymentMethod } from '@/types/database'
 
 const approvalTypeLabels: Record<string, string> = {
   price_change: 'Cambio de precio',
   product_delete: 'Eliminación de producto/variante',
   cash_adjustment: 'Movimiento de caja',
+  sale_item_exchange: 'Cambio de producto en una venta',
+  sale_item_return: 'Devolución en una venta',
 }
 
 // Dashboard is loaded eagerly (see App.tsx) — this chart section pulls in
@@ -57,7 +62,7 @@ export function DashboardPage() {
   const { sales, payments: todayPayments, loading: loadingSales } = useReports(effectiveBranchId, day, day)
   const { register, expectedNow } = useCash(effectiveBranchId)
   const { inventory } = useInventory()
-  const { variants } = useProducts()
+  const { variants, products } = useProducts()
 
   const todayTotal = sales.reduce((s, sale) => s + sale.total, 0)
 
@@ -99,6 +104,54 @@ export function DashboardPage() {
     const { error } = await reject(id)
     setProcessingApprovalId(null)
     setApprovalError(error)
+  }
+
+  const canManageTransfers = profile?.role === 'admin' || profile?.role === 'supervisor'
+  const { transfers, loadTransferItems, receiveTransfer, cancelTransfer } = useTransfers()
+  const { branches: allBranches } = useBranches()
+  const branchNameById = useMemo(() => new Map(allBranches.map((b) => [b.id, b.name])), [allBranches])
+  const productNameById = useMemo(() => new Map(products.map((p) => [p.id, p.name])), [products])
+  const variantById = useMemo(() => new Map(variants.map((v) => [v.id, v])), [variants])
+
+  function variantLabel(variantId: string): string {
+    const variant = variantById.get(variantId)
+    if (!variant) return '—'
+    return `${productNameById.get(variant.product_id) ?? '—'} — ${formatVariantSpec(variant.calidad, variant.kilo)}`
+  }
+
+  const pendingTransfers = useMemo(
+    () => transfers.filter((t) => t.status === 'en_transito' && t.destination_branch_id === effectiveBranchId),
+    [transfers, effectiveBranchId]
+  )
+
+  const [transferItemsCache, setTransferItemsCache] = useState<Record<string, TransferItem[]>>({})
+  const [processingTransferId, setProcessingTransferId] = useState<string | null>(null)
+  const [transferError, setTransferError] = useState<string | null>(null)
+  const [rejectTransferTarget, setRejectTransferTarget] = useState<Transfer | null>(null)
+
+  useEffect(() => {
+    const missing = pendingTransfers.filter((t) => !(t.id in transferItemsCache))
+    if (missing.length === 0) return
+    let cancelled = false
+    Promise.all(missing.map(async (t) => [t.id, (await loadTransferItems(t.id)).items] as const)).then((pairs) => {
+      if (cancelled) return
+      setTransferItemsCache((prev) => {
+        const next = { ...prev }
+        for (const [id, items] of pairs) next[id] = items
+        return next
+      })
+    })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingTransfers, transferItemsCache])
+
+  async function handleReceiveTransfer(id: string) {
+    setProcessingTransferId(id)
+    const { error } = await receiveTransfer(id)
+    setProcessingTransferId(null)
+    setTransferError(error)
   }
 
   return (
@@ -145,6 +198,62 @@ export function DashboardPage() {
           </div>
         </Card>
       )}
+
+      {canManageTransfers && pendingTransfers.length > 0 && (
+        <Card className="mt-6 border-sky-200 bg-sky-50 p-4">
+          <div className="flex items-center gap-2">
+            <Truck size={18} className="text-sky-600" />
+            <h2 className="text-sm font-semibold text-sky-900">Traslados por recibir ({pendingTransfers.length})</h2>
+          </div>
+          {transferError && <p className="mt-2 text-sm text-red-600">{transferError}</p>}
+          <div className="mt-3 space-y-3">
+            {pendingTransfers.map((t) => {
+              const items = transferItemsCache[t.id] ?? []
+              return (
+                <div key={t.id} className="rounded-lg border border-sky-200 bg-white p-3">
+                  <p className="text-sm font-medium text-slate-800">
+                    Desde {branchNameById.get(t.origin_branch_id) ?? 'Sucursal'}
+                    {t.transfer_number ? ` · ${t.transfer_number}` : ''}
+                  </p>
+                  <ul className="mt-1 space-y-0.5 text-sm text-slate-600">
+                    {items.length === 0 && <li className="text-slate-400">Cargando artículos...</li>}
+                    {items.map((item) => (
+                      <li key={item.id}>
+                        {item.quantity} x {variantLabel(item.variant_id)}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-1 text-xs text-slate-400">{formatDateTime(t.sent_at)}</p>
+                  <div className="mt-2 flex justify-end gap-2">
+                    <Button
+                      variant="secondary"
+                      disabled={processingTransferId === t.id}
+                      onClick={() => setRejectTransferTarget(t)}
+                    >
+                      Rechazar
+                    </Button>
+                    <Button disabled={processingTransferId === t.id} onClick={() => handleReceiveTransfer(t.id)}>
+                      Recibir
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+      )}
+
+      <ReasonModal
+        open={!!rejectTransferTarget}
+        onClose={() => setRejectTransferTarget(null)}
+        title={`Rechazar traslado${rejectTransferTarget?.transfer_number ? ` ${rejectTransferTarget.transfer_number}` : ''}`}
+        confirmLabel="Rechazar"
+        onConfirm={async (reason) => {
+          const result = await cancelTransfer(rejectTransferTarget!.id, reason)
+          if (!result.error) setRejectTransferTarget(null)
+          return result
+        }}
+      />
 
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {!isTienda && (
