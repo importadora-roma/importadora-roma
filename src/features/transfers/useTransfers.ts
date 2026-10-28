@@ -26,12 +26,16 @@ export interface TransferItem {
   unit_price: number | null
 }
 
-export function useTransfers() {
+export function useTransfers(enabled: boolean = true) {
   const [transfers, setTransfers] = useState<Transfer[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const reload = useCallback(async () => {
+    if (!enabled) {
+      setLoading(false)
+      return
+    }
     setLoading(true)
     const { data, error } = await supabase.from('transfers').select('*').order('sent_at', { ascending: false }).limit(200)
     if (error) {
@@ -41,7 +45,7 @@ export function useTransfers() {
       setError(null)
     }
     setLoading(false)
-  }, [])
+  }, [enabled])
 
   useEffect(() => {
     reload()

@@ -25,12 +25,16 @@ export async function createApprovalRequest(requestType: ApprovalRequestType, de
   return { error: error?.message ?? null }
 }
 
-export function usePendingApprovals() {
+export function usePendingApprovals(enabled: boolean = true) {
   const [requests, setRequests] = useState<ApprovalRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const reload = useCallback(async () => {
+    if (!enabled) {
+      setLoading(false)
+      return
+    }
     setLoading(true)
     const { data, error } = await supabase
       .from('approval_requests')
@@ -79,7 +83,7 @@ export function usePendingApprovals() {
     )
     setError(null)
     setLoading(false)
-  }, [])
+  }, [enabled])
 
   useEffect(() => {
     reload()

@@ -206,6 +206,8 @@ export function ProductsPage() {
       if (!isAdmin && priceChanged) {
         // Apply every other field right away; only the price change itself
         // is gated — it's requested, not applied, until an admin approves it.
+        // Falls through to the shared barcode/SKU step below instead of
+        // returning early, so a SKU edited in the same submit isn't dropped.
         const { error } = await updateVariant(editingVariant.id, { ...payload, price: editingVariant.price })
         if (error) {
           setSaving(false)
@@ -220,22 +222,22 @@ export function ProductsPage() {
           old_price: editingVariant.price,
           new_price: price,
         })
-        setSaving(false)
         if (requestError) {
+          setSaving(false)
           setVariantFormError(requestError)
           return
         }
         setInfoMessage('Cambio de precio enviado para aprobación del administrador. Los demás cambios ya se guardaron.')
-        setVariantModalOpen(false)
-        return
+        variantId = editingVariant.id
+      } else {
+        const { error } = await updateVariant(editingVariant.id, payload)
+        if (error) {
+          setSaving(false)
+          setVariantFormError(error)
+          return
+        }
+        variantId = editingVariant.id
       }
-      const { error } = await updateVariant(editingVariant.id, payload)
-      if (error) {
-        setSaving(false)
-        setVariantFormError(error)
-        return
-      }
-      variantId = editingVariant.id
     } else {
       const { variant, error } = await createVariant({ ...payload, sku: null, product_id: variantProductId! })
       if (error || !variant) {

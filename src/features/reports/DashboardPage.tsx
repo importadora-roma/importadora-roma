@@ -88,7 +88,7 @@ export function DashboardPage() {
   const pendingInvoices = invoices.filter((i) => i.status === 'pending').length
 
   const isAdmin = profile?.role === 'admin'
-  const { requests: pendingApprovals, approve, reject } = usePendingApprovals()
+  const { requests: pendingApprovals, approve, reject } = usePendingApprovals(isAdmin)
   const [processingApprovalId, setProcessingApprovalId] = useState<string | null>(null)
   const [approvalError, setApprovalError] = useState<string | null>(null)
 
@@ -107,7 +107,7 @@ export function DashboardPage() {
   }
 
   const canManageTransfers = profile?.role === 'admin' || profile?.role === 'supervisor'
-  const { transfers, loadTransferItems, receiveTransfer, cancelTransfer } = useTransfers()
+  const { transfers, loadTransferItems, receiveTransfer, cancelTransfer } = useTransfers(canManageTransfers)
   const { branches: allBranches } = useBranches()
   const branchNameById = useMemo(() => new Map(allBranches.map((b) => [b.id, b.name])), [allBranches])
   const productNameById = useMemo(() => new Map(products.map((p) => [p.id, p.name])), [products])
