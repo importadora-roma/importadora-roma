@@ -73,12 +73,14 @@ export function SalesHistoryPage() {
   const [exchangeTarget, setExchangeTarget] = useState<SaleItem | null>(null)
   const [returnTarget, setReturnTarget] = useState<SaleItem | null>(null)
   const [costError, setCostError] = useState<{ itemId: string; message: string } | null>(null)
+  const [showCost, setShowCost] = useState(false)
 
   const canManage = profile?.role === 'admin' || profile?.role === 'supervisor'
   const isAdmin = profile?.role === 'admin'
   const [infoMessage, setInfoMessage] = useState<string | null>(null)
 
   async function openDetail(sale: Sale) {
+    setShowCost(false)
     setDetailSale(sale)
     const { items, payments } = await loadSaleDetail(sale.id)
     setDetailItems(items)
@@ -210,13 +212,23 @@ export function SalesHistoryPage() {
               {formatDate(`${detailSale.sale_date}T00:00:00`)} · {formatTimeCL(detailSale.created_at)}
             </p>
           )}
+          {isAdmin && (
+            <div className="-mt-2 flex justify-end">
+              <button
+                onClick={() => setShowCost((prev) => !prev)}
+                className="text-xs font-medium text-slate-500 underline hover:text-slate-800"
+              >
+                {showCost ? 'Ocultar costo' : 'Ver costo'}
+              </button>
+            </div>
+          )}
           <table className="w-full text-left text-sm">
             <thead className="text-xs uppercase text-slate-400">
               <tr>
                 <th className="py-1 pr-2">Producto</th>
                 <th className="py-1 pr-2">Cant.</th>
                 <th className="py-1 pr-2">Precio</th>
-                {canManage && <th className="py-1 pr-2">Costo</th>}
+                {isAdmin && showCost && <th className="py-1 pr-2">Costo</th>}
                 <th className="py-1 pr-2">Estado</th>
                 <th className="py-1" />
               </tr>
@@ -231,7 +243,7 @@ export function SalesHistoryPage() {
                   </td>
                   <td className="py-1.5 pr-2">{item.quantity}</td>
                   <td className="py-1.5 pr-2">{formatCLP(item.sold_price)}</td>
-                  {canManage && (
+                  {isAdmin && showCost && (
                     <td className="py-1.5 pr-2">
                       <input
                         type="number"

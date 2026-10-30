@@ -30,7 +30,8 @@ interface CartItem {
 
 export function NewSalePage() {
   const profile = useAuthStore((s) => s.profile)
-  const canSeeCost = profile?.role === 'admin' || profile?.role === 'supervisor'
+  const isAdmin = profile?.role === 'admin'
+  const canManage = profile?.role === 'admin' || profile?.role === 'supervisor'
   const { branchId: effectiveBranchId, branches } = useEffectiveBranch()
 
   const { catalog, loading: catalogLoading, reloadInventory } = useSaleCatalog(effectiveBranchId)
@@ -285,7 +286,7 @@ export function NewSalePage() {
                             stock disponible: {item.maxStock}
                             {item.quantity > item.maxStock && ' (quedará negativo)'}
                           </div>
-                          {canSeeCost && <div className="text-[11px] text-slate-300">costo: {formatCLP(item.cost)}</div>}
+                          {isAdmin && <div className="text-[11px] text-slate-300">costo: {formatCLP(item.cost)}</div>}
                         </>
                       )}
                       <input
@@ -332,7 +333,7 @@ export function NewSalePage() {
         <div className="space-y-4 rounded-lg border border-slate-200 bg-white shadow-sm p-4">
           <CustomerSelect customerId={customerId} onChange={setCustomerId} />
 
-          {canSeeCost && (
+          {canManage && (
             <Input
               label="Fecha de la venta"
               type="date"
