@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
-import { formatCLP, formatDateTime } from '@/lib/format'
+import { formatCLP, formatDateTime, parseCLNumber } from '@/lib/format'
 import { useCash } from './useCash'
 import { useEffectiveBranch } from '@/hooks/useEffectiveBranch'
 import { createApprovalRequest } from '@/features/approvals/useApprovalRequests'
@@ -45,8 +45,8 @@ export function CashPage() {
   const [saving, setSaving] = useState(false)
 
   async function handleOpen() {
-    const amount = Number(openingAmount)
-    if (Number.isNaN(amount) || amount < 0) {
+    const amount = parseCLNumber(openingAmount)
+    if (amount === null || amount < 0) {
       setFormError('Ingresa un monto válido')
       return
     }
@@ -63,8 +63,8 @@ export function CashPage() {
   }
 
   async function handleClose() {
-    const amount = Number(actualAmount)
-    if (Number.isNaN(amount) || amount < 0) {
+    const amount = parseCLNumber(actualAmount)
+    if (amount === null || amount < 0) {
       setFormError('Ingresa un monto válido')
       return
     }
@@ -81,8 +81,8 @@ export function CashPage() {
   }
 
   async function handleMovement() {
-    const amount = Number(movementAmount)
-    if (Number.isNaN(amount) || amount <= 0) {
+    const amount = parseCLNumber(movementAmount)
+    if (amount === null || amount <= 0) {
       setFormError('Ingresa un monto válido')
       return
     }
@@ -135,7 +135,8 @@ export function CashPage() {
   }
 
   const expectedAtClose = register ? register.opening_amount + movements.reduce((s, m) => s + m.amount, 0) : 0
-  const difference = actualAmount ? Number(actualAmount) - expectedAtClose : null
+  const parsedActualAmount = parseCLNumber(actualAmount)
+  const difference = parsedActualAmount !== null ? parsedActualAmount - expectedAtClose : null
 
   return (
     <div>
@@ -231,7 +232,14 @@ export function CashPage() {
 
       <Modal open={openModal} onClose={() => setOpenModal(false)} title="Abrir caja">
         <div className="space-y-4">
-          <Input label="Monto de apertura" type="number" value={openingAmount} onChange={(e) => setOpeningAmount(e.target.value)} />
+          <Input
+            label="Monto de apertura"
+            type="text"
+            inputMode="decimal"
+            placeholder="Ej: 40.000"
+            value={openingAmount}
+            onChange={(e) => setOpeningAmount(e.target.value)}
+          />
           {formError && <p className="text-sm text-red-600">{formError}</p>}
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setOpenModal(false)}>
@@ -247,7 +255,14 @@ export function CashPage() {
       <Modal open={closeModal} onClose={() => setCloseModal(false)} title="Cerrar caja">
         <div className="space-y-4">
           <p className="text-sm text-slate-600">Monto esperado: {formatCLP(expectedAtClose)}</p>
-          <Input label="Monto real contado" type="number" value={actualAmount} onChange={(e) => setActualAmount(e.target.value)} />
+          <Input
+            label="Monto real contado"
+            type="text"
+            inputMode="decimal"
+            placeholder="Ej: 40.000"
+            value={actualAmount}
+            onChange={(e) => setActualAmount(e.target.value)}
+          />
           {difference !== null && (
             <p className={`text-sm font-medium ${difference === 0 ? 'text-slate-600' : difference > 0 ? 'text-green-700' : 'text-red-600'}`}>
               Diferencia: {formatCLP(difference)}
@@ -272,7 +287,14 @@ export function CashPage() {
       >
         <div className="space-y-4">
           <Input label="Categoría" value={movementCategory} onChange={(e) => setMovementCategory(e.target.value)} placeholder="Ej: retiro, pago proveedor" />
-          <Input label="Monto" type="number" value={movementAmount} onChange={(e) => setMovementAmount(e.target.value)} />
+          <Input
+            label="Monto"
+            type="text"
+            inputMode="decimal"
+            placeholder="Ej: 40.000"
+            value={movementAmount}
+            onChange={(e) => setMovementAmount(e.target.value)}
+          />
           <Input label="Descripción (opcional)" value={movementDescription} onChange={(e) => setMovementDescription(e.target.value)} />
           {formError && <p className="text-sm text-red-600">{formError}</p>}
           <div className="flex justify-end gap-2">
