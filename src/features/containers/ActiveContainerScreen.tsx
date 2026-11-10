@@ -20,7 +20,7 @@ import { UsbScannerInput } from '@/components/UsbScannerInput'
 import { UnknownCodeResolveDialog } from './UnknownCodeResolveDialog'
 import { PhotoOcrCapture, type OcrCaptureResult } from './PhotoOcrCapture'
 import type { ScanMethod } from '@/types/database'
-import type { ScanEvent, UnknownCode } from './types'
+import type { ItemWithProgress, ScanEvent, UnknownCode } from './types'
 
 interface ScanExtra {
   confirmOver?: boolean
@@ -190,6 +190,33 @@ export function ActiveContainerScreen() {
 
   const handleBarcodeDetect = useCallback((code: string) => submitScan(code, 1, 'barcode'), [submitScan])
   const handleUsbScan = useCallback((code: string) => submitScan(code, 1, 'usb_scanner'), [submitScan])
+
+  // Resolves the code to scan with for a row's +/- button: the item's own
+  // code if it has one, else its matched variant's sku. Containers are
+  // often reconciled from photos of the labels rather than live scanning,
+  // so this lets staff tap +1/-1 next to the right row instead of typing
+  // or re-scanning its code every time.
+  const resolveAdjustCode = useCallback(
+    (item: ItemWithProgress): string | null => {
+      if (item.code) return item.code
+      if (item.variant_id) {
+        const variant = variants.find((v) => v.id === item.variant_id)
+        if (variant?.sku) return variant.sku
+      }
+      return null
+    },
+    [variants]
+  )
+
+  const handleAdjust = useCallback(
+    (code: string, delta: number) => {
+      // A deliberate tap on a row's own button is never an accidental
+      // duplicate scan the way the same barcode appearing twice quickly
+      // normally is — skip that confirmation so repeated taps all count.
+      void submitScan(code, delta, 'manual', { confirmDuplicate: true })
+    },
+    [submitScan]
+  )
 
   const handleOcrConfirm = useCallback(
     async (result: OcrCaptureResult) => {
@@ -459,7 +486,12 @@ export function ActiveContainerScreen() {
         </div>
       )}
 
-      <ItemComparisonTable items={itemsWithProgress} />
+      <ItemComparisonTable
+        items={itemsWithProgress}
+        getAdjustCode={container.status === 'counting' ? resolveAdjustCode : undefined}
+        onAdjust={handleAdjust}
+        adjustDisabled={submitting}
+      />
 
       <Modal open={completeOpen} onClose={() => setCompleteOpen(false)} title={t('activeScreen.completeModal.title')}>
         <div className="space-y-4">

@@ -53,6 +53,7 @@
   "itemTable.col.scanned": "Okutulan",
   "itemTable.col.remaining": "Kalan",
   "itemTable.col.status": "Durum",
+  "itemTable.col.adjust": "Düzelt",
   "itemTable.noResults": "Sonuç yok",
 
   "newContainer.title": "Yeni konteyner",

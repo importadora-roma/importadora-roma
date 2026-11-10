@@ -53,6 +53,7 @@
   "itemTable.col.scanned": "Escaneado",
   "itemTable.col.remaining": "Restante",
   "itemTable.col.status": "Estado",
+  "itemTable.col.adjust": "Ajustar",
   "itemTable.noResults": "Sin resultados",
 
   "newContainer.title": "Nuevo contenedor",

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Minus, Plus } from 'lucide-react'
 import { Badge, type BadgeTone } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { useTranslation } from '@/i18n/I18nProvider'
@@ -27,7 +28,21 @@ const filterKey: Record<Filter, string> = {
   over: 'itemTable.filter.over',
 }
 
-export function ItemComparisonTable({ items }: { items: ItemWithProgress[] }) {
+export function ItemComparisonTable({
+  items,
+  getAdjustCode,
+  onAdjust,
+  adjustDisabled,
+}: {
+  items: ItemWithProgress[]
+  // Returns the code to submit a scan with for this row (the item's own
+  // code, or a matched variant's sku as fallback), or null when the row
+  // has no code to scan by yet — in that case the +/- buttons are hidden
+  // since record_scan can only ever match an item by code.
+  getAdjustCode?: (item: ItemWithProgress) => string | null
+  onAdjust?: (code: string, delta: number) => void
+  adjustDisabled?: boolean
+}) {
   const { t } = useTranslation()
   const [filter, setFilter] = useState<Filter>('all')
   const [calidadFilter, setCalidadFilter] = useState('')
@@ -97,27 +112,57 @@ export function ItemComparisonTable({ items }: { items: ItemWithProgress[] }) {
               <th className="px-3 py-2 text-right">{t('itemTable.col.scanned')}</th>
               <th className="px-3 py-2 text-right">{t('itemTable.col.remaining')}</th>
               <th className="px-3 py-2">{t('itemTable.col.status')}</th>
+              {getAdjustCode && <th className="px-3 py-2 text-right">{t('itemTable.col.adjust')}</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {filtered.map((item) => (
-              <tr key={item.id}>
-                <td className="px-3 py-2 font-medium text-slate-900">
-                  {item.product_name}
-                </td>
-                <td className="px-3 py-2 text-slate-600">{item.calidad ?? '—'}</td>
-                <td className="px-3 py-2 font-mono text-xs text-slate-500">{item.code ?? '—'}</td>
-                <td className="px-3 py-2 text-right">{item.expected_qty}</td>
-                <td className="px-3 py-2 text-right">{item.scannedQty}</td>
-                <td className="px-3 py-2 text-right">{item.remaining}</td>
-                <td className="px-3 py-2">
-                  <Badge tone={statusTone[item.itemStatus]}>{t(statusKey[item.itemStatus])}</Badge>
-                </td>
-              </tr>
-            ))}
+            {filtered.map((item) => {
+              const adjustCode = getAdjustCode?.(item) ?? null
+              return (
+                <tr key={item.id}>
+                  <td className="px-3 py-2 font-medium text-slate-900">
+                    {item.product_name}
+                  </td>
+                  <td className="px-3 py-2 text-slate-600">{item.calidad ?? '—'}</td>
+                  <td className="px-3 py-2 font-mono text-xs text-slate-500">{item.code ?? '—'}</td>
+                  <td className="px-3 py-2 text-right">{item.expected_qty}</td>
+                  <td className="px-3 py-2 text-right">{item.scannedQty}</td>
+                  <td className="px-3 py-2 text-right">{item.remaining}</td>
+                  <td className="px-3 py-2">
+                    <Badge tone={statusTone[item.itemStatus]}>{t(statusKey[item.itemStatus])}</Badge>
+                  </td>
+                  {getAdjustCode && (
+                    <td className="px-3 py-2">
+                      {adjustCode && (
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => onAdjust?.(adjustCode, -1)}
+                            disabled={adjustDisabled || item.scannedQty <= 0}
+                            aria-label="-1"
+                            className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            <Minus size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onAdjust?.(adjustCode, 1)}
+                            disabled={adjustDisabled}
+                            aria-label="+1"
+                            className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              )
+            })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-slate-400">
+                <td colSpan={getAdjustCode ? 8 : 7} className="px-3 py-6 text-center text-slate-400">
                   {t('itemTable.noResults')}
                 </td>
               </tr>
