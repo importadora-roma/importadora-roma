@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AlertTriangle, Camera, CloudUpload, ImagePlus, Undo2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -87,6 +87,13 @@ export function ActiveContainerScreen() {
   const [completing, setCompleting] = useState(false)
   const [completeError, setCompleteError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  // Per-item pending delta from a row's +/- button, shown on top of the
+  // server-confirmed count while its scan request is in flight — a tap
+  // used to feel slow because the count only moved after a full round
+  // trip to record_scan; this makes it move the instant you tap, and
+  // nets back out once that specific request settles (its contribution
+  // is then either reflected in the real, persisted event or discarded).
+  const [optimisticDeltas, setOptimisticDeltas] = useState<Record<string, number>>({})
 
   const submitScan = useCallback(
     async (code: string, delta: number, method: ScanMethod, extra: ScanExtra = {}) => {
@@ -209,14 +216,41 @@ export function ActiveContainerScreen() {
   )
 
   const handleAdjust = useCallback(
-    (code: string, delta: number) => {
+    (item: ItemWithProgress, delta: number) => {
+      const code = resolveAdjustCode(item)
+      if (!code) return
+      setOptimisticDeltas((prev) => ({ ...prev, [item.id]: (prev[item.id] ?? 0) + delta }))
       // A deliberate tap on a row's own button is never an accidental
       // duplicate scan the way the same barcode appearing twice quickly
       // normally is — skip that confirmation so repeated taps all count.
-      void submitScan(code, delta, 'manual', { confirmDuplicate: true })
+      void submitScan(code, delta, 'manual', { confirmDuplicate: true }).finally(() => {
+        setOptimisticDeltas((prev) => {
+          const next = { ...prev }
+          const remaining = (next[item.id] ?? 0) - delta
+          if (remaining === 0) delete next[item.id]
+          else next[item.id] = remaining
+          return next
+        })
+      })
     },
-    [submitScan]
+    [resolveAdjustCode, submitScan]
   )
+
+  const displayItems = useMemo(() => {
+    if (Object.keys(optimisticDeltas).length === 0) return itemsWithProgress
+    return itemsWithProgress.map((item) => {
+      const delta = optimisticDeltas[item.id]
+      if (!delta) return item
+      const scannedQty = item.scannedQty + delta
+      const remaining = item.expected_qty - scannedQty
+      let itemStatus: ItemWithProgress['itemStatus']
+      if (scannedQty <= 0) itemStatus = 'empty'
+      else if (scannedQty > item.expected_qty) itemStatus = 'over'
+      else if (scannedQty === item.expected_qty) itemStatus = 'complete'
+      else itemStatus = 'partial'
+      return { ...item, scannedQty, remaining, itemStatus }
+    })
+  }, [itemsWithProgress, optimisticDeltas])
 
   const handleOcrConfirm = useCallback(
     async (result: OcrCaptureResult) => {
@@ -487,10 +521,9 @@ export function ActiveContainerScreen() {
       )}
 
       <ItemComparisonTable
-        items={itemsWithProgress}
+        items={displayItems}
         getAdjustCode={container.status === 'counting' ? resolveAdjustCode : undefined}
         onAdjust={handleAdjust}
-        adjustDisabled={submitting}
       />
 
       <Modal open={completeOpen} onClose={() => setCompleteOpen(false)} title={t('activeScreen.completeModal.title')}>

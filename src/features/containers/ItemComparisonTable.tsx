@@ -32,7 +32,6 @@ export function ItemComparisonTable({
   items,
   getAdjustCode,
   onAdjust,
-  adjustDisabled,
 }: {
   items: ItemWithProgress[]
   // Returns the code to submit a scan with for this row (the item's own
@@ -40,8 +39,7 @@ export function ItemComparisonTable({
   // has no code to scan by yet — in that case the +/- buttons are hidden
   // since record_scan can only ever match an item by code.
   getAdjustCode?: (item: ItemWithProgress) => string | null
-  onAdjust?: (code: string, delta: number) => void
-  adjustDisabled?: boolean
+  onAdjust?: (item: ItemWithProgress, delta: number) => void
 }) {
   const { t } = useTranslation()
   const [filter, setFilter] = useState<Filter>('all')
@@ -137,8 +135,8 @@ export function ItemComparisonTable({
                         <div className="flex items-center justify-end gap-1">
                           <button
                             type="button"
-                            onClick={() => onAdjust?.(adjustCode, -1)}
-                            disabled={adjustDisabled || item.scannedQty <= 0}
+                            onClick={() => onAdjust?.(item, -1)}
+                            disabled={item.scannedQty <= 0}
                             aria-label="-1"
                             className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
                           >
@@ -146,8 +144,7 @@ export function ItemComparisonTable({
                           </button>
                           <button
                             type="button"
-                            onClick={() => onAdjust?.(adjustCode, 1)}
-                            disabled={adjustDisabled}
+                            onClick={() => onAdjust?.(item, 1)}
                             aria-label="+1"
                             className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
                           >
